@@ -9,7 +9,6 @@ from PIL import Image
 
 obj, info_pfad, png = sys.argv[1:4]
 KFARBE = tuple(float(x) for x in (sys.argv[4] if len(sys.argv) > 4 else "0.12,0.25,0.2").split(","))
-R, SPUR, ACHSE = 1.6, 3.4, 5.6
 
 # ---------- Geometrie sammeln: (Dreiecke Nx3x3, Farbe, Glanz, Transparenz) ----------
 teile = []
@@ -23,7 +22,9 @@ FARBEN = {"Karosserie": KFARBE, "Dach": KFARBE, "Verkleidung": (0.06, 0.06, 0.06
 for name, f in objs.items():
     teile.append((V[np.array(f)], FARBEN.get(name, (0.5, 0.5, 0.5)), 0.5 if name != "Verkleidung" else 0.1))
 
-P = json.load(open(info_pfad))["positionen"]
+INFO = json.load(open(info_pfad))
+R, SPUR, ACHSE = INFO["rad"]
+
 
 
 def box(mitte, groesse, farbe, glanz=0.2, dreh=None):
@@ -49,29 +50,33 @@ def zylinder(mitte, radius, breite, farbe, glanz=0.1, n=36):
     teile.append((np.array(tri, dtype=float), farbe, glanz))
 
 
+ART = {"lack": (KFARBE, 0.5), "chrom": ((0.75, 0.75, 0.78), 0.9), "alu": ((0.66, 0.66, 0.69), 0.9),
+       "schwarz": ((0.03, 0.03, 0.035), 0.2), "carbon": ((0.09, 0.09, 0.1), 0.4), "grill": ((0.09, 0.09, 0.1), 0.3),
+       "scheinwerfer": ((0.95, 0.97, 1.0), 1), "neon_weiss": ((0.95, 0.95, 0.95), 1), "neon_rot": ((0.75, 0.04, 0.04), 0.8),
+       "blinker": ((0.6, 0.38, 0.14), 0.5)}
+
+
+def drehung(r):
+    ax, ay, az = (np.radians(v) for v in r)
+    rx = np.array([[1, 0, 0], [0, np.cos(ax), -np.sin(ax)], [0, np.sin(ax), np.cos(ax)]])
+    ry = np.array([[np.cos(ay), 0, np.sin(ay)], [0, 1, 0], [-np.sin(ay), 0, np.cos(ay)]])
+    rz = np.array([[np.cos(az), -np.sin(az), 0], [np.sin(az), np.cos(az), 0], [0, 0, 1]])
+    return rx @ ry @ rz
+
+
 for s in (-1, 1):
     for rz in (-ACHSE, ACHSE):
         zylinder((s * SPUR, R, rz), R, 1.3, (0.04, 0.04, 0.04), 0.05)
         zylinder((s * (SPUR + 0.03), R, rz), R * 0.66, 1.32, (0.72, 0.73, 0.76), 0.9)
         zylinder((s * (SPUR + 0.04), R, rz), R * 0.2, 1.34, (0.2, 0.2, 0.22), 0.5)
-    x, y, z = P["Scheinwerfer"]; box((s * x, y, z), (1.5, 0.3, 0.3), (0.95, 0.97, 1.0), 1)
-    box((s * x, y - 0.2, z - 0.04), (1.5, 0.06, 0.3), (1.0, 1.0, 1.0), 1)
-    x, y, z = P["Ruecklicht"]; box((s * x, y, z), (1.3, 0.3, 0.25), (0.7, 0.04, 0.04), 0.8)
-    x, y, z = P["Nebel"]; box((s * x, y, z), (0.7, 0.16, 0.1), (0.9, 0.9, 0.9), 1)
-    x, y, z = P["Spiegel"]; box((s * (x + 0.25), y, z), (0.7, 0.55, 0.85), KFARBE, 0.5)
-    x, y, z = P["Dachreling"]; box((s * x, y, z), (0.16, 0.14, 6.2), (0.7, 0.7, 0.73), 0.9)
-    for g in ("Griff1", "Griff2"):
-        x, y, z = P[g]; box((s * x, y, z), (0.08, 0.14, 0.75), (0.75, 0.75, 0.78), 0.9)
-    x, y, z = P["Chromleiste"]; box((s * x, y, z), (0.05, 0.08, 6.5), (0.75, 0.75, 0.78), 0.9)
-    x, y, z = P["Auspuff"]; box((s * x, y, z), (0.7, 0.3, 0.4), (0.75, 0.75, 0.78), 0.9)
-x, y, z = P["Kuehlergrill"]; box((x, y, z), (3.6, 0.95, 0.2), (0.09, 0.09, 0.1), 0.3)
-box((x, y + 0.5, z - 0.02), (3.7, 0.08, 0.2), (0.75, 0.75, 0.78), 0.9)
-x, y, z = P["Lichtband"]; box((x, y, z), (3.2, 0.1, 0.08), (0.7, 0.04, 0.04), 0.8)
-x, y, z = P["Lufteinlass"]; box((x, y, z), (4.2, 0.5, 0.1), (0.03, 0.03, 0.03), 0.2)
-x, y, z = P["KennzeichenVorne"]; box((x, y, z - 0.05), (2.6, 0.7, 0.08), (0.95, 0.95, 0.95), 0.1)
-x, y, z = P["KennzeichenHinten"]; box((x, y, z + 0.05), (2.6, 0.7, 0.08), (0.95, 0.95, 0.95), 0.1)
-x, y, z = P["Dachspoiler"]; box((x, y, z), (5.4, 0.12, 0.6), KFARBE, 0.5)
-x, y, z = P["DrittesBremslicht"]; box((x, y + 0.05, z + 0.25), (1.2, 0.08, 0.1), (0.7, 0.04, 0.04), 0.8)
+for t in INFO["anbau"]:
+    farbe, glanz = ART.get(t["a"], ART["schwarz"])
+    for s in ((-1, 1) if t["s"] else (1,)):
+        r = t.get("r")
+        box((s * t["p"][0], t["p"][1], t["p"][2]), t["g"], farbe, glanz, drehung((r[0], s * r[1], s * r[2])) if r else None)
+for ende in ("vorne", "hinten"):
+    y, z = INFO["kennzeichen"][ende]
+    box((0, y, z), (2.6, 0.7, 0.1), (0.95, 0.95, 0.95), 0.1)
 
 
 # ---------- Renderer ----------

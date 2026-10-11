@@ -849,33 +849,22 @@ Auto.MODELLE = {
 Auto.MODELL_REIHENFOLGE = { "kleinwagen", "suv", "limousine", "sport", "renn", "supersport" }
 
 -- ---------------------------------------------------------------
--- Round SUV body "Ranger X" (own design, made with tools/mesh/suv.py -> dist/mesh/RangerX.obj).
--- Import RangerX.obj with the 3D Importer, name the model "RangerX" and move it into ServerStorage.
--- If it is there, every SUV uses it automatically; otherwise the block body is used.
+-- Round bodies for private cars (own designs, made with tools/mesh/*.py -> dist/mesh/<vorlage>.obj).
+-- Import the .obj with the 3D Importer and move the model (e.g. "RangerX") into ServerStorage.
+-- If it is there, that car type uses it automatically; otherwise the block body is used.
 -- ---------------------------------------------------------------
-local SUV_MESH = {
-	Karosserie = { groesse = Vector3.new(7.797, 3.77, 17.5), mitte = Vector3.new(0.0, 3.035, 0.0) },
-	Verkleidung = { groesse = Vector3.new(7.9685, 2.7691, 17.57), mitte = Vector3.new(0.0, 2.5346, 0.0) },
-	Glas = { groesse = Vector3.new(7.1621, 2.6275, 11.75), mitte = Vector3.new(0.0, 6.0438, 2.575) },
-	Dach = { groesse = Vector3.new(7.2609, 2.9594, 9.0), mitte = Vector3.new(0.0, 5.9078, 3.4) },
-}
-local SUV_POS = {
-	Scheinwerfer = { 2.35, 4.2, -8.835 },
-	Kuehlergrill = { 0, 3.65, -8.805 },
-	Lufteinlass = { 0, 2.05, -8.755 },
-	Nebel = { 2.85, 2.2, -8.68 },
-	KennzeichenVorne = { 0, 2.75, -8.755 },
-	Ruecklicht = { 2.45, 4.45, 8.825 },
-	Lichtband = { 0, 4.5, 8.745 },
-	KennzeichenHinten = { 0, 3.45, 8.755 },
-	Auspuff = { 2.3, 1.75, 8.845 },
-	Griff1 = { 3.76, 4.4, 0.0 },
-	Griff2 = { 3.77, 4.45, 3.4 },
-	Spiegel = { 3.3, 4.7, -2.85 },
-	Chromleiste = { 3.82, 2.0, 0.6 },
-	DrittesBremslicht = { 0, 7.205, 6.4 },
-	Dachspoiler = { 0, 7.25, 6.55 },
-	Dachreling = { 2.81, 7.403, 2.6 },
+local KAROSSERIEN = require(script.Parent:WaitForChild("Karosserien"))
+local ANBAU_ART = {
+	lack = { mat = Enum.Material.SmoothPlastic },
+	chrom = { farbe = CHROM, mat = Enum.Material.Metal },
+	alu = { farbe = Color3.fromRGB(170, 170, 175), mat = Enum.Material.Metal },
+	schwarz = { farbe = Color3.fromRGB(12, 12, 14), mat = Enum.Material.SmoothPlastic },
+	carbon = { farbe = Color3.fromRGB(32, 32, 36), mat = Enum.Material.SmoothPlastic },
+	grill = { farbe = Color3.fromRGB(25, 25, 28), mat = Enum.Material.DiamondPlate },
+	scheinwerfer = { farbe = Color3.fromRGB(230, 236, 245), mat = Enum.Material.Neon },
+	neon_weiss = { farbe = Color3.fromRGB(235, 235, 240), mat = Enum.Material.Neon },
+	neon_rot = { farbe = Color3.fromRGB(170, 15, 15), mat = Enum.Material.Neon },
+	blinker = { farbe = Color3.fromRGB(150, 95, 35), mat = Enum.Material.SmoothPlastic },
 }
 
 local function meshTeil(vorlage, name)
@@ -960,16 +949,19 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 	local KANTE = farbe:Lerp(Color3.new(0, 0, 0), 0.35)
 	local sitzY = 1.6
 
-	-- round SUV body from the 3D model (only if "RangerX" was imported into ServerStorage)
-	local suvVorlage = typ == "suv" and game:GetService("ServerStorage"):FindFirstChild("RangerX")
-	if suvVorlage and not meshTeil(suvVorlage, "Karosserie") then suvVorlage = nil end
-	local function suvRund()
-		local function p(name, s) local q = SUV_POS[name] return at((s or 1) * q[1], q[2], q[3]) end
-		-- invisible colliders: lower body above the wheels and the cabin (the wheels must never touch them)
-		k("Kollision", V3(B, 1.3, L - 1), at(0, 2 * R + 0.95, 0), farbe, nil, { kollision = true, transparenz = 1, schatten = false })
-		k("Kollision", V3(B - 0.8, 2.4, 10), at(0, 6.0, 2.4), farbe, nil, { kollision = true, transparenz = 1, schatten = false })
-		for name, d in SUV_MESH do
-			local quelle = meshTeil(suvVorlage, name)
+	-- round body from the 3D model (only if the model was imported into ServerStorage)
+	local rundDef = KAROSSERIEN[typ]
+	local rundVorlage = rundDef and game:GetService("ServerStorage"):FindFirstChild(rundDef.vorlage)
+	if rundVorlage and not meshTeil(rundVorlage, "Karosserie") then rundVorlage = nil end
+	local function v3(t) return V3(t[1], t[2], t[3]) end
+	local function rundBauen()
+		if rundDef.sitzY then sitzY = rundDef.sitzY end
+		-- invisible colliders (above the wheels, the wheels must never touch them)
+		for _, kol in rundDef.kollision do
+			k("Kollision", v3(kol.g), at(kol.p[1], kol.p[2], kol.p[3]), farbe, nil, { kollision = true, transparenz = 1, schatten = false })
+		end
+		for name, d in rundDef.mesh do
+			local quelle = meshTeil(rundVorlage, name)
 			if quelle then
 				local mp = quelle:Clone()
 				mp.Name = name == "Karosserie" and "Karosserie" or ("Rund_" .. name)
@@ -977,8 +969,8 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 				mp.CanCollide = false
 				mp.CanTouch = false
 				mp.Massless = true
-				mp.Size = d.groesse
-				mp.CFrame = at(d.mitte.X, d.mitte.Y, d.mitte.Z) * CFrame.Angles(0, math.rad(Auto.MESH_DREHUNG), 0)
+				mp.Size = v3(d.groesse)
+				mp.CFrame = at(d.mitte[1], d.mitte[2], d.mitte[3]) * CFrame.Angles(0, math.rad(Auto.MESH_DREHUNG), 0)
 				for _, kind in mp:GetChildren() do
 					if kind:IsA("SurfaceAppearance") or kind:IsA("Decal") or kind:IsA("Texture") then kind:Destroy() end
 				end
@@ -1006,42 +998,30 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 				w.Parent = mp
 			end
 		end
-		-- front: wide grille with chrome bar, slim headlights with a light strip, fog lights
-		k("Kuehlergrill", V3(3.6, 0.95, 0.15), p("Kuehlergrill") * CFrame.new(0, 0, 0.02), Color3.fromRGB(25, 25, 28), Enum.Material.DiamondPlate, { schatten = false })
-		k("Grillchrom", V3(3.7, 0.08, 0.1), p("Kuehlergrill") * CFrame.new(0, 0.5, -0.04), CHROM, Enum.Material.Metal, { schatten = false })
-		k("Lufteinlass", V3(4.2, 0.5, 0.08), p("Lufteinlass"), Color3.fromRGB(12, 12, 14), nil, { schatten = false })
-		k("Unterfahrschutz", V3(3.2, 0.18, 0.1), p("Lufteinlass") * CFrame.new(0, -0.45, -0.04), CHROM, Enum.Material.Metal, { schatten = false })
-		for _, s in { -1, 1 } do
-			local lampe = k("Scheinwerfer", V3(1.5, 0.3, 0.2), p("Scheinwerfer", s) * CFrame.new(0, 0, 0.06), Color3.fromRGB(230, 236, 245), Enum.Material.Neon, { schatten = false })
-			local licht = Instance.new("SpotLight")
-			licht.Face = Enum.NormalId.Front
-			licht.Angle = 55
-			licht.Range = 50
-			licht.Brightness = 1.2
-			licht.Shadows = false
-			licht.Parent = lampe
-			k("Tagfahrlicht", V3(1.5, 0.06, 0.08), p("Scheinwerfer", s) * CFrame.new(0, -0.22, 0.02), Color3.new(1, 1, 1), Enum.Material.Neon, { schatten = false })
-			k(s < 0 and "BlinkerL" or "BlinkerR", V3(0.3, 0.3, 0.2), p("Scheinwerfer", s) * CFrame.new(s * 0.9, 0, 0.12), BLINK_AUS, nil, { schatten = false })
-			k("Nebelscheinwerfer", V3(0.7, 0.16, 0.08), p("Nebel", s), Color3.fromRGB(235, 235, 240), Enum.Material.Neon, { schatten = false })
-			-- back: slim tail lights joined by a light strip
-			k("Ruecklicht", V3(1.3, 0.3, 0.2), p("Ruecklicht", s) * CFrame.new(0, 0, -0.04), Color3.fromRGB(170, 15, 15), Enum.Material.Neon, { schatten = false })
-			k(s < 0 and "BlinkerL" or "BlinkerR", V3(0.3, 0.3, 0.2), p("Ruecklicht", s) * CFrame.new(s * 0.75, 0, -0.06), BLINK_AUS, nil, { schatten = false })
-			k("Auspuff", V3(0.7, 0.3, 0.3), p("Auspuff", s) * CFrame.new(0, 0, -0.15), CHROM, Enum.Material.Metal, { schatten = false })
-			-- sides: mirrors, door handles, chrome strip, roof rails
-			local sp = SUV_POS.Spiegel
-			k("Spiegel", V3(0.7, 0.5, 0.8), at(s * (sp[1] + 0.45), sp[2] + 0.15, sp[3]), farbe)
-			k("Spiegelfuss", V3(0.5, 0.15, 0.4), at(s * (sp[1] + 0.1), sp[2], sp[3] + 0.1), SCHWARZ, nil, { schatten = false })
-			for _, g in { "Griff1", "Griff2" } do
-				k("Griff", V3(0.08, 0.14, 0.75), p(g, s) * CFrame.new(s * 0.04, 0, 0), CHROM, Enum.Material.Metal, { schatten = false })
+		-- lights, grille, mirrors ... (positions come from the generator)
+		for _, t in rundDef.anbau do
+			local art = ANBAU_ART[t.a] or ANBAU_ART.schwarz
+			for _, s in (t.s and { -1, 1 } or { 1 }) do
+				local name = t.n
+				if t.a == "blinker" then name = s < 0 and "BlinkerL" or "BlinkerR" end
+				local lage = at(s * t.p[1], t.p[2], t.p[3])
+				if t.r then lage *= CFrame.Angles(math.rad(t.r[1]), math.rad(s * t.r[2]), math.rad(s * t.r[3])) end
+				local teil = k(name, v3(t.g), lage, t.a == "lack" and farbe or art.farbe, art.mat, { schatten = t.a == "lack" })
+				if t.a == "scheinwerfer" then
+					local licht = Instance.new("SpotLight")
+					licht.Face = Enum.NormalId.Front
+					licht.Angle = 55
+					licht.Range = 50
+					licht.Brightness = 1.2
+					licht.Shadows = false
+					licht.Parent = teil
+				end
 			end
-			k("Zierleiste", V3(0.05, 0.08, 6.5), p("Chromleiste", s) * CFrame.new(s * 0.04, 0, 0), CHROM, Enum.Material.Metal, { schatten = false })
-			k("Dachreling", V3(0.16, 0.14, 6.2), p("Dachreling", s), Color3.fromRGB(170, 170, 175), Enum.Material.Metal, { schatten = false })
 		end
-		k("Ruecklichtband", V3(2.4, 0.1, 0.08), p("Lichtband"), Color3.fromRGB(150, 12, 12), Enum.Material.Neon, { schatten = false })
-		k("Dachspoiler", V3(5.4, 0.12, 0.6), p("Dachspoiler"), farbe)
-		local ds = SUV_POS.Dachspoiler
-		m:SetAttribute("SpoilerAmDach", CFrame.new(0, ds[2] + 0.15 - R, ds[3] + 0.3)) -- relative to the chassis (for the spoiler tuning)
-		k("Bremslicht_oben", V3(1.2, 0.08, 0.1), p("DrittesBremslicht") * CFrame.new(0, 0.08, 0.25), Color3.fromRGB(170, 15, 15), Enum.Material.Neon, { schatten = false })
+		if rundDef.spoiler then
+			m:SetAttribute("SpoilerAmDach", CFrame.new(0, rundDef.spoiler[1] - R, rundDef.spoiler[2])) -- relative to the chassis (spoiler tuning)
+			if rundDef.spoiler[3] then m:SetAttribute("SpoilerStuetze", rundDef.spoiler[3]) end
+		end
 	end
 
 	if typ == "kleinwagen" then
@@ -1100,8 +1080,8 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		lichter(unten + 0.9, -L / 2 + 0.5, L / 2 - 0.4, 2.6)
 	elseif typ == "suv" then
 		sitzY = 2.4
-		if suvVorlage then
-			suvRund()
+		if rundVorlage then
+			rundBauen()
 		else
 			local unten = R + 0.5
 			k("Karosserie", V3(B, 2.8, L - 1), at(0, unten + 1.4, 0), farbe)
@@ -1128,27 +1108,31 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 			lichter(unten + 1.9, -L / 2 + 0.45, L / 2 - 0.45, 2.6)
 		end
 	elseif typ == "sport" then
-		local unten = R + 0.2
-		k("Karosserie", V3(B, 1.5, L - 1), at(0, unten + 0.75, 0), farbe)
-		k("Kollision", V3(B, 0.35, L - 1), at(0, 2 * R + 0.25, 0), farbe, nil, { kollision = true, transparenz = 1, schatten = false })
-		k("Motorhaube", V3(B - 0.4, 0.8, 5.5), at(0, unten + 1.5 + 0.0, -L / 2 + 3.4) * CFrame.Angles(math.rad(-5), 0, 0), farbe)
-		k("Frontlippe", V3(B, 0.25, 1.0), at(0, unten - 0.05, -L / 2 + 0.2), SCHWARZ)
-		k("Heckdiffusor", V3(B - 1, 0.5, 0.8), at(0, unten + 0.1, L / 2 - 0.3), SCHWARZ)
-		k("Lufteinlass", V3(3.6, 0.45, 0.1), at(0, unten + 0.5, -L / 2 + 0.5), Color3.fromRGB(20, 20, 22))
-		local oben = unten + 1.5
-		k("Dach", V3(B - 1.4, 0.3, 4.2), at(0, oben + 2.0, 1.2), farbe, nil, { kollision = true })
-		glas("Frontscheibe", V3(B - 1.4, 1.9, 2.4), at(0, oben + 0.95, -2.1), "WedgePart")
-		local heck = glas("Heckscheibe", V3(B - 1.4, 1.9, 3.2), at(0, oben + 0.95, 4.9) * CFrame.Angles(0, math.pi, 0), "WedgePart")
-		heck.Color = Color3.fromRGB(30, 35, 45)
-		glas("Seitenscheiben", V3(B - 1.3, 1.8, 4.2), at(0, oben + 0.95, 1.2))
-		k("Heckspoiler", V3(B - 0.8, 0.2, 1.2), at(0, oben + 0.55, L / 2 - 0.8), SCHWARZ)
-		for _, s in { -1, 1 } do
-			k("Seitenschweller", V3(0.3, 0.4, L - 5), at(s * (B / 2 + 0.05), unten + 0.1, 0), SCHWARZ)
-			k("Lufteinlass", V3(0.15, 0.8, 1.8), at(s * (B / 2 + 0.02), unten + 0.9, 2.2), Color3.fromRGB(20, 20, 22))
-			k("Rennstreifen", V3(0.8, 0.05, L - 1), at(s * 0.8, unten + 1.52, 0), Color3.new(1, 1, 1), nil, { schatten = false })
-			k("Auspuff", V3(0.6, 0.6, 0.6), at(s * 0.9, unten + 0.15, L / 2 - 0.05) * CFrame.Angles(0, math.rad(90), 0), CHROM, Enum.Material.Metal, { form = Enum.PartType.Cylinder })
+		if rundVorlage then
+			rundBauen()
+		else
+			local unten = R + 0.2
+			k("Karosserie", V3(B, 1.5, L - 1), at(0, unten + 0.75, 0), farbe)
+			k("Kollision", V3(B, 0.35, L - 1), at(0, 2 * R + 0.25, 0), farbe, nil, { kollision = true, transparenz = 1, schatten = false })
+			k("Motorhaube", V3(B - 0.4, 0.8, 5.5), at(0, unten + 1.5 + 0.0, -L / 2 + 3.4) * CFrame.Angles(math.rad(-5), 0, 0), farbe)
+			k("Frontlippe", V3(B, 0.25, 1.0), at(0, unten - 0.05, -L / 2 + 0.2), SCHWARZ)
+			k("Heckdiffusor", V3(B - 1, 0.5, 0.8), at(0, unten + 0.1, L / 2 - 0.3), SCHWARZ)
+			k("Lufteinlass", V3(3.6, 0.45, 0.1), at(0, unten + 0.5, -L / 2 + 0.5), Color3.fromRGB(20, 20, 22))
+			local oben = unten + 1.5
+			k("Dach", V3(B - 1.4, 0.3, 4.2), at(0, oben + 2.0, 1.2), farbe, nil, { kollision = true })
+			glas("Frontscheibe", V3(B - 1.4, 1.9, 2.4), at(0, oben + 0.95, -2.1), "WedgePart")
+			local heck = glas("Heckscheibe", V3(B - 1.4, 1.9, 3.2), at(0, oben + 0.95, 4.9) * CFrame.Angles(0, math.pi, 0), "WedgePart")
+			heck.Color = Color3.fromRGB(30, 35, 45)
+			glas("Seitenscheiben", V3(B - 1.3, 1.8, 4.2), at(0, oben + 0.95, 1.2))
+			k("Heckspoiler", V3(B - 0.8, 0.2, 1.2), at(0, oben + 0.55, L / 2 - 0.8), SCHWARZ)
+			for _, s in { -1, 1 } do
+				k("Seitenschweller", V3(0.3, 0.4, L - 5), at(s * (B / 2 + 0.05), unten + 0.1, 0), SCHWARZ)
+				k("Lufteinlass", V3(0.15, 0.8, 1.8), at(s * (B / 2 + 0.02), unten + 0.9, 2.2), Color3.fromRGB(20, 20, 22))
+				k("Rennstreifen", V3(0.8, 0.05, L - 1), at(s * 0.8, unten + 1.52, 0), Color3.new(1, 1, 1), nil, { schatten = false })
+				k("Auspuff", V3(0.6, 0.6, 0.6), at(s * 0.9, unten + 0.15, L / 2 - 0.05) * CFrame.Angles(0, math.rad(90), 0), CHROM, Enum.Material.Metal, { form = Enum.PartType.Cylinder })
+			end
+			lichter(unten + 1.0, -L / 2 + 0.45, L / 2 - 0.45, 2.5)
 		end
-		lichter(unten + 1.0, -L / 2 + 0.45, L / 2 - 0.45, 2.5)
 	else -- race car
 		sitzY = 1.2
 		local unten = R + 0.05
@@ -1197,9 +1181,9 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 	if kennzeichen then
 		for _, ende in { { -L / 2 + 0.05, Enum.NormalId.Front }, { L / 2 - 0.05, Enum.NormalId.Back } } do
 			local lage = at(0, R + 0.9, ende[1] + (ende[1] < 0 and -0.12 or 0.12))
-			if suvVorlage then
-				local q = SUV_POS[ende[1] < 0 and "KennzeichenVorne" or "KennzeichenHinten"]
-				lage = at(0, q[2], q[3] + (ende[1] < 0 and -0.08 or 0.08))
+			if rundVorlage then
+				local q = rundDef.kennzeichen[ende[1] < 0 and "vorne" or "hinten"]
+				lage = at(0, q[1], q[2])
 			end
 			local schild = k("Kennzeichen", V3(2.6, 0.7, 0.1), lage, Color3.new(1, 1, 1), nil, { schatten = false })
 			local g = Instance.new("SurfaceGui")
@@ -1224,8 +1208,9 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 	end
 
 	-- dashboard and steering wheel (all cars)
-	k("Armaturenbrett", V3(5.6, 0.7, 1.0), at(0, sitzY + 1.6, -1.9), INNEN)
-	k("Lenkrad", V3(0.15, 1.3, 1.3), at(-1.5, sitzY + 2.1, -1.4) * CFrame.Angles(math.rad(-25), math.rad(90), 0), SCHWARZ, nil, { form = Enum.PartType.Cylinder })
+	local armZ = rundVorlage and rundDef.armaturenZ or -1.9
+	k("Armaturenbrett", V3(5.6, 0.7, 1.0), at(0, sitzY + 1.6, armZ), INNEN)
+	k("Lenkrad", V3(0.15, 1.3, 1.3), at(-1.5, sitzY + 2.1, armZ + 0.5) * CFrame.Angles(math.rad(-25), math.rad(90), 0), SCHWARZ, nil, { form = Enum.PartType.Cylinder })
 	for _, x in { -1.5, 1.5 } do
 		k("Sitz", V3(2.1, 0.5, 2.1), at(x, sitzY - 0.1, 0.6), INNEN, Enum.Material.Fabric)
 		k("Rueckenlehne", V3(2.1, 2.4, 0.4), at(x, sitzY + 1.1, 1.8) * CFrame.Angles(math.rad(-12), 0, 0), typ == "renn" and Color3.fromRGB(180, 30, 30) or INNEN, Enum.Material.Fabric)

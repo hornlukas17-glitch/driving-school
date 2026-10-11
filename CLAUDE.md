@@ -15,7 +15,7 @@ Roblox-Fahrschulspiel von Lukas. Antworten an Lukas auf **Deutsch**, kurz und eh
   - LocalScript `FuehrerscheinClient` (`Client.lua`). `v{VERSION}` im Code wird beim Build ersetzt.
 - `tools/mock.luau` – Roblox-Nachbau zum Testen ohne Studio. `tests/*.luau` – Szenarien (laufen über `tools/runner.py`). Ein Test schlägt fehl, wenn eine `ERROR:`-Zeile erscheint.
 - Neue Funktion → passenden Test in `tests/` ergänzen.
-- `tools/mesh/` – Karosserie-Generatoren (Python, numpy) → `dist/mesh/*.obj`, Vorschau mit `tools/mesh/render.py`. Nach Formänderung die Werte aus `tools/mesh/<name>_info.json` in `SUV_MESH`/`SUV_POS` (Auto.lua) übernehmen. Nur eigene Designs, keine Nachbauten echter Automodelle oder Marken.
+- `tools/mesh/` – Karosserie-Generatoren: `basis.py` (gemeinsam) + je Auto eine Formdatei (`suv.py`, `sport.py`). `python3 tools/mesh/<auto>.py` schreibt `dist/mesh/<Vorlage>.obj` und erzeugt `src/Karosserien.lua` neu (nie von Hand ändern). `Auto.bauenPrivat` nutzt die Karosserie, wenn das Modell im ServerStorage liegt; der Typ-Zweig braucht dafür `if rundVorlage then rundBauen() else <Block> end`. Vorschau: `python3 tools/mesh/render.py <obj> <info.json> <png> r,g,b`. Nur eigene Designs, keine Nachbauten echter Automodelle oder Marken.
 
 ## Daten
 DataStore `Fuehrerschein_v1` (nie umbenennen, sonst verlieren Spieler alles). Neue Felder immer mit Standardwert ergänzen. OrderedDataStores `Rangliste_Level/Km/Perfekt`.

@@ -88,6 +88,12 @@ function Pflege.anwenden(modell, typ, a, nurWerte)
 		if dachSpoiler then
 			-- SUV with round body: a bigger roof spoiler instead of a trunk wing
 			tuningTeil(modell, chassis, "Spoiler", Vector3.new(6, 0.18, 1.2), cf * dachSpoiler * CFrame.Angles(math.rad(-8), 0, 0), Color3.fromRGB(25, 25, 28))
+			local stuetze = modell:GetAttribute("SpoilerStuetze")
+			if stuetze then -- wing on supports (sports car)
+				for _, s in { -1, 1 } do
+					tuningTeil(modell, chassis, "Spoilerstuetze", Vector3.new(0.2, stuetze, 0.5), cf * dachSpoiler * CFrame.new(s * 1.9, -stuetze / 2, 0), Color3.fromRGB(25, 25, 28))
+				end
+			end
 		else
 			tuningTeil(modell, chassis, "Spoiler", Vector3.new(6, 0.2, 1.4), cf * CFrame.new(0, oben + 1.1, laenge / 2 - 1.2) * CFrame.Angles(math.rad(6), 0, 0), Color3.fromRGB(25, 25, 28))
 			for _, s in { -1, 1 } do

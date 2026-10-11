@@ -64,6 +64,8 @@ neu("ModuleScript", "Fahrzeugpflege", server, [=====[
 ''' + src("Fahrzeugpflege.lua") + ''']=====])
 neu("ModuleScript", "Missionen", server, [=====[
 ''' + src("Missionen.lua") + ''']=====])
+neu("ModuleScript", "Karosserien", server, [=====[
+''' + src("Karosserien.lua") + ''']=====])
 server.Parent = SSS
 
 neu("LocalScript", "FuehrerscheinClient", SPS, [=====[
@@ -101,7 +103,7 @@ rs = item("Folder", "Fuehrerschein", [
     item("ModuleScript", "Verkehr", quelle=src("Verkehr.lua")),
 ])
 server = item("Script", "FuehrerscheinServer", [
-    item("ModuleScript", n, quelle=src(n + ".lua")) for n in ["Fragen", "Auto", "Fahrstunden", "Strafen", "Umwelt", "Fahrzeugpflege", "Missionen"]
+    item("ModuleScript", n, quelle=src(n + ".lua")) for n in ["Fragen", "Auto", "Fahrstunden", "Strafen", "Umwelt", "Fahrzeugpflege", "Missionen", "Karosserien"]
 ], quelle=src("Server.lua"), disabled=True)
 client = item("LocalScript", "FuehrerscheinClient", quelle=src("Client.lua"))
 modell = item("Folder", "DrivingSchoolInstall", [rs, server, client])

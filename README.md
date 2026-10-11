@@ -10,8 +10,11 @@ local w=workspace:FindFirstChild("DrivingSchoolInstall",true) for _,o in {game.R
 4. Speichern (File → Save to Roblox).
 
 ## Runde Karosserien (optional)
-SUV: In Studio **Home → Import 3D** → `dist/mesh/RangerX.obj` wählen → importieren. Das Modell heißt `RangerX` – ins **ServerStorage** ziehen. Fertig: alle SUVs (auch im Autohaus) bekommen die runde Karosserie.
-Steht das Auto verkehrt herum, in `Auto.lua` `Auto.MESH_DREHUNG = 180` setzen.
+In Studio **Home → Import 3D** → Datei aus `dist/mesh/` wählen → importieren → Modell ins **ServerStorage** ziehen (Name nicht ändern):
+- `RangerX.obj` → SUV
+- `VelocityGT.obj` → Sportwagen
+
+Ohne Import bleibt das jeweilige Auto im Block-Look. Steht ein Auto verkehrt herum, in `Auto.lua` `Auto.MESH_DREHUNG = 180` setzen.
 
 ## Für Entwicklung
 `./tools/check.sh` – prüft Syntax, baut `dist/` und lässt alle Tests laufen.

@@ -1,5 +1,10 @@
 # Changelog
 
+## v14
+- Neuer runder Sportwagen-Look „Velocity GT“ (eigenes Design): flacher Keil mit Mittelmotor-Proportionen, breite Hüften, Seitenlufteinlässe, Abrisskante. `dist/mesh/VelocityGT.obj` importieren, Modell `VelocityGT` in den ServerStorage.
+- Man sitzt im runden Sportwagen tiefer; Tuning-Heckflügel steht auf zwei Stützen über dem Motordeck.
+- Intern: Karosserien kommen jetzt aus `src/Karosserien.lua` (automatisch erzeugt), neue Autos brauchen nur noch eine Formdatei.
+
 ## v13
 - Neuer runder SUV-Look „Ranger X“ (eigenes Design): `dist/mesh/RangerX.obj` mit dem 3D-Importer importieren, Modell `RangerX` in den ServerStorage. Ohne Import bleibt der alte Block-SUV.
 - Schmale LED-Scheinwerfer, Lichtband hinten, Dachreling, Dachspoiler, Chromleisten. Spoiler-Tuning sitzt beim runden SUV am Dach.

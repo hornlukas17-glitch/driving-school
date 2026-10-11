@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.lua) cd \"$CLAUDE_PROJECT_DIR\" && ./tools/check.sh --schnell >&2 || exit 2;; esac" }
+        ]
+      }
+    ]
+  }
+}

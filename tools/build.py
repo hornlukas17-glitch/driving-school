@@ -5,7 +5,8 @@ V = open(os.path.join(ROOT, "VERSION")).read().strip()
 DIST = os.path.join(ROOT, "dist")
 os.makedirs(DIST, exist_ok=True)
 for alt in os.listdir(DIST):
-    os.remove(os.path.join(DIST, alt))
+    if os.path.isfile(os.path.join(DIST, alt)):  # alte Installer weg, dist/mesh bleibt
+        os.remove(os.path.join(DIST, alt))
 def src(n):
     s = open(os.path.join(FS, n)).read().replace("v{VERSION}", "v" + V)
     assert "]=====]" not in s

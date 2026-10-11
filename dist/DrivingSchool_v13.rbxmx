@@ -4766,6 +4766,44 @@ Auto.MODELLE = {
 }
 Auto.MODELL_REIHENFOLGE = { "kleinwagen", "suv", "limousine", "sport", "renn", "supersport" }
 
+-- ---------------------------------------------------------------
+-- Round SUV body "Ranger X" (own design, made with tools/mesh/suv.py -> dist/mesh/RangerX.obj).
+-- Import RangerX.obj with the 3D Importer, name the model "RangerX" and move it into ServerStorage.
+-- If it is there, every SUV uses it automatically; otherwise the block body is used.
+-- ---------------------------------------------------------------
+local SUV_MESH = {
+	Karosserie = { groesse = Vector3.new(7.797, 3.77, 17.5), mitte = Vector3.new(0.0, 3.035, 0.0) },
+	Verkleidung = { groesse = Vector3.new(7.9685, 2.7691, 17.57), mitte = Vector3.new(0.0, 2.5346, 0.0) },
+	Glas = { groesse = Vector3.new(7.1621, 2.6275, 11.75), mitte = Vector3.new(0.0, 6.0438, 2.575) },
+	Dach = { groesse = Vector3.new(7.2609, 2.9594, 9.0), mitte = Vector3.new(0.0, 5.9078, 3.4) },
+}
+local SUV_POS = {
+	Scheinwerfer = { 2.35, 4.2, -8.835 },
+	Kuehlergrill = { 0, 3.65, -8.805 },
+	Lufteinlass = { 0, 2.05, -8.755 },
+	Nebel = { 2.85, 2.2, -8.68 },
+	KennzeichenVorne = { 0, 2.75, -8.755 },
+	Ruecklicht = { 2.45, 4.45, 8.825 },
+	Lichtband = { 0, 4.5, 8.745 },
+	KennzeichenHinten = { 0, 3.45, 8.755 },
+	Auspuff = { 2.3, 1.75, 8.845 },
+	Griff1 = { 3.76, 4.4, 0.0 },
+	Griff2 = { 3.77, 4.45, 3.4 },
+	Spiegel = { 3.3, 4.7, -2.85 },
+	Chromleiste = { 3.82, 2.0, 0.6 },
+	DrittesBremslicht = { 0, 7.205, 6.4 },
+	Dachspoiler = { 0, 7.25, 6.55 },
+	Dachreling = { 2.81, 7.403, 2.6 },
+}
+
+local function meshTeil(vorlage, name)
+	for _, t in vorlage:GetDescendants() do
+		if t:IsA("MeshPart") and string.find(string.lower(t.Name), string.lower(name), 1, true) then
+			return t
+		end
+	end
+end
+
 function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 	local D = Auto.MODELLE[typ] or Auto.MODELLE.suv
 	farbe = farbe or Color3.fromRGB(200, 30, 35)
@@ -4840,6 +4878,90 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 	local KANTE = farbe:Lerp(Color3.new(0, 0, 0), 0.35)
 	local sitzY = 1.6
 
+	-- round SUV body from the 3D model (only if "RangerX" was imported into ServerStorage)
+	local suvVorlage = typ == "suv" and game:GetService("ServerStorage"):FindFirstChild("RangerX")
+	if suvVorlage and not meshTeil(suvVorlage, "Karosserie") then suvVorlage = nil end
+	local function suvRund()
+		local function p(name, s) local q = SUV_POS[name] return at((s or 1) * q[1], q[2], q[3]) end
+		-- invisible colliders: lower body above the wheels and the cabin (the wheels must never touch them)
+		k("Kollision", V3(B, 1.3, L - 1), at(0, 2 * R + 0.95, 0), farbe, nil, { kollision = true, transparenz = 1, schatten = false })
+		k("Kollision", V3(B - 0.8, 2.4, 10), at(0, 6.0, 2.4), farbe, nil, { kollision = true, transparenz = 1, schatten = false })
+		for name, d in SUV_MESH do
+			local quelle = meshTeil(suvVorlage, name)
+			if quelle then
+				local mp = quelle:Clone()
+				mp.Name = name == "Karosserie" and "Karosserie" or ("Rund_" .. name)
+				mp.Anchored = false
+				mp.CanCollide = false
+				mp.CanTouch = false
+				mp.Massless = true
+				mp.Size = d.groesse
+				mp.CFrame = at(d.mitte.X, d.mitte.Y, d.mitte.Z) * CFrame.Angles(0, math.rad(Auto.MESH_DREHUNG), 0)
+				for _, kind in mp:GetChildren() do
+					if kind:IsA("SurfaceAppearance") or kind:IsA("Decal") or kind:IsA("Texture") then kind:Destroy() end
+				end
+				pcall(function() mp.TextureID = "" end)
+				if name == "Glas" then
+					mp.Color = Color3.fromRGB(30, 38, 48)
+					mp.Material = Enum.Material.Glass
+					mp.Transparency = 0.3
+					mp.Reflectance = 0.25
+					mp.CastShadow = false
+				elseif name == "Verkleidung" then
+					mp.Color = Color3.fromRGB(28, 28, 31)
+					mp.Material = Enum.Material.SmoothPlastic
+					mp.Reflectance = 0
+					mp.Transparency = 0
+				else
+					mp.Color = farbe
+					mp.Material = Enum.Material.SmoothPlastic
+					mp.Reflectance = 0.15
+					mp.Transparency = 0
+				end
+				mp.Parent = m
+				local w = Instance.new("WeldConstraint")
+				w.Part0, w.Part1 = chassis, mp
+				w.Parent = mp
+			end
+		end
+		-- front: wide grille with chrome bar, slim headlights with a light strip, fog lights
+		k("Kuehlergrill", V3(3.6, 0.95, 0.15), p("Kuehlergrill") * CFrame.new(0, 0, 0.02), Color3.fromRGB(25, 25, 28), Enum.Material.DiamondPlate, { schatten = false })
+		k("Grillchrom", V3(3.7, 0.08, 0.1), p("Kuehlergrill") * CFrame.new(0, 0.5, -0.04), CHROM, Enum.Material.Metal, { schatten = false })
+		k("Lufteinlass", V3(4.2, 0.5, 0.08), p("Lufteinlass"), Color3.fromRGB(12, 12, 14), nil, { schatten = false })
+		k("Unterfahrschutz", V3(3.2, 0.18, 0.1), p("Lufteinlass") * CFrame.new(0, -0.45, -0.04), CHROM, Enum.Material.Metal, { schatten = false })
+		for _, s in { -1, 1 } do
+			local lampe = k("Scheinwerfer", V3(1.5, 0.3, 0.2), p("Scheinwerfer", s) * CFrame.new(0, 0, 0.06), Color3.fromRGB(230, 236, 245), Enum.Material.Neon, { schatten = false })
+			local licht = Instance.new("SpotLight")
+			licht.Face = Enum.NormalId.Front
+			licht.Angle = 55
+			licht.Range = 50
+			licht.Brightness = 1.2
+			licht.Shadows = false
+			licht.Parent = lampe
+			k("Tagfahrlicht", V3(1.5, 0.06, 0.08), p("Scheinwerfer", s) * CFrame.new(0, -0.22, 0.02), Color3.new(1, 1, 1), Enum.Material.Neon, { schatten = false })
+			k(s < 0 and "BlinkerL" or "BlinkerR", V3(0.3, 0.3, 0.2), p("Scheinwerfer", s) * CFrame.new(s * 0.9, 0, 0.12), BLINK_AUS, nil, { schatten = false })
+			k("Nebelscheinwerfer", V3(0.7, 0.16, 0.08), p("Nebel", s), Color3.fromRGB(235, 235, 240), Enum.Material.Neon, { schatten = false })
+			-- back: slim tail lights joined by a light strip
+			k("Ruecklicht", V3(1.3, 0.3, 0.2), p("Ruecklicht", s) * CFrame.new(0, 0, -0.04), Color3.fromRGB(170, 15, 15), Enum.Material.Neon, { schatten = false })
+			k(s < 0 and "BlinkerL" or "BlinkerR", V3(0.3, 0.3, 0.2), p("Ruecklicht", s) * CFrame.new(s * 0.75, 0, -0.06), BLINK_AUS, nil, { schatten = false })
+			k("Auspuff", V3(0.7, 0.3, 0.3), p("Auspuff", s) * CFrame.new(0, 0, -0.15), CHROM, Enum.Material.Metal, { schatten = false })
+			-- sides: mirrors, door handles, chrome strip, roof rails
+			local sp = SUV_POS.Spiegel
+			k("Spiegel", V3(0.7, 0.5, 0.8), at(s * (sp[1] + 0.45), sp[2] + 0.15, sp[3]), farbe)
+			k("Spiegelfuss", V3(0.5, 0.15, 0.4), at(s * (sp[1] + 0.1), sp[2], sp[3] + 0.1), SCHWARZ, nil, { schatten = false })
+			for _, g in { "Griff1", "Griff2" } do
+				k("Griff", V3(0.08, 0.14, 0.75), p(g, s) * CFrame.new(s * 0.04, 0, 0), CHROM, Enum.Material.Metal, { schatten = false })
+			end
+			k("Zierleiste", V3(0.05, 0.08, 6.5), p("Chromleiste", s) * CFrame.new(s * 0.04, 0, 0), CHROM, Enum.Material.Metal, { schatten = false })
+			k("Dachreling", V3(0.16, 0.14, 6.2), p("Dachreling", s), Color3.fromRGB(170, 170, 175), Enum.Material.Metal, { schatten = false })
+		end
+		k("Ruecklichtband", V3(2.4, 0.1, 0.08), p("Lichtband"), Color3.fromRGB(150, 12, 12), Enum.Material.Neon, { schatten = false })
+		k("Dachspoiler", V3(5.4, 0.12, 0.6), p("Dachspoiler"), farbe)
+		local ds = SUV_POS.Dachspoiler
+		m:SetAttribute("SpoilerAmDach", CFrame.new(0, ds[2] + 0.15 - R, ds[3] + 0.3)) -- relative to the chassis (for the spoiler tuning)
+		k("Bremslicht_oben", V3(1.2, 0.08, 0.1), p("DrittesBremslicht") * CFrame.new(0, 0.08, 0.25), Color3.fromRGB(170, 15, 15), Enum.Material.Neon, { schatten = false })
+	end
+
 	if typ == "kleinwagen" then
 		sitzY = 1.7
 		local unten = R + 0.35
@@ -4896,29 +5018,33 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		lichter(unten + 0.9, -L / 2 + 0.5, L / 2 - 0.4, 2.6)
 	elseif typ == "suv" then
 		sitzY = 2.4
-		local unten = R + 0.5
-		k("Karosserie", V3(B, 2.8, L - 1), at(0, unten + 1.4, 0), farbe)
-		-- invisible collision box above the wheels (the wheels must never touch the body)
-		k("Kollision", V3(B, 1.3, L - 1), at(0, 2 * R + 0.95, 0), farbe, nil, { kollision = true, transparenz = 1, schatten = false })
-		k("Unterfahrschutz", V3(B - 1, 0.6, 1.2), at(0, unten + 0.1, -L / 2 + 0.6), Color3.fromRGB(150, 150, 155), Enum.Material.Metal)
-		k("Stossstange", V3(B - 0.2, 1.1, 0.8), at(0, unten + 0.6, -L / 2 + 0.3), SCHWARZ)
-		k("Stossstange", V3(B - 0.2, 1.1, 0.8), at(0, unten + 0.6, L / 2 - 0.3), SCHWARZ)
-		k("Kuehlergrill", V3(4.2, 1.2, 0.15), at(0, unten + 1.9, -L / 2 + 0.45), Color3.fromRGB(40, 40, 45), Enum.Material.DiamondPlate)
-		local oben = unten + 2.8
-		k("Dach", V3(B - 0.6, 0.35, 8.8), at(0, oben + 2.75, 1.2), farbe, nil, { kollision = true })
-		glas("Frontscheibe", V3(B - 0.8, 2.6, 1.6), at(0, oben + 1.3, -3.9), "WedgePart")
-		glas("Seitenscheiben", V3(B - 0.5, 2.5, 8.6), at(0, oben + 1.3, 1.2))
-		k("Heckteil", V3(B - 0.6, 2.6, 0.5), at(0, oben + 1.3, 5.6), farbe)
-		for _, s in { -1, 1 } do
-			k("Dachreling", V3(0.3, 0.3, 8), at(s * (B / 2 - 0.6), oben + 3.1, 1.2), Color3.fromRGB(170, 170, 175), Enum.Material.Metal)
-			k("Saeule", V3(0.4, 2.6, 0.5), at(s * (B / 2 - 0.4), oben + 1.3, 0.2), farbe)
-			k("Radlauf", V3(0.4, 1.0, 4.2), at(s * (B / 2 + 0.05), unten + 0.6, -A), SCHWARZ)
-			k("Radlauf", V3(0.4, 1.0, 4.2), at(s * (B / 2 + 0.05), unten + 0.6, A), SCHWARZ)
-			k("Trittbrett", V3(0.7, 0.25, 6), at(s * (B / 2 + 0.3), unten - 0.1, 0), Color3.fromRGB(60, 60, 65))
+		if suvVorlage then
+			suvRund()
+		else
+			local unten = R + 0.5
+			k("Karosserie", V3(B, 2.8, L - 1), at(0, unten + 1.4, 0), farbe)
+			-- invisible collision box above the wheels (the wheels must never touch the body)
+			k("Kollision", V3(B, 1.3, L - 1), at(0, 2 * R + 0.95, 0), farbe, nil, { kollision = true, transparenz = 1, schatten = false })
+			k("Unterfahrschutz", V3(B - 1, 0.6, 1.2), at(0, unten + 0.1, -L / 2 + 0.6), Color3.fromRGB(150, 150, 155), Enum.Material.Metal)
+			k("Stossstange", V3(B - 0.2, 1.1, 0.8), at(0, unten + 0.6, -L / 2 + 0.3), SCHWARZ)
+			k("Stossstange", V3(B - 0.2, 1.1, 0.8), at(0, unten + 0.6, L / 2 - 0.3), SCHWARZ)
+			k("Kuehlergrill", V3(4.2, 1.2, 0.15), at(0, unten + 1.9, -L / 2 + 0.45), Color3.fromRGB(40, 40, 45), Enum.Material.DiamondPlate)
+			local oben = unten + 2.8
+			k("Dach", V3(B - 0.6, 0.35, 8.8), at(0, oben + 2.75, 1.2), farbe, nil, { kollision = true })
+			glas("Frontscheibe", V3(B - 0.8, 2.6, 1.6), at(0, oben + 1.3, -3.9), "WedgePart")
+			glas("Seitenscheiben", V3(B - 0.5, 2.5, 8.6), at(0, oben + 1.3, 1.2))
+			k("Heckteil", V3(B - 0.6, 2.6, 0.5), at(0, oben + 1.3, 5.6), farbe)
+			for _, s in { -1, 1 } do
+				k("Dachreling", V3(0.3, 0.3, 8), at(s * (B / 2 - 0.6), oben + 3.1, 1.2), Color3.fromRGB(170, 170, 175), Enum.Material.Metal)
+				k("Saeule", V3(0.4, 2.6, 0.5), at(s * (B / 2 - 0.4), oben + 1.3, 0.2), farbe)
+				k("Radlauf", V3(0.4, 1.0, 4.2), at(s * (B / 2 + 0.05), unten + 0.6, -A), SCHWARZ)
+				k("Radlauf", V3(0.4, 1.0, 4.2), at(s * (B / 2 + 0.05), unten + 0.6, A), SCHWARZ)
+				k("Trittbrett", V3(0.7, 0.25, 6), at(s * (B / 2 + 0.3), unten - 0.1, 0), Color3.fromRGB(60, 60, 65))
+			end
+			local reserve = k("Reserverad", V3(0.8, 2.6, 2.6), at(0, unten + 1.6, L / 2 + 0.2) * CFrame.Angles(0, math.rad(90), 0), SCHWARZ, nil, { form = Enum.PartType.Cylinder })
+			reserve.CastShadow = false
+			lichter(unten + 1.9, -L / 2 + 0.45, L / 2 - 0.45, 2.6)
 		end
-		local reserve = k("Reserverad", V3(0.8, 2.6, 2.6), at(0, unten + 1.6, L / 2 + 0.2) * CFrame.Angles(0, math.rad(90), 0), SCHWARZ, nil, { form = Enum.PartType.Cylinder })
-		reserve.CastShadow = false
-		lichter(unten + 1.9, -L / 2 + 0.45, L / 2 - 0.45, 2.6)
 	elseif typ == "sport" then
 		local unten = R + 0.2
 		k("Karosserie", V3(B, 1.5, L - 1), at(0, unten + 0.75, 0), farbe)
@@ -4988,7 +5114,12 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 	-- number plates front and back
 	if kennzeichen then
 		for _, ende in { { -L / 2 + 0.05, Enum.NormalId.Front }, { L / 2 - 0.05, Enum.NormalId.Back } } do
-			local schild = k("Kennzeichen", V3(2.6, 0.7, 0.1), at(0, R + 0.9, ende[1] + (ende[1] < 0 and -0.12 or 0.12)), Color3.new(1, 1, 1), nil, { schatten = false })
+			local lage = at(0, R + 0.9, ende[1] + (ende[1] < 0 and -0.12 or 0.12))
+			if suvVorlage then
+				local q = SUV_POS[ende[1] < 0 and "KennzeichenVorne" or "KennzeichenHinten"]
+				lage = at(0, q[2], q[3] + (ende[1] < 0 and -0.08 or 0.08))
+			end
+			local schild = k("Kennzeichen", V3(2.6, 0.7, 0.1), lage, Color3.new(1, 1, 1), nil, { schatten = false })
 			local g = Instance.new("SurfaceGui")
 			g.Face = ende[2]
 			g.Parent = schild
@@ -5649,9 +5780,15 @@ function Pflege.anwenden(modell, typ, a, nurWerte)
 	local oben = karosserie and (karosserie.Position.Y + karosserie.Size.Y / 2 - chassis.Position.Y) or 2
 	local cf = chassis.CFrame
 	if a.spoiler then
-		tuningTeil(modell, chassis, "Spoiler", Vector3.new(6, 0.2, 1.4), cf * CFrame.new(0, oben + 1.1, laenge / 2 - 1.2) * CFrame.Angles(math.rad(6), 0, 0), Color3.fromRGB(25, 25, 28))
-		for _, s in { -1, 1 } do
-			tuningTeil(modell, chassis, "Spoilerstuetze", Vector3.new(0.25, 1.1, 0.6), cf * CFrame.new(s * 2.2, oben + 0.55, laenge / 2 - 1.2), Color3.fromRGB(25, 25, 28))
+		local dachSpoiler = modell:GetAttribute("SpoilerAmDach")
+		if dachSpoiler then
+			-- SUV with round body: a bigger roof spoiler instead of a trunk wing
+			tuningTeil(modell, chassis, "Spoiler", Vector3.new(6, 0.18, 1.2), cf * dachSpoiler * CFrame.Angles(math.rad(-8), 0, 0), Color3.fromRGB(25, 25, 28))
+		else
+			tuningTeil(modell, chassis, "Spoiler", Vector3.new(6, 0.2, 1.4), cf * CFrame.new(0, oben + 1.1, laenge / 2 - 1.2) * CFrame.Angles(math.rad(6), 0, 0), Color3.fromRGB(25, 25, 28))
+			for _, s in { -1, 1 } do
+				tuningTeil(modell, chassis, "Spoilerstuetze", Vector3.new(0.25, 1.1, 0.6), cf * CFrame.new(s * 2.2, oben + 0.55, laenge / 2 - 1.2), Color3.fromRGB(25, 25, 28))
+			end
 		end
 	end
 	if (a.neon or 0) > 0 then
@@ -6082,7 +6219,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v12 loaded")
+print("[Driving School] client v13 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -9011,7 +9148,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v12 loading")
+	print("[Driving School] start screen v13 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true

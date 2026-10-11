@@ -84,9 +84,15 @@ function Pflege.anwenden(modell, typ, a, nurWerte)
 	local oben = karosserie and (karosserie.Position.Y + karosserie.Size.Y / 2 - chassis.Position.Y) or 2
 	local cf = chassis.CFrame
 	if a.spoiler then
-		tuningTeil(modell, chassis, "Spoiler", Vector3.new(6, 0.2, 1.4), cf * CFrame.new(0, oben + 1.1, laenge / 2 - 1.2) * CFrame.Angles(math.rad(6), 0, 0), Color3.fromRGB(25, 25, 28))
-		for _, s in { -1, 1 } do
-			tuningTeil(modell, chassis, "Spoilerstuetze", Vector3.new(0.25, 1.1, 0.6), cf * CFrame.new(s * 2.2, oben + 0.55, laenge / 2 - 1.2), Color3.fromRGB(25, 25, 28))
+		local dachSpoiler = modell:GetAttribute("SpoilerAmDach")
+		if dachSpoiler then
+			-- SUV with round body: a bigger roof spoiler instead of a trunk wing
+			tuningTeil(modell, chassis, "Spoiler", Vector3.new(6, 0.18, 1.2), cf * dachSpoiler * CFrame.Angles(math.rad(-8), 0, 0), Color3.fromRGB(25, 25, 28))
+		else
+			tuningTeil(modell, chassis, "Spoiler", Vector3.new(6, 0.2, 1.4), cf * CFrame.new(0, oben + 1.1, laenge / 2 - 1.2) * CFrame.Angles(math.rad(6), 0, 0), Color3.fromRGB(25, 25, 28))
+			for _, s in { -1, 1 } do
+				tuningTeil(modell, chassis, "Spoilerstuetze", Vector3.new(0.25, 1.1, 0.6), cf * CFrame.new(s * 2.2, oben + 0.55, laenge / 2 - 1.2), Color3.fromRGB(25, 25, 28))
+			end
 		end
 	end
 	if (a.neon or 0) > 0 then

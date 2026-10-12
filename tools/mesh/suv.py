@@ -4,7 +4,7 @@ Passt zu Auto.MODELLE.suv: Räder R = 1.6 bei x = ±3.4, z = ±5.6, Länge 17.5.
 Aufruf:  python3 tools/mesh/suv.py  ->  dist/mesh/RangerX.obj, tools/mesh/suv_info.json, src/Karosserien.lua
 """
 import math
-from basis import Form, glatt, loft, sauber, zusammen, doppelseitig, dach_teil, saeulen_teil, verkleidung_teil, teil, erzeugen
+from basis import Form, glatt, loft, sauber, zusammen, doppelseitig, dach_teil, saeulen_teil, verkleidung_teil, teil, erzeugen, linie
 
 LH = 8.75              # halbe Länge
 ACHSE = 5.6
@@ -111,8 +111,9 @@ def anbauteile():
     t = [
         teil("Kuehlergrill", "grill", (3.6, 0.95, 0.15), plus(grill, dz=0.02)),
         teil("Grillchrom", "chrom", (3.7, 0.08, 0.1), plus(grill, dy=0.5, dz=-0.04)),
-        teil("Lufteinlass", "schwarz", (4.2, 0.5, 0.08), luft),
+        teil("Lufteinlass", "grill", (4.2, 0.5, 0.08), luft),
         teil("Unterfahrschutz", "chrom", (3.2, 0.18, 0.1), plus(luft, dy=-0.45, dz=-0.04)),
+        teil("Scheinwerferrahmen", "schwarz", (1.7, 0.44, 0.12), plus(sw, dz=0.1), True),
         teil("Scheinwerfer", "scheinwerfer", (1.5, 0.3, 0.2), plus(sw, dz=0.06), True),
         teil("Tagfahrlicht", "neon_weiss", (1.5, 0.06, 0.08), plus(sw, dy=-0.22, dz=0.02), True),
         teil("Blinker", "blinker", (0.3, 0.3, 0.2), plus(sw, dx=0.9, dz=0.12), True),
@@ -130,6 +131,10 @@ def anbauteile():
         teil("Dachspoiler", "lack", (5.4, 0.12, 0.6), ds),
         teil("Bremslicht_oben", "neon_rot", (1.2, 0.08, 0.1), plus(bl, dy=0.08, dz=0.25)),
     ]
+    # Fugen: drei Türkanten je Seite und die Haube
+    for z0 in (-2.95, 1.05, 3.3):
+        t += linie("Fuge", [[form.seite_x(y, z0) + 0.005, y, z0] for y in (2.0, 2.9, 3.8, 4.6)], spiegeln=True)
+    t += linie("Fuge", [[2.95, form.oben_y(2.95, z) + 0.008, z] for z in (-8.4, -7.0, -5.5, -4.0, -3.45)], spiegeln=True)
     kennz = {"vorne": [2.75, form.front_z(0, 2.75) - 0.05 + 0.04 - 0.08], "hinten": [3.45, form.heck_z(0, 3.45) + 0.05 - 0.04 + 0.08]}
     return t, kennz, [ds[1] + 0.15, ds[2] + 0.3]
 

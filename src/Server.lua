@@ -2527,7 +2527,33 @@ task.spawn(function()
 	local farben = {
 		kleinwagen = Color3.fromRGB(90, 170, 220), suv = Color3.fromRGB(30, 130, 70), limousine = Color3.fromRGB(20, 20, 24),
 		sport = Color3.fromRGB(200, 25, 30), renn = Color3.fromRGB(245, 190, 30), supersport = Color3.fromRGB(240, 110, 20),
+		track = Color3.fromRGB(20, 90, 200),
 	}
+	-- the 7th car (Striker TR) gets its own podium outside, in front of the showroom glass
+	local hatTrack = false
+	for _, p in autohaus:GetChildren() do
+		if p.Name == "Ausstellungsplatz" and p:GetAttribute("Typ") == "track" then hatTrack = true end
+	end
+	if not hatTrack then
+		local pos = Vector3.new(78, 0, -395)
+		local treffer = workspace:Raycast(pos + Vector3.new(0, 20, 0), Vector3.new(0, -40, 0))
+		local y = treffer and treffer.Position.Y or 0.2
+		local function neu(name, gr, lage, farbe, mat, form)
+			local p = Instance.new("Part")
+			p.Name, p.Size, p.CFrame, p.Color, p.Material, p.Anchored = name, gr, lage, farbe, mat, true
+			if form then p.Shape = form end
+			p.Parent = autohaus
+			return p
+		end
+		neu("Podest", Vector3.new(1, 16, 16), CFrame.new(pos.X, y + 0.5, pos.Z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(30, 30, 34), Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
+		local ring = neu("Podestlicht", Vector3.new(1.02, 16.4, 16.4), CFrame.new(pos.X, y + 0.45, pos.Z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(255, 60, 70), Enum.Material.Neon, Enum.PartType.Cylinder)
+		ring.CanCollide = false
+		local platz = neu("Ausstellungsplatz", Vector3.new(2, 1, 2), CFrame.new(pos.X, y + 1.5, pos.Z) * CFrame.Angles(0, math.rad(-120), 0), Color3.new(1, 0, 0), Enum.Material.SmoothPlastic)
+		platz.Transparency = 1
+		platz.CanCollide = false
+		platz.CanQuery = false
+		platz:SetAttribute("Typ", "track")
+	end
 	for _, platz in autohaus:GetChildren() do
 		local typ = platz.Name == "Ausstellungsplatz" and platz:GetAttribute("Typ")
 		if typ and Auto.MODELLE[typ] then

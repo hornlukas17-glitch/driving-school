@@ -15,7 +15,7 @@ Roblox-Fahrschulspiel von Lukas. Antworten an Lukas auf **Deutsch**, kurz und eh
   - LocalScript `FuehrerscheinClient` (`Client.lua`). `v{VERSION}` im Code wird beim Build ersetzt.
 - `tools/mock.luau` – Roblox-Nachbau zum Testen ohne Studio. `tests/*.luau` – Szenarien (laufen über `tools/runner.py`). Ein Test schlägt fehl, wenn eine `ERROR:`-Zeile erscheint.
 - Neue Funktion → passenden Test in `tests/` ergänzen.
-- `tools/mesh/` – Karosserie-Generatoren: `basis.py` (gemeinsam) + je Auto eine Formdatei (`suv.py`, `sport.py`). `python3 tools/mesh/<auto>.py` schreibt `dist/mesh/<Vorlage>.obj` und erzeugt `src/Karosserien.lua` neu (nie von Hand ändern). `Auto.bauenPrivat` nutzt die Karosserie, wenn das Modell im ServerStorage liegt; der Typ-Zweig braucht dafür `if rundVorlage then rundBauen() else <Block> end`. Vorschau: `python3 tools/mesh/render.py <obj> <info.json> <png> r,g,b`. Nur eigene Designs, keine Nachbauten echter Automodelle oder Marken.
+- `tools/mesh/` – Karosserie-Generatoren: `basis.py` (gemeinsam) + je Auto eine Formdatei (`suv.py`, `sport.py`, `track.py`). `python3 tools/mesh/<auto>.py` schreibt `dist/mesh/<Vorlage>.obj` und erzeugt `src/Karosserien.lua` neu (nie von Hand ändern). `Auto.bauenPrivat` nutzt die Karosserie, wenn das Modell im ServerStorage liegt; der Typ-Zweig braucht dafür `if rundVorlage then rundBauen() else <Block> end`. Vorschau: `python3 tools/mesh/render.py <obj> <info.json> <png> r,g,b`. Nur eigene Designs, keine Nachbauten echter Automodelle oder Marken.
 
 ## Daten
 DataStore `Fuehrerschein_v1` (nie umbenennen, sonst verlieren Spieler alles). Neue Felder immer mit Standardwert ergänzen. OrderedDataStores `Rangliste_Level/Km/Perfekt`.
@@ -25,6 +25,7 @@ Stadt |x|,|z| ≤ 324 (50 km/h) · Autobahn z = -520 (130) · Siedlungen x 405�
 Tempolimits zentral in `src/Verkehrsregeln.lua` (WOHNSTRASSEN muss zum Generator passen).
 
 ## Offene Punkte
+- **Stand 12.10. (morgen weiter):** v15 ist in Lukas' Studio (Place1.rbxl) per Patch eingespielt, aber nur im offenen Studio – er muss speichern. Nächster Schritt: Lukas importiert die neuen `RangerX.obj`, `VelocityGT.obj` (Säulen-Fix) und `StrikerTR.obj` (+ .mtl) und entfernt die alten aus dem ServerStorage; dann Modelle in den ServerStorage schieben, Vorschau bauen, Bilder prüfen (Fugen, Felgen, Track-Coupé). Studio-Verbindung läuft über den MCP-Server von Roblox Studio + Claude Desktop.
 - Etappe 2 Rest: Busfahrer-Job, Abschlepp-Job.
 - Etappe 3: Spieler-Polizei, Gebrauchtwagenmarkt, echte Spieler als Fahrlehrer, Rettungsdienst/Feuerwehr, Schaltgetriebe, Hupe (Sound-ID von Lukas nötig).
 - Noch nie in echtem Studio getestet – Fehlermeldungen von Lukas haben Vorrang.

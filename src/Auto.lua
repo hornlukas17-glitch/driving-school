@@ -840,13 +840,18 @@ Auto.MODELLE = {
 		R = 1.3, spur = 3.3, achse = 5.0, laenge = 15.5, breite = 7.2,
 		werte = { MaxTempo = 170, Antrieb = 7200, Bremse = 18000, Lenkwinkel = 32, Grip = 16, Lenkdirekt = 15, Anpressdruck = 75 },
 	},
+	track = {
+		name = "Striker TR", art = "Track car", preis = 22000, beschreibung = "A road-legal track coupe with a huge rear wing. 190 km/h top speed.",
+		R = 1.35, spur = 3.45, achse = 5.3, laenge = 16.5, breite = 7.6,
+		werte = { MaxTempo = 190, Antrieb = 8400, Bremse = 21000, Lenkwinkel = 31, Grip = 17, Lenkdirekt = 16, Anpressdruck = 88 },
+	},
 	renn = {
 		name = "Apex R1", art = "Race car", preis = 35000, beschreibung = "A real race car with a huge rear wing. 210 km/h top speed.",
 		R = 1.35, spur = 3.5, achse = 5.4, laenge = 17, breite = 7.8,
 		werte = { MaxTempo = 210, Antrieb = 9500, Bremse = 22000, Lenkwinkel = 30, Grip = 18, Lenkdirekt = 16, Anpressdruck = 95 },
 	},
 }
-Auto.MODELL_REIHENFOLGE = { "kleinwagen", "suv", "limousine", "sport", "renn", "supersport" }
+Auto.MODELL_REIHENFOLGE = { "kleinwagen", "suv", "limousine", "sport", "track", "renn", "supersport" }
 
 -- ---------------------------------------------------------------
 -- Round bodies for private cars (own designs, made with tools/mesh/*.py -> dist/mesh/<vorlage>.obj).
@@ -865,6 +870,7 @@ local ANBAU_ART = {
 	neon_weiss = { farbe = Color3.fromRGB(235, 235, 240), mat = Enum.Material.Neon },
 	neon_rot = { farbe = Color3.fromRGB(170, 15, 15), mat = Enum.Material.Neon },
 	blinker = { farbe = Color3.fromRGB(150, 95, 35), mat = Enum.Material.SmoothPlastic },
+	fuge = { farbe = Color3.fromRGB(8, 8, 10), mat = Enum.Material.SmoothPlastic },
 }
 
 local function meshTeil(vorlage, name)
@@ -1006,6 +1012,10 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 				if t.a == "blinker" then name = s < 0 and "BlinkerL" or "BlinkerR" end
 				local lage = at(s * t.p[1], t.p[2], t.p[3])
 				if t.r then lage *= CFrame.Angles(math.rad(t.r[1]), math.rad(s * t.r[2]), math.rad(s * t.r[3])) end
+				if t.d then -- line along the body (panel gaps)
+					local richtung = cf:VectorToWorldSpace(Vector3.new(s * t.d[1], t.d[2], t.d[3]))
+					lage = CFrame.lookAt(lage.Position, lage.Position + richtung)
+				end
 				local teil = k(name, v3(t.g), lage, t.a == "lack" and farbe or art.farbe, art.mat, { schatten = t.a == "lack" })
 				if t.a == "scheinwerfer" then
 					local licht = Instance.new("SpotLight")
@@ -1133,6 +1143,20 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 			end
 			lichter(unten + 1.0, -L / 2 + 0.45, L / 2 - 0.45, 2.5)
 		end
+	elseif typ == "track" then
+		if rundVorlage then
+			rundBauen()
+		else
+			-- simple block body until the round body (StrikerTR) is imported
+			local unten = R + 0.15
+			k("Karosserie", V3(B, 1.5, L - 1), at(0, unten + 0.75, 0), farbe)
+			k("Kollision", V3(B, 0.35, L - 1), at(0, 2 * R + 0.25, 0), farbe, nil, { kollision = true, transparenz = 1, schatten = false })
+			local oben = unten + 1.5
+			k("Dach", V3(B - 1.6, 0.3, 3.6), at(0, oben + 1.8, 1.6), farbe, nil, { kollision = true })
+			glas("Seitenscheiben", V3(B - 1.5, 1.6, 4.4), at(0, oben + 0.85, 1.4))
+			k("Heckfluegel", V3(B - 0.6, 0.15, 1.3), at(0, oben + 1.4, L / 2 - 1.2), SCHWARZ)
+			lichter(unten + 0.9, -L / 2 + 0.45, L / 2 - 0.45, 2.6)
+		end
 	else -- race car
 		sitzY = 1.2
 		local unten = R + 0.05
@@ -1214,7 +1238,11 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 	for _, x in { -1.5, 1.5 } do
 		k("Sitz", V3(2.1, 0.5, 2.1), at(x, sitzY - 0.1, 0.6), INNEN, Enum.Material.Fabric)
 		k("Rueckenlehne", V3(2.1, 2.4, 0.4), at(x, sitzY + 1.1, 1.8) * CFrame.Angles(math.rad(-12), 0, 0), typ == "renn" and Color3.fromRGB(180, 30, 30) or INNEN, Enum.Material.Fabric)
+		k("Kopfstuetze", V3(1.2, 0.7, 0.35), at(x, sitzY + 2.55, 2.05) * CFrame.Angles(math.rad(-12), 0, 0), INNEN, Enum.Material.Fabric)
 	end
+	-- a bit of interior that you can see through the windows
+	k("Mittelkonsole", V3(0.8, 0.9, 2.6), at(0, sitzY + 0.35, armZ + 1.6), Color3.fromRGB(35, 35, 38))
+	k("Tacho", V3(1.2, 0.45, 0.06), at(-1.5, sitzY + 2.1, armZ + 0.3) * CFrame.Angles(math.rad(-25), 0, 0), Color3.fromRGB(60, 160, 255), Enum.Material.Neon, { schatten = false })
 
 	-- seats
 	local function sitzBauen(klasse, name, x)
@@ -1241,8 +1269,34 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 
 	-- wheels (same hinge setup as the driving school car)
 	local reifen = PhysicalProperties.new(0.9, 2, 0, 100, 1)
-	local felgenFarbe = typ == "renn" and Color3.fromRGB(40, 40, 45) or (typ == "sport" and Color3.fromRGB(220, 180, 60) or CHROM)
-	local function rad(x, z)
+	local felgenFarbe = typ == "renn" and Color3.fromRGB(40, 40, 45) or (typ == "sport" and Color3.fromRGB(45, 45, 50) or CHROM)
+	-- spoke rims and brake calipers: only looks, all massless and without collision (driving feel unchanged)
+	local SPEICHEN = { kleinwagen = 4, suv = 6, limousine = 5, sport = 5, track = 5, renn = 6, supersport = 10 }
+	local SATTEL_FARBE = {
+		sport = Color3.fromRGB(235, 175, 20), renn = Color3.fromRGB(200, 25, 30), supersport = Color3.fromRGB(200, 25, 30),
+		track = Color3.fromRGB(235, 95, 20),
+		suv = Color3.fromRGB(70, 70, 75), limousine = Color3.fromRGB(70, 70, 75), kleinwagen = Color3.fromRGB(70, 70, 75),
+	}
+	local function deko(name, gr, lage, farbeT, mat, an, form)
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Size = gr
+		p.CFrame = lage
+		p.Color = farbeT
+		p.Material = mat or Enum.Material.SmoothPlastic
+		p.CanCollide = false
+		p.CanTouch = false
+		p.CanQuery = false
+		p.Massless = true
+		p.CastShadow = false
+		if form then p.Shape = form end
+		p.Parent = m
+		local w = Instance.new("WeldConstraint")
+		w.Part0, w.Part1 = an, p
+		w.Parent = p
+		return p
+	end
+	local function rad(x, z, halter)
 		local r = Instance.new("Part")
 		r.Name = "Rad"
 		r.Shape = Enum.PartType.Cylinder
@@ -1251,24 +1305,29 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		r.Color = SCHWARZ
 		r.CustomPhysicalProperties = reifen
 		r.Parent = m
-		local felge = Instance.new("Part")
-		felge.Name = "Felge"
-		felge.Shape = Enum.PartType.Cylinder
-		felge.Size = Vector3.new(r.Size.X + 0.04, R * 1.25, R * 1.25)
-		felge.CFrame = r.CFrame
-		felge.Color = felgenFarbe
-		felge.Material = Enum.Material.Metal
-		felge.CanCollide = false
-		felge.Massless = true
-		felge.Parent = m
-		local w = Instance.new("WeldConstraint")
-		w.Part0, w.Part1 = r, felge
-		w.Parent = felge
+		-- outer side of the wheel (x points outwards)
+		local aussen = math.sign(x)
+		local hw = r.Size.X / 2
+		local function schicht(dx) return r.CFrame * CFrame.new(aussen * (hw + dx), 0, 0) end
+		local felgeR = R * 0.66
+		deko("Felge", Vector3.new(0.04, felgeR * 2, felgeR * 2), schicht(0.02), felgenFarbe, Enum.Material.Metal, r, Enum.PartType.Cylinder)
+		deko("Felgenbett", Vector3.new(0.04, felgeR * 1.8, felgeR * 1.8), schicht(0.04), Color3.fromRGB(18, 18, 20), nil, r, Enum.PartType.Cylinder)
+		-- brake caliper: fixed to the chassis / steering knuckle, so it does not spin
+		local sattelLage = schicht(0.07) * CFrame.Angles(math.rad(-40), 0, 0) * CFrame.new(0, felgeR * 0.55, 0)
+		deko("Bremssattel", Vector3.new(0.05, felgeR * 0.32, felgeR * 0.75), sattelLage, SATTEL_FARBE[typ] or SATTEL_FARBE.suv, nil, halter)
+		deko("Bremsscheibe", Vector3.new(0.03, felgeR * 1.45, felgeR * 1.45), schicht(0.055), Color3.fromRGB(95, 95, 100), Enum.Material.Metal, r, Enum.PartType.Cylinder)
+		local n = SPEICHEN[typ] or 5
+		for i = 1, n do
+			local spoke = schicht(0.1) * CFrame.Angles(math.rad(360 / n * i), 0, 0) * CFrame.new(0, felgeR * 0.48, 0)
+			deko("Felge", Vector3.new(0.05, felgeR * 0.9, n > 6 and 0.12 or 0.2), spoke, felgenFarbe, Enum.Material.Metal, r)
+		end
+		deko("Felge", Vector3.new(0.06, felgeR * 0.36, felgeR * 0.36), schicht(0.12), felgenFarbe, Enum.Material.Metal, r, Enum.PartType.Cylinder)
+		deko("Radmutter", Vector3.new(0.04, felgeR * 0.14, felgeR * 0.14), schicht(0.16), Color3.fromRGB(30, 30, 33), Enum.Material.Metal, r, Enum.PartType.Cylinder)
 		return r
 	end
 	for _, s in { -1, 1 } do
 		local seite = s < 0 and "L" or "R"
-		local hinten = rad(s * SP, A)
+		local hinten = rad(s * SP, A, chassis)
 		local motor = Instance.new("HingeConstraint")
 		motor.Name = "Motor" .. seite
 		motor.Attachment0 = anhang(chassis, "HintenA" .. seite, CFrame.new(s * SP, 0, A))
@@ -1298,7 +1357,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		servo.TargetAngle = 0
 		servo.Parent = chassis
 
-		local vorne = rad(s * SP, -A)
+		local vorne = rad(s * SP, -A, knoten)
 		local frei = Instance.new("HingeConstraint")
 		frei.Name = "Vorderrad" .. seite
 		frei.Attachment0 = anhang(knoten, "RadA", CFrame.new(s * 0.6, 0, 0))

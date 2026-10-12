@@ -3420,7 +3420,33 @@ task.spawn(function()
 	local farben = {
 		kleinwagen = Color3.fromRGB(90, 170, 220), suv = Color3.fromRGB(30, 130, 70), limousine = Color3.fromRGB(20, 20, 24),
 		sport = Color3.fromRGB(200, 25, 30), renn = Color3.fromRGB(245, 190, 30), supersport = Color3.fromRGB(240, 110, 20),
+		track = Color3.fromRGB(20, 90, 200),
 	}
+	-- the 7th car (Striker TR) gets its own podium outside, in front of the showroom glass
+	local hatTrack = false
+	for _, p in autohaus:GetChildren() do
+		if p.Name == "Ausstellungsplatz" and p:GetAttribute("Typ") == "track" then hatTrack = true end
+	end
+	if not hatTrack then
+		local pos = Vector3.new(78, 0, -395)
+		local treffer = workspace:Raycast(pos + Vector3.new(0, 20, 0), Vector3.new(0, -40, 0))
+		local y = treffer and treffer.Position.Y or 0.2
+		local function neu(name, gr, lage, farbe, mat, form)
+			local p = Instance.new("Part")
+			p.Name, p.Size, p.CFrame, p.Color, p.Material, p.Anchored = name, gr, lage, farbe, mat, true
+			if form then p.Shape = form end
+			p.Parent = autohaus
+			return p
+		end
+		neu("Podest", Vector3.new(1, 16, 16), CFrame.new(pos.X, y + 0.5, pos.Z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(30, 30, 34), Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
+		local ring = neu("Podestlicht", Vector3.new(1.02, 16.4, 16.4), CFrame.new(pos.X, y + 0.45, pos.Z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(255, 60, 70), Enum.Material.Neon, Enum.PartType.Cylinder)
+		ring.CanCollide = false
+		local platz = neu("Ausstellungsplatz", Vector3.new(2, 1, 2), CFrame.new(pos.X, y + 1.5, pos.Z) * CFrame.Angles(0, math.rad(-120), 0), Color3.new(1, 0, 0), Enum.Material.SmoothPlastic)
+		platz.Transparency = 1
+		platz.CanCollide = false
+		platz.CanQuery = false
+		platz:SetAttribute("Typ", "track")
+	end
 	for _, platz in autohaus:GetChildren() do
 		local typ = platz.Name == "Ausstellungsplatz" and platz:GetAttribute("Typ")
 		if typ and Auto.MODELLE[typ] then
@@ -4758,13 +4784,18 @@ Auto.MODELLE = {
 		R = 1.3, spur = 3.3, achse = 5.0, laenge = 15.5, breite = 7.2,
 		werte = { MaxTempo = 170, Antrieb = 7200, Bremse = 18000, Lenkwinkel = 32, Grip = 16, Lenkdirekt = 15, Anpressdruck = 75 },
 	},
+	track = {
+		name = "Striker TR", art = "Track car", preis = 22000, beschreibung = "A road-legal track coupe with a huge rear wing. 190 km/h top speed.",
+		R = 1.35, spur = 3.45, achse = 5.3, laenge = 16.5, breite = 7.6,
+		werte = { MaxTempo = 190, Antrieb = 8400, Bremse = 21000, Lenkwinkel = 31, Grip = 17, Lenkdirekt = 16, Anpressdruck = 88 },
+	},
 	renn = {
 		name = "Apex R1", art = "Race car", preis = 35000, beschreibung = "A real race car with a huge rear wing. 210 km/h top speed.",
 		R = 1.35, spur = 3.5, achse = 5.4, laenge = 17, breite = 7.8,
 		werte = { MaxTempo = 210, Antrieb = 9500, Bremse = 22000, Lenkwinkel = 30, Grip = 18, Lenkdirekt = 16, Anpressdruck = 95 },
 	},
 }
-Auto.MODELL_REIHENFOLGE = { "kleinwagen", "suv", "limousine", "sport", "renn", "supersport" }
+Auto.MODELL_REIHENFOLGE = { "kleinwagen", "suv", "limousine", "sport", "track", "renn", "supersport" }
 
 -- ---------------------------------------------------------------
 -- Round bodies for private cars (own designs, made with tools/mesh/*.py -> dist/mesh/<vorlage>.obj).
@@ -4783,6 +4814,7 @@ local ANBAU_ART = {
 	neon_weiss = { farbe = Color3.fromRGB(235, 235, 240), mat = Enum.Material.Neon },
 	neon_rot = { farbe = Color3.fromRGB(170, 15, 15), mat = Enum.Material.Neon },
 	blinker = { farbe = Color3.fromRGB(150, 95, 35), mat = Enum.Material.SmoothPlastic },
+	fuge = { farbe = Color3.fromRGB(8, 8, 10), mat = Enum.Material.SmoothPlastic },
 }
 
 local function meshTeil(vorlage, name)
@@ -4924,6 +4956,10 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 				if t.a == "blinker" then name = s < 0 and "BlinkerL" or "BlinkerR" end
 				local lage = at(s * t.p[1], t.p[2], t.p[3])
 				if t.r then lage *= CFrame.Angles(math.rad(t.r[1]), math.rad(s * t.r[2]), math.rad(s * t.r[3])) end
+				if t.d then -- line along the body (panel gaps)
+					local richtung = cf:VectorToWorldSpace(Vector3.new(s * t.d[1], t.d[2], t.d[3]))
+					lage = CFrame.lookAt(lage.Position, lage.Position + richtung)
+				end
 				local teil = k(name, v3(t.g), lage, t.a == "lack" and farbe or art.farbe, art.mat, { schatten = t.a == "lack" })
 				if t.a == "scheinwerfer" then
 					local licht = Instance.new("SpotLight")
@@ -5051,6 +5087,20 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 			end
 			lichter(unten + 1.0, -L / 2 + 0.45, L / 2 - 0.45, 2.5)
 		end
+	elseif typ == "track" then
+		if rundVorlage then
+			rundBauen()
+		else
+			-- simple block body until the round body (StrikerTR) is imported
+			local unten = R + 0.15
+			k("Karosserie", V3(B, 1.5, L - 1), at(0, unten + 0.75, 0), farbe)
+			k("Kollision", V3(B, 0.35, L - 1), at(0, 2 * R + 0.25, 0), farbe, nil, { kollision = true, transparenz = 1, schatten = false })
+			local oben = unten + 1.5
+			k("Dach", V3(B - 1.6, 0.3, 3.6), at(0, oben + 1.8, 1.6), farbe, nil, { kollision = true })
+			glas("Seitenscheiben", V3(B - 1.5, 1.6, 4.4), at(0, oben + 0.85, 1.4))
+			k("Heckfluegel", V3(B - 0.6, 0.15, 1.3), at(0, oben + 1.4, L / 2 - 1.2), SCHWARZ)
+			lichter(unten + 0.9, -L / 2 + 0.45, L / 2 - 0.45, 2.6)
+		end
 	else -- race car
 		sitzY = 1.2
 		local unten = R + 0.05
@@ -5132,7 +5182,11 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 	for _, x in { -1.5, 1.5 } do
 		k("Sitz", V3(2.1, 0.5, 2.1), at(x, sitzY - 0.1, 0.6), INNEN, Enum.Material.Fabric)
 		k("Rueckenlehne", V3(2.1, 2.4, 0.4), at(x, sitzY + 1.1, 1.8) * CFrame.Angles(math.rad(-12), 0, 0), typ == "renn" and Color3.fromRGB(180, 30, 30) or INNEN, Enum.Material.Fabric)
+		k("Kopfstuetze", V3(1.2, 0.7, 0.35), at(x, sitzY + 2.55, 2.05) * CFrame.Angles(math.rad(-12), 0, 0), INNEN, Enum.Material.Fabric)
 	end
+	-- a bit of interior that you can see through the windows
+	k("Mittelkonsole", V3(0.8, 0.9, 2.6), at(0, sitzY + 0.35, armZ + 1.6), Color3.fromRGB(35, 35, 38))
+	k("Tacho", V3(1.2, 0.45, 0.06), at(-1.5, sitzY + 2.1, armZ + 0.3) * CFrame.Angles(math.rad(-25), 0, 0), Color3.fromRGB(60, 160, 255), Enum.Material.Neon, { schatten = false })
 
 	-- seats
 	local function sitzBauen(klasse, name, x)
@@ -5159,8 +5213,34 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 
 	-- wheels (same hinge setup as the driving school car)
 	local reifen = PhysicalProperties.new(0.9, 2, 0, 100, 1)
-	local felgenFarbe = typ == "renn" and Color3.fromRGB(40, 40, 45) or (typ == "sport" and Color3.fromRGB(220, 180, 60) or CHROM)
-	local function rad(x, z)
+	local felgenFarbe = typ == "renn" and Color3.fromRGB(40, 40, 45) or (typ == "sport" and Color3.fromRGB(45, 45, 50) or CHROM)
+	-- spoke rims and brake calipers: only looks, all massless and without collision (driving feel unchanged)
+	local SPEICHEN = { kleinwagen = 4, suv = 6, limousine = 5, sport = 5, track = 5, renn = 6, supersport = 10 }
+	local SATTEL_FARBE = {
+		sport = Color3.fromRGB(235, 175, 20), renn = Color3.fromRGB(200, 25, 30), supersport = Color3.fromRGB(200, 25, 30),
+		track = Color3.fromRGB(235, 95, 20),
+		suv = Color3.fromRGB(70, 70, 75), limousine = Color3.fromRGB(70, 70, 75), kleinwagen = Color3.fromRGB(70, 70, 75),
+	}
+	local function deko(name, gr, lage, farbeT, mat, an, form)
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Size = gr
+		p.CFrame = lage
+		p.Color = farbeT
+		p.Material = mat or Enum.Material.SmoothPlastic
+		p.CanCollide = false
+		p.CanTouch = false
+		p.CanQuery = false
+		p.Massless = true
+		p.CastShadow = false
+		if form then p.Shape = form end
+		p.Parent = m
+		local w = Instance.new("WeldConstraint")
+		w.Part0, w.Part1 = an, p
+		w.Parent = p
+		return p
+	end
+	local function rad(x, z, halter)
 		local r = Instance.new("Part")
 		r.Name = "Rad"
 		r.Shape = Enum.PartType.Cylinder
@@ -5169,24 +5249,29 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		r.Color = SCHWARZ
 		r.CustomPhysicalProperties = reifen
 		r.Parent = m
-		local felge = Instance.new("Part")
-		felge.Name = "Felge"
-		felge.Shape = Enum.PartType.Cylinder
-		felge.Size = Vector3.new(r.Size.X + 0.04, R * 1.25, R * 1.25)
-		felge.CFrame = r.CFrame
-		felge.Color = felgenFarbe
-		felge.Material = Enum.Material.Metal
-		felge.CanCollide = false
-		felge.Massless = true
-		felge.Parent = m
-		local w = Instance.new("WeldConstraint")
-		w.Part0, w.Part1 = r, felge
-		w.Parent = felge
+		-- outer side of the wheel (x points outwards)
+		local aussen = math.sign(x)
+		local hw = r.Size.X / 2
+		local function schicht(dx) return r.CFrame * CFrame.new(aussen * (hw + dx), 0, 0) end
+		local felgeR = R * 0.66
+		deko("Felge", Vector3.new(0.04, felgeR * 2, felgeR * 2), schicht(0.02), felgenFarbe, Enum.Material.Metal, r, Enum.PartType.Cylinder)
+		deko("Felgenbett", Vector3.new(0.04, felgeR * 1.8, felgeR * 1.8), schicht(0.04), Color3.fromRGB(18, 18, 20), nil, r, Enum.PartType.Cylinder)
+		-- brake caliper: fixed to the chassis / steering knuckle, so it does not spin
+		local sattelLage = schicht(0.07) * CFrame.Angles(math.rad(-40), 0, 0) * CFrame.new(0, felgeR * 0.55, 0)
+		deko("Bremssattel", Vector3.new(0.05, felgeR * 0.32, felgeR * 0.75), sattelLage, SATTEL_FARBE[typ] or SATTEL_FARBE.suv, nil, halter)
+		deko("Bremsscheibe", Vector3.new(0.03, felgeR * 1.45, felgeR * 1.45), schicht(0.055), Color3.fromRGB(95, 95, 100), Enum.Material.Metal, r, Enum.PartType.Cylinder)
+		local n = SPEICHEN[typ] or 5
+		for i = 1, n do
+			local spoke = schicht(0.1) * CFrame.Angles(math.rad(360 / n * i), 0, 0) * CFrame.new(0, felgeR * 0.48, 0)
+			deko("Felge", Vector3.new(0.05, felgeR * 0.9, n > 6 and 0.12 or 0.2), spoke, felgenFarbe, Enum.Material.Metal, r)
+		end
+		deko("Felge", Vector3.new(0.06, felgeR * 0.36, felgeR * 0.36), schicht(0.12), felgenFarbe, Enum.Material.Metal, r, Enum.PartType.Cylinder)
+		deko("Radmutter", Vector3.new(0.04, felgeR * 0.14, felgeR * 0.14), schicht(0.16), Color3.fromRGB(30, 30, 33), Enum.Material.Metal, r, Enum.PartType.Cylinder)
 		return r
 	end
 	for _, s in { -1, 1 } do
 		local seite = s < 0 and "L" or "R"
-		local hinten = rad(s * SP, A)
+		local hinten = rad(s * SP, A, chassis)
 		local motor = Instance.new("HingeConstraint")
 		motor.Name = "Motor" .. seite
 		motor.Attachment0 = anhang(chassis, "HintenA" .. seite, CFrame.new(s * SP, 0, A))
@@ -5216,7 +5301,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		servo.TargetAngle = 0
 		servo.Parent = chassis
 
-		local vorne = rad(s * SP, -A)
+		local vorne = rad(s * SP, -A, knoten)
 		local frei = Instance.new("HingeConstraint")
 		frei.Name = "Vorderrad" .. seite
 		frei.Attachment0 = anhang(knoten, "RadA", CFrame.new(s * 0.6, 0, 0))
@@ -5688,7 +5773,7 @@ local Pflege = {}
 
 Pflege.TANKPREIS = 1.5                 -- coins per % of fuel
 Pflege.REICHWEITE = {                  -- km per full tank
-	kleinwagen = 10, suv = 7, limousine = 9, sport = 7, renn = 5, supersport = 6,
+	kleinwagen = 10, suv = 7, limousine = 9, sport = 7, track = 6, renn = 5, supersport = 6,
 }
 Pflege.PANNENHILFE = { preis = 120, prozent = 15 } -- roadside fuel delivery
 Pflege.ABSCHLEPPEN = 200                -- broken car is towed to the garage
@@ -6216,19 +6301,19 @@ return {
 			Karosserie = { groesse = { 8.0741, 2.5, 15.5 }, mitte = { 0, 1.8, 0 } },
 			Verkleidung = { groesse = { 8.2357, 2.39, 15.562 }, mitte = { 0, 1.745, 0 } },
 			Glas = { groesse = { 6.0368, 2.1035, 9 }, mitte = { 0, 3.5781, 2.2 } },
-			Dach = { groesse = { 6.1209, 2.0564, 6.5 }, mitte = { -0, 3.6318, 3.25 } },
+			Dach = { groesse = { 6.1209, 1.8064, 6.5 }, mitte = { -0, 3.7568, 3.25 } },
 		},
 		anbau = {
 			{ n = "Scheinwerfer", a = "scheinwerfer", g = { 1.35, 0.16, 0.25 }, p = { 2.35, 1.62, -7.3 }, s = true, r = { 0, -14, 0 } },
 			{ n = "Tagfahrlicht", a = "neon_weiss", g = { 1.25, 0.05, 0.08 }, p = { 2.35, 1.47, -7.29 }, s = true, r = { 0, -14, 0 } },
 			{ n = "Blinker", a = "blinker", g = { 0.3, 0.14, 0.2 }, p = { 3.1, 1.62, -7.1 }, s = true, r = { 0, -14, 0 } },
-			{ n = "Lufteinlass", a = "schwarz", g = { 3.4, 0.42, 0.1 }, p = { 0, 0.88, -7.755 }, s = false },
-			{ n = "Lufteinlass", a = "schwarz", g = { 0.95, 0.5, 0.1 }, p = { 2.55, 0.95, -7.13 }, s = true, r = { 0, -20, 0 } },
+			{ n = "Lufteinlass", a = "grill", g = { 3.4, 0.42, 0.1 }, p = { 0, 0.88, -7.755 }, s = false },
+			{ n = "Lufteinlass", a = "grill", g = { 0.95, 0.5, 0.1 }, p = { 2.55, 0.95, -7.13 }, s = true, r = { 0, -20, 0 } },
 			{ n = "Frontsplitter", a = "carbon", g = { 5.8, 0.07, 0.45 }, p = { 0, 0.6, -7.37 }, s = false },
 			{ n = "Haubenkante", a = "schwarz", g = { 2.2, 0.04, 0.6 }, p = { 0, 2.255, -5.2 }, s = false, r = { -11, 0, 0 } },
 			{ n = "Spiegel", a = "lack", g = { 0.55, 0.38, 0.75 }, p = { 3.795, 2.6, -1.3 }, s = true },
 			{ n = "Spiegelfuss", a = "schwarz", g = { 0.45, 0.12, 0.3 }, p = { 3.455, 2.47, -1.2 }, s = true },
-			{ n = "Seitenlufteinlass", a = "schwarz", g = { 0.06, 0.8, 1.6 }, p = { 3.885, 1.75, 3.15 }, s = true, r = { 0, 6, 0 } },
+			{ n = "Seitenlufteinlass", a = "grill", g = { 0.06, 0.8, 1.6 }, p = { 3.885, 1.75, 3.15 }, s = true, r = { 0, 6, 0 } },
 			{ n = "Ruecklicht", a = "neon_rot", g = { 1.6, 0.13, 0.15 }, p = { 2.3, 2.55, 7.72 }, s = true },
 			{ n = "Ruecklichtband", a = "neon_rot", g = { 1.6, 0.06, 0.08 }, p = { 0, 2.55, 7.745 }, s = false },
 			{ n = "Blinker", a = "blinker", g = { 0.3, 0.13, 0.15 }, p = { 3.25, 2.55, 7.7 }, s = true },
@@ -6237,6 +6322,16 @@ return {
 			{ n = "Diffusor", a = "carbon", g = { 4.6, 0.08, 0.9 }, p = { 0, 0.98, 7.2 }, s = false },
 			{ n = "Abrisskante", a = "lack", g = { 5.8, 0.1, 0.65 }, p = { 0, 3.097, 7.25 }, s = false, r = { -9, 0, 0 } },
 			{ n = "Motorgitter", a = "schwarz", g = { 2.6, 0.04, 1.6 }, p = { 0, 3.394, 5.3 }, s = false, r = { -12, 0, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.539 }, p = { 3.685, 1.25, -1.95 }, s = true, d = { 0.1191, 0.9929, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.535 }, p = { 3.705, 1.75, -1.95 }, s = true, d = { -0.04, 0.9992, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.654 }, p = { 3.468, 2.21, -1.95 }, s = true, d = { -0.7348, 0.6783, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.546 }, p = { 3.763, 1.25, 1.9 }, s = true, d = { 0.2055, 0.9787, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.535 }, p = { 3.815, 1.75, 1.9 }, s = true, d = { 0, 1, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.459 }, p = { 3.788, 2.21, 1.9 }, s = true, d = { -0.1298, 0.9915, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.162 }, p = { 2, 1.991, -6.55 }, s = true, d = { 0, 0.2174, 0.9761 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.55 }, p = { 2, 2.221, -5.25 }, s = true, d = { 0, 0.1419, 0.9899 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.544 }, p = { 2, 2.411, -3.75 }, s = true, d = { 0, 0.1093, 0.994 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.638 }, p = { 2, 2.523, -2.7 }, s = true, d = { 0, 0.0995, 0.995 } },
 		},
 		kollision = {
 			{ g = { 7.2, 0.35, 14.5 }, p = { 0, 2.85, 0 } },
@@ -6251,13 +6346,14 @@ return {
 			Karosserie = { groesse = { 7.797, 3.77, 17.5 }, mitte = { 0, 3.035, 0 } },
 			Verkleidung = { groesse = { 7.9685, 2.7691, 17.57 }, mitte = { 0, 2.5346, 0 } },
 			Glas = { groesse = { 7.1621, 2.6275, 11.75 }, mitte = { 0, 6.0438, 2.575 } },
-			Dach = { groesse = { 7.2609, 2.9594, 9 }, mitte = { 0, 5.9078, 3.4 } },
+			Dach = { groesse = { 7.2609, 2.7094, 9 }, mitte = { 0, 6.0328, 3.4 } },
 		},
 		anbau = {
 			{ n = "Kuehlergrill", a = "grill", g = { 3.6, 0.95, 0.15 }, p = { 0, 3.65, -8.785 }, s = false },
 			{ n = "Grillchrom", a = "chrom", g = { 3.7, 0.08, 0.1 }, p = { 0, 4.15, -8.845 }, s = false },
-			{ n = "Lufteinlass", a = "schwarz", g = { 4.2, 0.5, 0.08 }, p = { 0, 2.05, -8.755 }, s = false },
+			{ n = "Lufteinlass", a = "grill", g = { 4.2, 0.5, 0.08 }, p = { 0, 2.05, -8.755 }, s = false },
 			{ n = "Unterfahrschutz", a = "chrom", g = { 3.2, 0.18, 0.1 }, p = { 0, 1.6, -8.795 }, s = false },
+			{ n = "Scheinwerferrahmen", a = "schwarz", g = { 1.7, 0.44, 0.12 }, p = { 2.35, 4.2, -8.735 }, s = true },
 			{ n = "Scheinwerfer", a = "scheinwerfer", g = { 1.5, 0.3, 0.2 }, p = { 2.35, 4.2, -8.775 }, s = true },
 			{ n = "Tagfahrlicht", a = "neon_weiss", g = { 1.5, 0.06, 0.08 }, p = { 2.35, 3.98, -8.815 }, s = true },
 			{ n = "Blinker", a = "blinker", g = { 0.3, 0.3, 0.2 }, p = { 3.25, 4.2, -8.715 }, s = true },
@@ -6274,6 +6370,19 @@ return {
 			{ n = "Ruecklichtband", a = "neon_rot", g = { 2.4, 0.1, 0.08 }, p = { 0, 4.5, 8.745 }, s = false },
 			{ n = "Dachspoiler", a = "lack", g = { 5.4, 0.12, 0.6 }, p = { 0, 7.25, 6.55 }, s = false },
 			{ n = "Bremslicht_oben", a = "neon_rot", g = { 1.2, 0.08, 0.1 }, p = { 0, 7.285, 6.65 }, s = false },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.935 }, p = { 3.818, 2.45, -2.95 }, s = true, d = { 0.0056, 1, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.935 }, p = { 3.82, 3.35, -2.95 }, s = true, d = { 0, 1, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.904 }, p = { 3.65, 4.2, -2.95 }, s = true, d = { -0.3911, 0.9203, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.935 }, p = { 3.818, 2.45, 1.05 }, s = true, d = { 0.0056, 1, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.935 }, p = { 3.82, 3.35, 1.05 }, s = true, d = { 0, 1, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.876 }, p = { 3.69, 4.2, 1.05 }, s = true, d = { -0.3091, 0.951, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.935 }, p = { 3.823, 2.45, 3.3 }, s = true, d = { 0.0056, 1, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.935 }, p = { 3.825, 3.35, 3.3 }, s = true, d = { 0, 1, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.862 }, p = { 3.72, 4.2, 3.3 }, s = true, d = { -0.2539, 0.9672, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.441 }, p = { 2.95, 4.631, -7.7 }, s = true, d = { 0, 0.096, 0.9954 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.536 }, p = { 2.95, 4.721, -6.25 }, s = true, d = { 0, 0.03, 0.9996 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.535 }, p = { 2.95, 4.751, -4.75 }, s = true, d = { 0, 0.01, 1 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.585 }, p = { 2.95, 4.748, -3.725 }, s = true, d = { 0, -0.0363, 0.9993 } },
 		},
 		kollision = {
 			{ g = { 7.4, 1.3, 16.5 }, p = { 0, 4.15, 0 } },
@@ -6282,6 +6391,59 @@ return {
 		kennzeichen = { vorne = { 2.75, -8.835 }, hinten = { 3.45, 8.835 } },
 		spoiler = { 7.4, 6.85 },
 	},
+	track = {
+		vorlage = "StrikerTR",
+		sitzY = 1.3,
+		armaturenZ = -0.4,
+		mesh = {
+			Karosserie = { groesse = { 8.0532, 2.4997, 16.5 }, mitte = { 0, 1.8499, 0 } },
+			Verkleidung = { groesse = { 8.2156, 2.4396, 16.566 }, mitte = { 0, 1.8198, 0 } },
+			Glas = { groesse = { 6.2607, 2.2446, 6.75 }, mitte = { 0, 3.6475, 1.925 } },
+			Dach = { groesse = { 6.3482, 2.1939, 4.4 }, mitte = { 0, 3.7029, 2.8 } },
+		},
+		anbau = {
+			{ n = "Scheinwerfer", a = "scheinwerfer", g = { 1.4, 0.14, 0.22 }, p = { 2.55, 1.78, -7.935 }, s = true, r = { 0, -16, -5 } },
+			{ n = "Tagfahrlicht", a = "neon_weiss", g = { 1.25, 0.04, 0.08 }, p = { 2.55, 1.65, -7.925 }, s = true, r = { 0, -16, -5 } },
+			{ n = "Blinker", a = "blinker", g = { 0.3, 0.12, 0.2 }, p = { 3.33, 1.78, -7.735 }, s = true, r = { 0, -16, 0 } },
+			{ n = "Kuehlergrill", a = "grill", g = { 1.35, 0.5, 0.12 }, p = { 1.45, 1.22, -8.245 }, s = true },
+			{ n = "Lufteinlass", a = "grill", g = { 0.8, 0.42, 0.1 }, p = { 2.85, 1.12, -7.69 }, s = true, r = { 0, -25, 0 } },
+			{ n = "Frontsplitter", a = "carbon", g = { 6.4, 0.07, 0.5 }, p = { 0, 0.66, -8 }, s = false },
+			{ n = "Haubenschlitz", a = "grill", g = { 0.9, 0.03, 1.3 }, p = { 0.95, 2.42, -4.6 }, s = true, r = { -3.58, 0, 0 } },
+			{ n = "Spiegel", a = "lack", g = { 0.6, 0.38, 0.75 }, p = { 3.61, 2.7, -0.7 }, s = true },
+			{ n = "Spiegelfuss", a = "schwarz", g = { 0.45, 0.12, 0.3 }, p = { 3.27, 2.55, -0.6 }, s = true },
+			{ n = "Kieme", a = "schwarz", g = { 0.05, 0.12, 0.85 }, p = { 3.78, 1.95, -3.05 }, s = true, r = { 0, 0, 0 } },
+			{ n = "Kieme", a = "schwarz", g = { 0.05, 0.12, 0.85 }, p = { 3.78, 1.93, -2.75 }, s = true, r = { 0, 0, 0 } },
+			{ n = "Kieme", a = "schwarz", g = { 0.05, 0.12, 0.85 }, p = { 3.785, 1.91, -2.45 }, s = true, r = { 0, 0, 0 } },
+			{ n = "Ruecklichtband", a = "neon_rot", g = { 4.4, 0.09, 0.08 }, p = { 0, 2.62, 8.245 }, s = false },
+			{ n = "Ruecklicht", a = "neon_rot", g = { 0.9, 0.2, 0.14 }, p = { 2.75, 2.6, 8.13 }, s = true },
+			{ n = "Blinker", a = "blinker", g = { 0.3, 0.12, 0.14 }, p = { 2.75, 2.38, 8.16 }, s = true },
+			{ n = "Heckgitter", a = "grill", g = { 4.4, 0.4, 0.08 }, p = { 0, 1.95, 8.245 }, s = false },
+			{ n = "Diffusor", a = "carbon", g = { 5.2, 0.07, 1 }, p = { 0, 1, 7.65 }, s = false },
+			{ n = "Auspuff", a = "chrom", g = { 0.42, 0.3, 0.4 }, p = { 0.5, 1.38, 8.345 }, s = true },
+			{ n = "Auspuff", a = "chrom", g = { 0.42, 0.3, 0.4 }, p = { 1.05, 1.38, 8.345 }, s = true },
+			{ n = "Fluegel", a = "carbon", g = { 6.8, 0.12, 1.35 }, p = { 0, 4.32, 7.05 }, s = false, r = { -7, 0, 0 } },
+			{ n = "Fluegelendplatte", a = "lack", g = { 0.08, 0.85, 1.6 }, p = { 3.42, 4.22, 7.05 }, s = true },
+			{ n = "Fluegelstuetze", a = "carbon", g = { 0.12, 1.25, 0.35 }, p = { 1.35, 3.67, 7.25 }, s = true, r = { 12, 0, 0 } },
+			{ n = "Diffusorfinne", a = "carbon", g = { 0.06, 0.4, 0.95 }, p = { 0.5, 1.2, 7.65 }, s = true },
+			{ n = "Diffusorfinne", a = "carbon", g = { 0.06, 0.4, 0.95 }, p = { 1.5, 1.2, 7.65 }, s = true },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.485 }, p = { 3.795, 1.375, -1.35 }, s = true, d = { 0.0222, 0.9998, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.485 }, p = { 3.793, 1.825, -1.35 }, s = true, d = { -0.0333, 0.9994, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.781 }, p = { 3.48, 2.265, -1.35 }, s = true, d = { -0.8173, 0.5762, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.485 }, p = { 3.79, 1.375, 2.55 }, s = true, d = { 0.0444, 0.999, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.485 }, p = { 3.8, 1.825, 2.55 }, s = true, d = { 0, 1, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.505 }, p = { 3.705, 2.265, 2.55 }, s = true, d = { -0.4042, 0.9147, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.094 }, p = { 2.25, 2.181, -7.025 }, s = true, d = { 0, 0.1275, 0.9918 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.54 }, p = { 2.25, 2.308, -5.75 }, s = true, d = { 0, 0.0797, 0.9968 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.538 }, p = { 2.25, 2.413, -4.25 }, s = true, d = { 0, 0.0599, 0.9982 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.637 }, p = { 2.25, 2.501, -2.7 }, s = true, d = { 0, 0.0531, 0.9986 } },
+		},
+		kollision = {
+			{ g = { 7.6, 0.35, 15.5 }, p = { 0, 2.95, 0 } },
+			{ g = { 5.6, 1.4, 5 }, p = { 0, 3.9, 1 } },
+		},
+		kennzeichen = { vorne = { 1.25, -8.305 }, hinten = { 2.05, 8.325 } },
+		spoiler = { 4.6703, 6.75, 0.3 },
+	},
 }
 ]]></ProtectedString></Properties></Item></Item><Item class="LocalScript" referent="RBX18"><Properties><string name="Name">FuehrerscheinClient</string><ProtectedString name="Source"><![CDATA[-- Driver's license system (player): dialogs, theory lesson, theory test and driving lesson HUD.
 local Players = game:GetService("Players")
@@ -6289,7 +6451,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v14 loaded")
+print("[Driving School] client v15 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -9218,7 +9380,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v14 loading")
+	print("[Driving School] start screen v15 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true

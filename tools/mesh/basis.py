@@ -189,7 +189,10 @@ def saeulen_teil(form, bereiche):
     def qs(z):
         ring = form.querschnitt_glas(z)
         breite = max(abs(p[0]) for p in ring) or 1
-        return [(x * 1.014, y if abs(x) > 0.72 * breite else y - 0.35, zz) for x, y, zz in ring]
+        unten = form.gh_unten(z) - 0.1
+        # nur die Seitenstreifen; die Mitte verschwindet ganz unter dem Glas im Unterteil
+        # (sonst sieht man sie in Roblox durch das durchsichtige Glas als Deckel)
+        return [(x * 1.014, y if abs(x) > 0.72 * breite else unten, zz) for x, y, zz in ring]
     return zusammen(*[loft(qs, z0, z1, n) for z0, z1, n in bereiche])
 
 
@@ -230,6 +233,22 @@ def teil(name, art, groesse, pos, spiegeln=False, dreh=None):
     if dreh:
         t["r"] = [round(v, 2) for v in dreh]
     return t
+
+
+def linie(name, punkte, art="fuge", dicke=0.035, spiegeln=False):
+    """schmale Linie entlang mehrerer Punkte (z. B. Tür- und Haubenfugen): ein Teil je Abschnitt.
+    'd' ist die Richtung des Abschnitts; das Spiel dreht das Teil mit CFrame.lookAt danach aus."""
+    teile = []
+    for a, b in zip(punkte, punkte[1:]):
+        d = [b[i] - a[i] for i in range(3)]
+        laenge = math.sqrt(sum(v * v for v in d))
+        if laenge < 1e-6:
+            continue
+        mitte = [(a[i] + b[i]) / 2 for i in range(3)]
+        t = teil(name, art, (dicke, dicke, laenge + dicke), mitte, spiegeln)
+        t["d"] = [round(v / laenge, 4) for v in d]
+        teile.append(t)
+    return teile
 
 
 def erzeugen(typ, vorlage, titel, rad, meshes, anbau, kollision, kennzeichen, spoiler, sitz_y=None, armaturen_z=None):

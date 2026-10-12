@@ -53,7 +53,7 @@ def zylinder(mitte, radius, breite, farbe, glanz=0.1, n=36):
 ART = {"lack": (KFARBE, 0.5), "chrom": ((0.75, 0.75, 0.78), 0.9), "alu": ((0.66, 0.66, 0.69), 0.9),
        "schwarz": ((0.03, 0.03, 0.035), 0.2), "carbon": ((0.09, 0.09, 0.1), 0.4), "grill": ((0.09, 0.09, 0.1), 0.3),
        "scheinwerfer": ((0.95, 0.97, 1.0), 1), "neon_weiss": ((0.95, 0.95, 0.95), 1), "neon_rot": ((0.75, 0.04, 0.04), 0.8),
-       "blinker": ((0.6, 0.38, 0.14), 0.5)}
+       "blinker": ((0.6, 0.38, 0.14), 0.5), "fuge": ((0.02, 0.02, 0.025), 0.1)}
 
 
 def drehung(r):
@@ -73,7 +73,13 @@ for t in INFO["anbau"]:
     farbe, glanz = ART.get(t["a"], ART["schwarz"])
     for s in ((-1, 1) if t["s"] else (1,)):
         r = t.get("r")
-        box((s * t["p"][0], t["p"][1], t["p"][2]), t["g"], farbe, glanz, drehung((r[0], s * r[1], s * r[2])) if r else None)
+        if t.get("d"):
+            z = np.array([s * t["d"][0], t["d"][1], t["d"][2]], float)
+            x = np.cross([0, 1, 0], z) if abs(z[1]) < 0.99 else np.cross([1, 0, 0], z)
+            x /= np.linalg.norm(x); y = np.cross(z, x)
+            box((s * t["p"][0], t["p"][1], t["p"][2]), t["g"], farbe, glanz, np.column_stack([x, y, z]))
+        else:
+            box((s * t["p"][0], t["p"][1], t["p"][2]), t["g"], farbe, glanz, drehung((r[0], s * r[1], s * r[2])) if r else None)
 for ende in ("vorne", "hinten"):
     y, z = INFO["kennzeichen"][ende]
     box((0, y, z), (2.6, 0.7, 0.1), (0.95, 0.95, 0.95), 0.1)

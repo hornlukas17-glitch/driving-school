@@ -5,7 +5,7 @@ Passt zu Auto.MODELLE.sport: Räder R = 1.3 bei x = ±3.3, z = ±5.0, Länge 15.
 Aufruf:  python3 tools/mesh/sport.py  ->  dist/mesh/VelocityGT.obj, tools/mesh/sport_info.json, src/Karosserien.lua
 """
 import math
-from basis import Form, glatt, loft, sauber, zusammen, doppelseitig, dach_teil, saeulen_teil, verkleidung_teil, teil, erzeugen
+from basis import Form, glatt, loft, sauber, zusammen, doppelseitig, dach_teil, saeulen_teil, verkleidung_teil, teil, erzeugen, linie
 
 LH = 7.75              # halbe Länge
 ACHSE = 5.0
@@ -117,14 +117,14 @@ def anbauteile():
         teil("Scheinwerfer", "scheinwerfer", (1.35, 0.16, 0.25), plus(sw, dz=0.05), True, (0, -14, 0)),
         teil("Tagfahrlicht", "neon_weiss", (1.25, 0.05, 0.08), plus(sw, dy=-0.15, dz=0.06), True, (0, -14, 0)),
         teil("Blinker", "blinker", (0.3, 0.14, 0.2), plus(sw, dx=0.75, dz=0.25), True, (0, -14, 0)),
-        teil("Lufteinlass", "schwarz", (3.4, 0.42, 0.1), vorne(0, 0.88, 0.1)),
-        teil("Lufteinlass", "schwarz", (0.95, 0.5, 0.1), vorne(2.55, 0.95, 0.1), True, (0, -20, 0)),
+        teil("Lufteinlass", "grill", (3.4, 0.42, 0.1), vorne(0, 0.88, 0.1)),
+        teil("Lufteinlass", "grill", (0.95, 0.5, 0.1), vorne(2.55, 0.95, 0.1), True, (0, -20, 0)),
         teil("Frontsplitter", "carbon", (5.8, 0.07, 0.45), plus(vorne(0, 0.72, 0.1), dy=-0.12, dz=0.12)),
         teil("Haubenkante", "schwarz", (2.2, 0.04, 0.6), [0, form.oben_y(0, -5.2) + 0.01, -5.2], False, (-11, 0, 0)),
         # Seite
         teil("Spiegel", "lack", (0.55, 0.38, 0.75), plus(sp, dx=0.42, dy=0.18), True),
         teil("Spiegelfuss", "schwarz", (0.45, 0.12, 0.3), plus(sp, dx=0.08, dy=0.05, dz=0.1), True),
-        teil("Seitenlufteinlass", "schwarz", (0.06, 0.8, 1.6), plus(luft_seite, dx=-0.05), True, (0, 6, 0)),
+        teil("Seitenlufteinlass", "grill", (0.06, 0.8, 1.6), plus(luft_seite, dx=-0.05), True, (0, 6, 0)),
         # hinten
         teil("Ruecklicht", "neon_rot", (1.6, 0.13, 0.15), plus(rl, dz=-0.02), True),
         teil("Ruecklichtband", "neon_rot", (1.6, 0.06, 0.08), hinten(0, 2.55, 0.08)),
@@ -135,6 +135,9 @@ def anbauteile():
         teil("Abrisskante", "lack", (5.8, 0.1, 0.65), [0, oben(deck_z) + 0.05, deck_z + 0.2], False, (-9, 0, 0)),
         teil("Motorgitter", "schwarz", (2.6, 0.04, 1.6), [0, gh_oben(5.3) + 0.02, 5.3], False, (-12, 0, 0)),
     ]
+    for z0 in (-1.95, 1.9):
+        t += linie("Fuge", [[form.seite_x(y, z0) + 0.005, y, z0] for y in (1.0, 1.5, 2.0, 2.42)], spiegeln=True)
+    t += linie("Fuge", [[2.0, form.oben_y(2.0, z) + 0.008, z] for z in (-7.1, -6.0, -4.5, -3.0, -2.4)], spiegeln=True)
     kennz = {"vorne": [1.42, form.front_z(0, 1.42) - 0.06], "hinten": [1.95 + 0.0, form.heck_z(0, 1.95) + 0.08]}
     # Heckflügel aus dem Tuning: über dem Motordeck
     return t, kennz, [oben(6.6) + 0.95, 6.6, 0.9]

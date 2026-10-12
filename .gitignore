@@ -1,3 +1,4 @@
 tools/bin/
 tools/run.luau
 *.rbxl.lock
+__pycache__/

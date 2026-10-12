@@ -1,5 +1,8 @@
 # Ranger X SUV body - own design, generated for Roblox (import with the 3D Importer)
+mtllib RangerX.mtl
 o Karosserie
+g Karosserie
+usemtl Karosserie
 v 0.0000 3.1050 -8.7500
 v 0.0000 3.8240 -8.7500
 v 0.0000 3.9789 -8.7500
@@ -12587,6 +12590,8 @@ f 4179 4224 4223
 f 4180 4137 4181
 f 4180 4181 4224
 o Verkleidung
+g Verkleidung
+usemtl Verkleidung
 v 0.0000 2.4000 -8.7850
 v 0.0000 2.4000 -8.7850
 v 0.0000 2.4000 -8.7850
@@ -28004,6 +28009,8 @@ f 9459 9504 9503
 f 9460 9461 9505
 f 9460 9505 9504
 o Glas
+g Glas
+usemtl Glas
 v 0.0000 4.7550 -3.3000
 v 0.0000 4.7693 -3.3000
 v 0.0000 4.7724 -3.3000
@@ -41031,6 +41038,8 @@ f 12103 12147 12148
 f 12104 12105 12061
 f 12104 12148 12105
 o Dach
+g Dach
+usemtl Dach
 v 3.2863 6.9418 -1.1000
 v 3.2767 6.9418 -1.1000
 v 3.2405 6.9692 -1.1000

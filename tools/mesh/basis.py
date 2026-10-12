@@ -200,10 +200,20 @@ def verkleidung_teil(form, kante, skala=1.022, n=120):
 
 
 def schreiben(pfad, titel, teile):
-    zeilen = [f"# {titel} - own design, generated for Roblox (import with the 3D Importer)"]
+    # eigene Gruppe + eigenes Material je Teil, damit der Roblox-Importer getrennte MeshParts anlegt
+    mtl = os.path.splitext(os.path.basename(pfad))[0] + ".mtl"
+    zeilen = [f"# {titel} - own design, generated for Roblox (import with the 3D Importer)", f"mtllib {mtl}"]
+    farben = {"Karosserie": "0.8 0.1 0.1", "Dach": "0.8 0.1 0.1", "Verkleidung": "0.1 0.1 0.1", "Glas": "0.2 0.25 0.3"}
+    mtl_zeilen = []
+    for name, _ in teile:
+        mtl_zeilen += [f"newmtl {name}", f"Kd {farben.get(name, '0.5 0.5 0.5')}", "d 1.0", ""]
+    os.makedirs(os.path.dirname(pfad), exist_ok=True)
+    open(os.path.join(os.path.dirname(pfad), mtl), "w").write("\n".join(mtl_zeilen))
     basis = 1
     for name, (verts, faces) in teile:
         zeilen.append(f"o {name}")
+        zeilen.append(f"g {name}")
+        zeilen.append(f"usemtl {name}")
         for x, y, z in verts:
             zeilen.append(f"v {x:.4f} {y:.4f} {z:.4f}")
         for a, b, c in faces:

@@ -6352,44 +6352,44 @@ return {
 		armaturenZ = -2,
 		drehung = 180,
 		mesh = {
-			BlinkHL = { groesse = { 0.5503, 0.2423, 0.4803 }, mitte = { -2.6994, 3.1002, 7.9877 }, n = "BlinkerL", a = "blinker" },
-			BlinkHR = { groesse = { 0.4751, 0.2274, 0.4256 }, mitte = { 2.7032, 3.117, 7.9831 }, n = "BlinkerR", a = "blinker" },
-			BlinkVL = { groesse = { 0.3739, 0.1705, 0.3444 }, mitte = { -2.99, 2.4965, -6.9483 }, n = "BlinkerL", a = "blinker" },
-			BlinkVR = { groesse = { 0.3953, 0.1766, 0.3638 }, mitte = { 2.9437, 2.517, -6.9656 }, n = "BlinkerR", a = "blinker" },
+			BlinkHL = { groesse = { 0.5524, 0.2467, 0.4799 }, mitte = { -2.701, 3.1016, 7.9864 }, n = "BlinkerL", a = "blinker" },
+			BlinkHR = { groesse = { 0.4701, 0.2288, 0.4214 }, mitte = { 2.6988, 3.1193, 7.9868 }, n = "BlinkerR", a = "blinker" },
+			BlinkVL = { groesse = { 0.3767, 0.1795, 0.3416 }, mitte = { -2.9922, 2.5034, -6.9528 }, n = "BlinkerL", a = "blinker" },
+			BlinkVR = { groesse = { 0.3991, 0.1826, 0.3575 }, mitte = { 2.947, 2.5189, -6.9665 }, n = "BlinkerR", a = "blinker" },
 			Glas = { groesse = { 6.1492, 1.7719, 10.2832 }, mitte = { 0.0027, 4.1297, 1.6394 } },
-			Heckpartie = { groesse = { 7.1411, 3.0209, 5.1285 }, mitte = { 0.0007, 2.0234, -5.2276 } },
-			Karosserie = { groesse = { 6.2131, 2.1651, 0.8334 }, mitte = { -0.0123, 1.6387, -7.9082 } },
-			LichtHL = { groesse = { 2.5513, 0.4112, 0.6953 }, mitte = { -1.2703, 3.209, 8.4113 }, n = "Ruecklicht", a = "neon_rot" },
-			LichtHR = { groesse = { 2.5594, 0.4106, 0.6923 }, mitte = { 1.2849, 3.2098, 8.4039 }, n = "Ruecklicht", a = "neon_rot" },
-			LichtVL = { groesse = { 2.9005, 0.3449, 1.1877 }, mitte = { -1.4415, 2.4032, -7.5977 }, n = "Scheinwerfer", a = "scheinwerfer" },
-			LichtVR = { groesse = { 2.8252, 0.3511, 1.1593 }, mitte = { 1.4211, 2.4133, -7.6106 }, n = "Scheinwerfer", a = "scheinwerfer" },
-			Mittelteil = { groesse = { 7.4942, 4.3711, 12.3801 }, mitte = { 0.0027, 2.7252, 2.8966 } },
-			Verkleidung = { groesse = { 5.4438, 1.8285, 0.6085 }, mitte = { 0.0028, 1.4535, -8.0244 } },
-			Verkleidung2 = { groesse = { 6.9697, 1.9953, 1.0151 }, mitte = { -0.0061, 1.5407, -7.531 }, n = "Verkleidung2", a = "schwarz" },
-			Verkleidung3 = { groesse = { 7.4877, 4.1019, 16.135 }, mitte = { 0.0059, 2.5626, 0.9651 }, n = "Verkleidung2", a = "schwarz" },
+			Heckpartie = { groesse = { 7.1411, 3.2144, 6.3635 }, mitte = { 0.0007, 2.1201, -4.6047 } },
+			Karosserie = { groesse = { 4.727, 2.1078, 0.6649 }, mitte = { 0.0115, 1.61, -7.9924 } },
+			LichtHL = { groesse = { 2.5489, 0.4133, 0.6863 }, mitte = { -1.2671, 3.2109, 8.4094 }, n = "Ruecklicht", a = "neon_rot" },
+			LichtHR = { groesse = { 2.5547, 0.4126, 0.6912 }, mitte = { 1.2847, 3.2112, 8.4058 }, n = "Ruecklicht", a = "neon_rot" },
+			LichtVL = { groesse = { 2.8993, 0.3499, 1.1851 }, mitte = { -1.4433, 2.3994, -7.5993 }, n = "Scheinwerfer", a = "scheinwerfer" },
+			LichtVR = { groesse = { 2.8279, 0.3572, 1.1588 }, mitte = { 1.42, 2.4077, -7.611 }, n = "Scheinwerfer", a = "scheinwerfer" },
+			Mittelteil = { groesse = { 7.4932, 4.3711, 11.3167 }, mitte = { 0.0032, 2.7252, 3.4283 } },
+			Verkleidung = { groesse = { 5.5159, 1.8268, 0.5559 }, mitte = { -0.0003, 1.4527, -8.0507 } },
+			Verkleidung2 = { groesse = { 7.1161, 2.0658, 1.3215 }, mitte = { -0.0013, 1.5727, -7.3646 }, n = "Verkleidung2", a = "schwarz" },
+			Verkleidung3 = { groesse = { 7.4877, 4.1019, 15.8159 }, mitte = { 0.0059, 2.5626, 1.1246 }, n = "Verkleidung2", a = "schwarz" },
 			Radhaus = { groesse = { 6.9, 2.3083, 13.7185 }, mitte = { 0, 1.9659, 0 }, n = "Radhaus", a = "schwarz" },
 		},
 		anbau = {
 			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.466 }, p = { 3.289, 1.265, -2.7 }, s = true, d = { -0.0583, 0.9983, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.465 }, p = { 3.282, 1.695, -2.7 }, s = true, d = { 0.0255, 0.9997, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.465 }, p = { 3.285, 2.125, -2.7 }, s = true, d = { -0.0125, 0.9999, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.467 }, p = { 3.262, 2.555, -2.7 }, s = true, d = { -0.09, 0.9959, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.465 }, p = { 3.282, 1.695, -2.7 }, s = true, d = { 0.0262, 0.9997, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.465 }, p = { 3.285, 2.125, -2.7 }, s = true, d = { -0.0128, 0.9999, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.467 }, p = { 3.263, 2.555, -2.7 }, s = true, d = { -0.0905, 0.9959, 0 } },
 			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.513 }, p = { 3.139, 2.985, -2.7 }, s = true, d = { -0.4352, 0.9004, 0 } },
 			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.491 }, p = { 3.23, 1.278, 0.9 }, s = true, d = { 0.0317, 0.9995, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.491 }, p = { 3.243, 1.734, 0.9 }, s = true, d = { 0.0264, 0.9997, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.492 }, p = { 3.267, 2.19, 0.9 }, s = true, d = { 0.0762, 0.9971, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.492 }, p = { 3.266, 2.646, 0.9 }, s = true, d = { -0.0807, 0.9967, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.561 }, p = { 3.117, 3.102, 0.9 }, s = true, d = { -0.4973, 0.8676, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.559 }, p = { 3.43, 2.73, 4.05 }, s = true, d = { -0.4007, 0.9162, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.491 }, p = { 3.243, 1.734, 0.9 }, s = true, d = { 0.0256, 0.9997, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.492 }, p = { 3.266, 2.19, 0.9 }, s = true, d = { 0.077, 0.997, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.492 }, p = { 3.266, 2.646, 0.9 }, s = true, d = { -0.0808, 0.9967, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.561 }, p = { 3.116, 3.102, 0.9 }, s = true, d = { -0.4972, 0.8676, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.559 }, p = { 3.43, 2.73, 4.05 }, s = true, d = { -0.4006, 0.9162, 0 } },
 			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.658 }, p = { 3.126, 3.21, 4.05 }, s = true, d = { -0.6373, 0.7706, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.885 }, p = { 3.294, 1.05, -2.175 }, s = true, d = { -0.0103, 0, 0.9999 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.885 }, p = { 3.278, 1.05, -1.325 }, s = true, d = { -0.027, 0, 0.9996 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.885 }, p = { 3.256, 1.05, -0.475 }, s = true, d = { -0.0238, 0, 0.9997 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.885 }, p = { 3.294, 1.05, -2.175 }, s = true, d = { -0.0101, 0, 0.9999 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.885 }, p = { 3.277, 1.05, -1.325 }, s = true, d = { -0.0295, 0, 0.9996 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.885 }, p = { 3.255, 1.05, -0.475 }, s = true, d = { -0.0216, 0, 0.9998 } },
 			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.885 }, p = { 3.236, 1.05, 0.375 }, s = true, d = { -0.0242, 0, 0.9997 } },
 			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.773 }, p = { 3.221, 1.05, 1.369 }, s = true, d = { -0.0063, 0, 1 } },
 			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.773 }, p = { 3.218, 1.05, 2.106 }, s = true, d = { -0.0019, 0, 1 } },
 			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.781 }, p = { 3.273, 1.05, 2.844 }, s = true, d = { 0.1514, 0, 0.9885 } },
-			{ n = "Griff", a = "glanzschwarz", g = { 0.06, 0.12, 0.75 }, p = { 3.221, 2.95, -0.1 }, s = true },
+			{ n = "Griff", a = "glanzschwarz", g = { 0.06, 0.12, 0.75 }, p = { 3.222, 2.95, -0.1 }, s = true },
 			{ n = "Griff", a = "glanzschwarz", g = { 0.06, 0.12, 0.75 }, p = { 3.287, 2.95, 3.2 }, s = true },
 			{ n = "Fensterleiste", a = "chrom", g = { 0.05, 0.05, 1.451 }, p = { 2.908, 3.32, -1.7 }, s = true, d = { 0.0181, 0.0286, 0.9994 } },
 			{ n = "Fensterleiste", a = "chrom", g = { 0.05, 0.05, 1.551 }, p = { 2.917, 3.37, -0.25 }, s = true, d = { -0.0051, 0.04, 0.9992 } },
@@ -6647,7 +6647,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v22 loaded")
+print("[Driving School] client v23 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -9576,7 +9576,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v22 loading")
+	print("[Driving School] start screen v23 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true

@@ -31,7 +31,8 @@ fn=np.cross(V[F[:,1]]-V[F[:,0]],V[F[:,2]]-V[F[:,0]]); fn/=np.linalg.norm(fn,axis
 vorne=(cg[:,2]<-7.0)&(cg[:,1]<1.55)&(fn[:,2]<-0.35)&(L<=1)        # nur nach vorn zeigende Flächen (nicht um die Ecke)
 for _ in range(4):                                                  # Zone glätten
     vorne=((A@vorne.astype(float)+1.2*vorne)/(np.asarray(A.sum(1)).ravel()+1.2)>0.5)&(cg[:,2]<-6.8)&(L<=1)
-zone=vorne|((cg[:,2]>8.3)&(cg[:,1]<1.35)&(L<=1))|((np.abs(cg[:,0])>2.9)&(cg[:,1]<0.95)&(np.abs(cg[:,2])<3.2)&(L<=1))
+ecke=(np.abs(cg[:,0])>2.25)&(cg[:,2]<-6.75)&(cg[:,1]<2.05)&(L<=1)     # untere Frontecken komplett schwarz (Meshy-Lamellen dort zackig)
+zone=ecke|vorne|((cg[:,2]>8.3)&(cg[:,1]<1.35)&(L<=1))|((np.abs(cg[:,0])>2.9)&(cg[:,1]<0.95)&(np.abs(cg[:,2])<3.2)&(L<=1))
 print("schwarze Zonen",zone.sum())
 LICHT_PUNKTE={lab:cg[L==lab] for lab in (3,4,5,6)}
 # Beschriftung glätten

@@ -1,5 +1,9 @@
 # Changelog
 
+## v23
+- Vanta GS: untere Frontecken jetzt sauber schwarz (die zackigen Meshy-Lamellen dort sind weg). Neue `dist/mesh/VantaGS.obj` importieren.
+- In Studio getestet (v22-Modell): Licht an/aus, Blinker blinken, Scheinwerfer leuchten nach vorn, Beschleunigung wie gehabt.
+
 ## v22
 - Vanta GS: Rücklichtband und Frontleiste liegen jetzt direkt auf der Karosserie und laufen um die Ecken (vorher standen die Enden seitlich ab).
 - Seitendetails: Türfugen (vier Türen), bündige Türgriffe, Chrom-Fensterleiste entlang der Gürtellinie. Neue `dist/mesh/VantaGS.obj` importieren.

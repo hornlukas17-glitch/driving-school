@@ -1224,22 +1224,7 @@ do
 	local pylon = teil("Autohauspylon", V(1, 6, 12), V(16, 17, AZ - 30), RGB(200, 30, 40), M.SmoothPlastic, fAH)
 	schrift(pylon, Enum.NormalId.Left, "VELOCITY\nMOTORS", RGB(255, 255, 255))
 	schrift(pylon, Enum.NormalId.Right, "VELOCITY\nMOTORS", RGB(255, 255, 255))
-	-- Ausstellungsplaetze (die Autos stellt das Spiel darauf)
-	for _, a in { { "kleinwagen", SX - 14, AZ - 18 }, { "suv", SX - 14, AZ }, { "limousine", SX - 14, AZ + 18 },
-		{ "sport", SX + 4, AZ - 18 }, { "renn", SX + 4, AZ }, { "supersport", SX + 4, AZ + 18 } } do
-		local podest = teil("Podest", V(1, 16, 16), CFrame.new(a[2], 0.85, a[3]) * CFrame.Angles(0, 0, math.rad(90)), RGB(30, 30, 34), M.SmoothPlastic, fAH)
-		podest.Shape = Enum.PartType.Cylinder
-		local ring = teil("Podestlicht", V(1.02, 16.4, 16.4), CFrame.new(a[2], 0.8, a[3]) * CFrame.Angles(0, 0, math.rad(90)), RGB(255, 60, 70), M.Neon, fAH, true)
-		ring.Shape = Enum.PartType.Cylinder
-		local platz = teil("Ausstellungsplatz", V(2, 1, 2), CFrame.new(a[2], 1.35, a[3]) * CFrame.Angles(0, math.rad(-120), 0), RGB(255, 0, 0), M.SmoothPlastic, fAH, true)
-		platz.Transparency = 1
-		platz.CanQuery = false
-		platz:SetAttribute("Typ", a[1])
-		local spot = Instance.new("PointLight")
-		spot.Range = 18
-		spot.Brightness = 1
-		spot.Parent = teil("Spot", V(2, 0.4, 2), V(a[2], 14.2, a[3]), RGB(255, 250, 235), M.Neon, fAH, true)
-	end
+	-- Ausstellungs-Podeste, Spots und die gruene Kaufzone baut das Spiel selbst (Server.lua, AUTOHAUS_PLATTFORMEN)
 	-- Verkaufstresen und Verkaeufer
 	teil("Tresen", V(3, 3.6, 9), V(SX + 18, 2.4, AZ - 16), RGB(240, 240, 240), M.SmoothPlastic, fAH)
 	teil("Tresenplatte", V(3.4, 0.3, 9.4), V(SX + 18, 4.35, AZ - 16), RGB(200, 30, 40), M.SmoothPlastic, fAH)
@@ -1898,8 +1883,8 @@ Lighting.GlobalShadows = true
 Lighting.Brightness = 3
 Lighting.ClockTime = 14.5
 Lighting.GeographicLatitude = 48
-Lighting.Ambient = RGB(70, 70, 80)
-Lighting.OutdoorAmbient = RGB(120, 125, 135)
+Lighting.Ambient = RGB(60, 62, 72)
+Lighting.OutdoorAmbient = RGB(105, 110, 125)
 Lighting.EnvironmentDiffuseScale = 1
 Lighting.EnvironmentSpecularScale = 1
 Lighting.ShadowSoftness = 0.15
@@ -1909,12 +1894,12 @@ for _, alt in Lighting:GetChildren() do
 	if alt:IsA("PostEffect") or alt:IsA("Atmosphere") or alt:IsA("Sky") then alt:Destroy() end
 end
 local atmo = Instance.new("Atmosphere")
-atmo.Density = 0.28
+atmo.Density = 0.26
 atmo.Offset = 0.2
 atmo.Color = RGB(200, 210, 225)
 atmo.Decay = RGB(110, 120, 140)
-atmo.Glare = 0.15
-atmo.Haze = 1.2
+atmo.Glare = 0.2
+atmo.Haze = 0.6
 atmo.Parent = Lighting
 local himmel = Instance.new("Sky")
 himmel.SunAngularSize = 14
@@ -1925,8 +1910,8 @@ bloom.Size = 24
 bloom.Threshold = 1.6
 bloom.Parent = Lighting
 local farbe = Instance.new("ColorCorrectionEffect")
-farbe.Saturation = 0.12
-farbe.Contrast = 0.08
+farbe.Saturation = 0.2
+farbe.Contrast = 0.14
 farbe.Brightness = 0.02
 farbe.TintColor = RGB(255, 250, 242)
 farbe.Parent = Lighting

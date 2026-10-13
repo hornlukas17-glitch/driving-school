@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v26
+--  DRIVER'S LICENSE SYSTEM v27
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -332,7 +332,10 @@ function Verkehr.modell(art, farbIndex, firmaIndex)
 		p.CanQuery = false
 		p.CanTouch = false
 		if form then p.Shape = form end
-		if f == farbe and p.Material == Enum.Material.SmoothPlastic then p.Reflectance = 0.12 end
+		if f == farbe and p.Material == Enum.Material.SmoothPlastic then
+			-- metallic paint like the player cars (very light colours stay plastic)
+			if 0.299 * f.R + 0.587 * f.G + 0.114 * f.B > 0.72 then p.Reflectance = 0.06 else p.Material = Enum.Material.Metal p.Reflectance = 0.05 end
+		end
 		p.Parent = m
 		return p
 	end
@@ -3551,90 +3554,146 @@ end
 
 Players.PlayerRemoving:Connect(autoWeg)
 
--- show cars in the showroom (can't be driven) and the salesman
+-- Showroom: only these cars stand on the two platforms (best: the exclusive Robux cars)
+local AUTOHAUS_PLATTFORMEN = { "gs_night", "supersport" }
+local AUTOHAUS_FARBEN = {
+	kleinwagen = Color3.fromRGB(90, 170, 220), suv = Color3.fromRGB(30, 130, 70), limousine = Color3.fromRGB(20, 20, 24),
+	sport = Color3.fromRGB(200, 25, 30), renn = Color3.fromRGB(245, 190, 30), supersport = Color3.fromRGB(240, 110, 20),
+	track = Color3.fromRGB(20, 90, 200), gs = Color3.fromRGB(78, 88, 102), gs_night = Color3.fromRGB(18, 16, 24),
+}
+
+-- show cars in the showroom (can't be driven), the buy zone and the sales team
 task.spawn(function()
 	if not autohaus then
 		warn("License system: car dealership not found (run the new map generator)")
 		return
 	end
-	local farben = {
-		kleinwagen = Color3.fromRGB(90, 170, 220), suv = Color3.fromRGB(30, 130, 70), limousine = Color3.fromRGB(20, 20, 24),
-		sport = Color3.fromRGB(200, 25, 30), renn = Color3.fromRGB(245, 190, 30), supersport = Color3.fromRGB(240, 110, 20),
-		track = Color3.fromRGB(20, 90, 200), gs = Color3.fromRGB(78, 88, 102), gs_night = Color3.fromRGB(18, 16, 24),
-	}
-	-- cars added after the map (Striker TR, Vanta GS) get their own podiums outside, in front of the showroom glass
-	local DRAUSSEN = { track = Vector3.new(78, 0, -395), gs = Vector3.new(78, 0, -357), gs_night = Vector3.new(58, 0, -376) }
-	local vorhanden = {}
-	for _, p in autohaus:GetChildren() do
-		if p.Name == "Ausstellungsplatz" and p:GetAttribute("Typ") then vorhanden[p:GetAttribute("Typ")] = true end
-	end
-	for _, typ in { "track", "gs", "gs_night" } do
-		if not vorhanden[typ] then
-			local pos = DRAUSSEN[typ]
-			local treffer = workspace:Raycast(pos + Vector3.new(0, 20, 0), Vector3.new(0, -40, 0))
-			local y = treffer and treffer.Position.Y or 0.2
-			local function neu(name, gr, lage, farbe, mat, form)
-				local p = Instance.new("Part")
-				p.Name, p.Size, p.CFrame, p.Color, p.Material, p.Anchored = name, gr, lage, farbe, mat, true
-				if form then p.Shape = form end
-				p.Parent = autohaus
-				return p
-			end
-			neu("Podest", Vector3.new(1, 16, 16), CFrame.new(pos.X, y + 0.5, pos.Z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(30, 30, 34), Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
-			local ring = neu("Podestlicht", Vector3.new(1.02, 16.4, 16.4), CFrame.new(pos.X, y + 0.45, pos.Z) * CFrame.Angles(0, 0, math.rad(90)), typ == "gs_night" and Color3.fromRGB(150, 70, 255) or Color3.fromRGB(255, 60, 70), Enum.Material.Neon, Enum.PartType.Cylinder)
-			ring.CanCollide = false
-			local platz = neu("Ausstellungsplatz", Vector3.new(2, 1, 2), CFrame.new(pos.X, y + 1.5, pos.Z) * CFrame.Angles(0, math.rad(typ == "gs" and -60 or (typ == "gs_night" and -150 or -120)), 0), Color3.new(1, 0, 0), Enum.Material.SmoothPlastic)
-			platz.Transparency = 1
-			platz.CanCollide = false
-			platz.CanQuery = false
-			platz:SetAttribute("Typ", typ)
+	-- Showroom: only two platforms with the exclusive cars. All other cars are bought in the
+	-- green zone in front of the reception (or from Marco / Sophie).
+	for _, t in autohaus:GetChildren() do
+		if t.Name == "Podest" or t.Name == "Podestlicht" or t.Name == "Ausstellungsplatz" or t.Name == "Spot" or t.Name:sub(1, 12) == "Ausstellung_" then
+			t:Destroy()
 		end
 	end
-	for _, platz in autohaus:GetChildren() do
-		local typ = platz.Name == "Ausstellungsplatz" and platz:GetAttribute("Typ")
-		if typ and Auto.MODELLE[typ] then
-			-- stand the wheels on top of the podium (the indoor podiums from the map are 0.5 higher than the marker)
-			local rpPodest = RaycastParams.new()
-			rpPodest.FilterType = Enum.RaycastFilterType.Exclude
-			rpPodest.FilterDescendantsInstances = { platz }
-			local podest = workspace:Raycast(platz.Position + Vector3.new(0, 3, 0), Vector3.new(0, -10, 0), rpPodest)
-			local hoehe = podest and (podest.Position.Y - platz.Position.Y) or -0.5
-			local m, sitz, beifahrer = Auto.bauenPrivat(platz.CFrame * CFrame.new(0, hoehe, 0), typ, farben[typ])
+	local boden = autohaus:FindFirstChild("Showroomboden")
+	local mitte = boden and boden.Position or Vector3.new(122, 0.1, -376)
+	local bodenY = boden and (boden.Position.Y + boden.Size.Y / 2) or 0.6
+	local function neu(name, gr, lage, farbe, mat, form)
+		local p = Instance.new("Part")
+		p.Name, p.Size, p.CFrame, p.Color, p.Material, p.Anchored = name, gr, lage, farbe, mat, true
+		if form then p.Shape = form end
+		p.Parent = autohaus
+		return p
+	end
+	for i, typ in AUTOHAUS_PLATTFORMEN do
+		local D = Auto.MODELLE[typ]
+		if D then
+			local pos = mitte + Vector3.new(-10, 0, i == 1 and -14 or 14)
+			local exklusiv = D.pass ~= nil
+			local podest = neu("Podest", Vector3.new(1.2, 18, 18), CFrame.new(pos.X, bodenY + 0.6, pos.Z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(28, 28, 32), Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
+			podest.Reflectance = 0.15
+			local ring = neu("Podestlicht", Vector3.new(1.22, 18.4, 18.4), CFrame.new(pos.X, bodenY + 0.55, pos.Z) * CFrame.Angles(0, 0, math.rad(90)), exklusiv and Color3.fromRGB(150, 70, 255) or Color3.fromRGB(255, 60, 70), Enum.Material.Neon, Enum.PartType.Cylinder)
+			ring.CanCollide = false
+			local spot = neu("Spot", Vector3.new(2, 0.4, 2), CFrame.new(pos.X, 14.2, pos.Z), Color3.fromRGB(255, 250, 235), Enum.Material.Neon)
+			spot.CanCollide = false
+			local licht = Instance.new("SpotLight")
+			licht.Face = Enum.NormalId.Bottom
+			licht.Range = 20
+			licht.Angle = 70
+			licht.Brightness = 3
+			licht.Parent = spot
+			-- the car stands on the podium, turned towards the entrance
+			local oben = bodenY + 1.2
+			local m = Auto.bauenPrivat(CFrame.new(pos.X, oben, pos.Z) * CFrame.Angles(0, math.rad(i == 1 and -60 or -120), 0), typ, D.festeFarbe or AUTOHAUS_FARBEN[typ])
 			m.Name = "Ausstellung_" .. typ
 			for _, t in m:GetDescendants() do
 				if t:IsA("BasePart") then t.Anchored = true end
 				if t:IsA("Seat") or t:IsA("VehicleSeat") then t.Disabled = true end
 			end
 			m.Parent = autohaus
-			local daten2 = Auto.MODELLE[typ]
+			local schild = Instance.new("BillboardGui")
+			schild.Size = UDim2.fromOffset(220, 54)
+			schild.StudsOffsetWorldSpace = Vector3.new(0, 8.5, 0)
+			schild.MaxDistance = 60
+			schild.Parent = podest
+			local l = Instance.new("TextLabel")
+			l.Size = UDim2.fromScale(1, 1)
+			l.BackgroundTransparency = 1
+			l.Font = Enum.Font.GothamBlack
+			l.TextScaled = true
+			l.TextStrokeTransparency = 0.4
+			l.TextColor3 = exklusiv and Color3.fromRGB(210, 170, 255) or Color3.new(1, 1, 1)
+			l.Text = (exklusiv and "🌙 EXCLUSIVE\n" or "") .. D.name
+			l.Parent = schild
 			local pp = Instance.new("ProximityPrompt")
-			pp.ActionText = daten2.pass and "🌙 Exclusive – look" or ("Buy – %d coins"):format(daten2.preis)
-			pp.ObjectText = daten2.name .. " (" .. daten2.art .. ")"
+			pp.ActionText = exklusiv and "🌙 Exclusive – look" or ("Buy – %d coins"):format(D.preis)
+			pp.ObjectText = D.name .. " (" .. D.art .. ")"
 			pp.HoldDuration = 0
-			pp.MaxActivationDistance = 14
+			pp.MaxActivationDistance = 16
 			pp.RequiresLineOfSight = false
-			pp.Parent = m.PrimaryPart
+			pp.Parent = podest
 			pp.Triggered:Connect(function(p)
 				local d = daten[p]
 				if d then oeffnen:FireClient(p, "autohaus", { katalog = katalog(d), geld = d.geld, auswahl = typ }) end
 			end)
 		end
 	end
+
+	-- green buy zone in front of the reception: step in = the car catalogue opens
+	local tresen = autohaus:FindFirstChild("Tresen")
+	local zPos = tresen and Vector3.new(tresen.Position.X - tresen.Size.X / 2 - 4.5, bodenY, tresen.Position.Z) or Vector3.new(134, bodenY, -392)
+	local zone = neu("Kaufzone", Vector3.new(7, 0.12, 12), CFrame.new(zPos.X, bodenY + 0.06, zPos.Z), Color3.fromRGB(40, 220, 90), Enum.Material.Neon)
+	zone.CanCollide = false
+	zone.CanQuery = false
+	zone.Transparency = 0.35
+	local zg = Instance.new("SurfaceGui")
+	zg.Face = Enum.NormalId.Top
+	zg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	zg.PixelsPerStud = 40
+	zg.LightInfluence = 0
+	zg.Parent = zone
+	local zl = Instance.new("TextLabel")
+	zl.Size = UDim2.fromScale(1, 1)
+	zl.BackgroundTransparency = 1
+	zl.Font = Enum.Font.GothamBlack
+	zl.TextScaled = true
+	zl.TextColor3 = Color3.new(1, 1, 1)
+	zl.Text = "🚗 BUY CARS"
+	zl.Parent = zg
+	local imBereich = {}
+	task.spawn(function()
+		while zone.Parent do
+			task.wait(0.25)
+			for _, p in Players:GetPlayers() do
+				local w = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+				local rel = w and zone.CFrame:PointToObjectSpace(w.Position)
+				local drin = rel ~= nil and math.abs(rel.X) < zone.Size.X / 2 + 0.5 and math.abs(rel.Z) < zone.Size.Z / 2 + 0.5 and rel.Y < 8 and rel.Y > -2
+				if drin and not imBereich[p] then
+					local d = daten[p]
+					if d then oeffnen:FireClient(p, "autohaus", { katalog = katalog(d), geld = d.geld }) end
+				end
+				imBereich[p] = drin or nil
+			end
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(p) imBereich[p] = nil end)
+
+	-- sales team behind the reception: Marco and Sophie
 	local platz = autohaus:FindFirstChild("VerkaeuferPlatz")
 	if platz then
-		local figur, hum = npc("Verkaeufer", "Marco (Sales)", Color3.fromRGB(198, 145, 105), Color3.fromRGB(30, 30, 35), Color3.fromRGB(30, 30, 35),
-			{ shirt = NPC_LOOK.anzug.shirt, pants = NPC_LOOK.anzug.pants, haar = 9244021842, kopf = NPC_LOOK.koepfeMann[1], frau = false })
-		if figur then
+		local function verkaeufer(name, anzeige, haut, stil, versatz)
+			local figur, hum = npc(name, anzeige, haut, Color3.fromRGB(30, 30, 35), Color3.fromRGB(30, 30, 35), stil)
+			if not figur then return end
 			local wurzel = figur:WaitForChild("HumanoidRootPart")
 			wurzel.Anchored = true
-			local stand = Vector3.new(platz.Position.X, 0.6 + hum.HipHeight + wurzel.Size.Y / 2, platz.Position.Z)
+			local stand = Vector3.new(platz.Position.X, 0.6 + hum.HipHeight + wurzel.Size.Y / 2, platz.Position.Z + versatz)
 			figur:PivotTo(CFrame.lookAt(stand, stand + Vector3.new(-1, 0, 0)))
 			figur.Parent = autohaus
 			local idle = animation(hum, "stehen")
 			if idle then idle:Play() end
 			local pp = Instance.new("ProximityPrompt")
-			pp.ActionText = "Talk"
-			pp.ObjectText = "Marco (Sales)"
+			pp.ActionText = "Buy a car"
+			pp.ObjectText = anzeige
 			pp.HoldDuration = 0
 			pp.MaxActivationDistance = 10
 			pp.RequiresLineOfSight = false
@@ -3644,6 +3703,11 @@ task.spawn(function()
 				if d then oeffnen:FireClient(p, "autohaus", { katalog = katalog(d), geld = d.geld }) end
 			end)
 		end
+		task.spawn(verkaeufer, "Verkaeufer", "Marco (Sales)", Color3.fromRGB(198, 145, 105),
+			{ shirt = NPC_LOOK.anzug.shirt, pants = NPC_LOOK.anzug.pants, haar = 9244021842, kopf = NPC_LOOK.koepfeMann[1], frau = false }, -2.2)
+		-- Sophie: grey suit with waistcoat, long blonde braid (looks different from Anna at the driving school)
+		task.spawn(verkaeufer, "Verkaeuferin", "Sophie (Sales)", Color3.fromRGB(198, 145, 105),
+			{ shirt = 6554200369, pants = 6555797786, haar = 9244148336, kopf = NPC_LOOK.koepfeFrau[1], frau = true }, 2.2)
 	end
 end)
 
@@ -4121,6 +4185,19 @@ neu("ModuleScript", "Auto", server, [=====[
 -- (FuehrerscheinClient), which makes the car feel direct instead of floaty.
 local Auto = {}
 
+-- Car paint: metallic look (deep colour with a soft sheen). Very light colours stay plastic,
+-- otherwise white turns grey. Only looks – no effect on driving.
+function Auto.lack(p, farbe)
+	local hell = 0.299 * farbe.R + 0.587 * farbe.G + 0.114 * farbe.B
+	if hell > 0.72 then
+		p.Material = Enum.Material.SmoothPlastic
+		p.Reflectance = 0.06
+	else
+		p.Material = Enum.Material.Metal
+		p.Reflectance = 0.05
+	end
+end
+
 -- Driving feel (read by the driver's client). If the car drives backwards on W, set RICHTUNG = -1.
 Auto.EINSTELLUNGEN = {
 	RICHTUNG = 1,
@@ -4299,7 +4376,7 @@ function Auto.bauen(cf, farbe, dachText)
 		p.Transparency = opt.transparenz or 0
 		if opt.form then p.Shape = opt.form end
 		if f == farbe and p.Material == Enum.Material.SmoothPlastic then
-			p.Reflectance = 0.12 -- glossy paint
+			Auto.lack(p, farbe)
 		elseif f == CHROM then
 			p.Reflectance = 0.35
 		end
@@ -4506,8 +4583,7 @@ function Auto.bauen(cf, farbe, dachText)
 					mp.CastShadow = false
 				else
 					mp.Color = farbe
-					mp.Material = Enum.Material.SmoothPlastic
-					mp.Reflectance = 0.15
+					Auto.lack(mp, farbe)
 					mp.Transparency = 0
 				end
 				for _, kind in mp:GetChildren() do
@@ -4723,7 +4799,7 @@ function Auto.bauenLkw(cf, farbe, aufschrift, stufe)
 		p.CastShadow = opt.schatten ~= false
 		p.Transparency = opt.transparenz or 0
 		if opt.form then p.Shape = opt.form end
-		if f == farbe then p.Reflectance = 0.1 end
+		if f == farbe and p.Material == Enum.Material.SmoothPlastic then Auto.lack(p, farbe) end
 		p.Parent = m
 		local w = Instance.new("WeldConstraint")
 		w.Part0, w.Part1 = chassis, p
@@ -5148,8 +5224,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 					mp.Transparency = 0
 				else
 					mp.Color = farbe
-					mp.Material = Enum.Material.SmoothPlastic
-					mp.Reflectance = 0.15
+					Auto.lack(mp, farbe)
 					mp.Transparency = 0
 				end
 				mp.Parent = m
@@ -5954,6 +6029,12 @@ function Umwelt.starten(ordner)
 	Lighting.ClockTime = 9
 	local atmo = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
 	atmo.Parent = Lighting
+	-- clearer, richer look: less haze, deeper shadows, a bit more contrast and colour
+	atmo.Density, atmo.Haze, atmo.Glare = 0.26, 0.6, 0.2
+	Lighting.OutdoorAmbient = Color3.fromRGB(105, 110, 125)
+	Lighting.Ambient = Color3.fromRGB(60, 62, 72)
+	local farbe = Lighting:FindFirstChildOfClass("ColorCorrectionEffect")
+	if farbe then farbe.Contrast, farbe.Saturation = 0.14, 0.2 end
 	local wolken = workspace.Terrain:FindFirstChildOfClass("Clouds")
 	local basis = { dichte = atmo.Density or 0.3, dunst = atmo.Haze or 0, bedeckt = wolken and wolken.Cover or 0.5 }
 	atmo.Density, atmo.Haze = basis.dichte, basis.dunst
@@ -7447,7 +7528,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v26 loaded")
+print("[Driving School] client v27 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -10876,7 +10957,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v26 loading")
+	print("[Driving School] start screen v27 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -11064,4 +11145,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v26 installed. Press F5 to test.")
+print("License system v27 installed. Press F5 to test.")

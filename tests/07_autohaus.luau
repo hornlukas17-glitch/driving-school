@@ -14,7 +14,25 @@ M.laufen(6)
 local aktion = game.ReplicatedStorage.Fuehrerschein.Aktion
 local function frage(was, e) return aktion.OnServerInvoke(p, was, e) end
 local ah = workspace.Karte.Vorstadt.Autohaus
-print("showroom cars:", ah:FindFirstChild("Ausstellung_suv") ~= nil, ah:FindFirstChild("Ausstellung_sport") ~= nil, ah:FindFirstChild("Ausstellung_renn") ~= nil, "salesman:", ah:FindFirstChild("Verkaeufer") ~= nil)
+local function pruefe(name, ok) print((ok and "OK  " or "FAIL") .. " " .. name) if not ok then error("check failed: " .. name) end end
+-- showroom: only two platforms (exclusive car first), green buy zone, Marco and Sophie
+local podeste, autos = 0, 0
+for _, x in ah:GetChildren() do
+	if x.Name == "Podest" then podeste += 1 end
+	if x.Name:sub(1, 12) == "Ausstellung_" then autos += 1 end
+end
+pruefe("2 podiums, 2 showroom cars", podeste == 2 and autos == 2)
+pruefe("exclusive car on a podium", ah:FindFirstChild("Ausstellung_gs_night") ~= nil)
+pruefe("green buy zone", ah:FindFirstChild("Kaufzone") ~= nil)
+pruefe("Marco and Sophie", ah:FindFirstChild("Verkaeufer") ~= nil and ah:FindFirstChild("Verkaeuferin") ~= nil)
+-- walking into the green zone opens the catalogue
+pruefe("catalogue closed at the start", p.PlayerGui:FindFirstChild("Autohaus") == nil)
+p.Character:PivotTo(ah.Kaufzone.CFrame + Vector3.new(0, 3, 0))
+M.laufen(M.zeit() + 1)
+pruefe("green zone opens the catalogue", p.PlayerGui:FindFirstChild("Autohaus") ~= nil)
+p.PlayerGui.Autohaus:Destroy()
+M.laufen(M.zeit() + 1)
+pruefe("does not re-open while standing in it", p.PlayerGui:FindFirstChild("Autohaus") == nil)
 print("buy no money:", frage("autoKaufen", "suv").fehler)
 for i = 1, 100 do frage("dev", { befehl = "geld" }) end
 M.laufen(M.zeit() + 1)
@@ -34,7 +52,7 @@ local a = workspace.Auto_Lukas
 a.Fahrersitz:Sit(p.Character.Humanoid)
 M.laufen(M.zeit() + 1)
 -- the showroom prompt opens the dialog in the client
-ah.Ausstellung_renn.PrimaryPart.ProximityPrompt.Triggered:Fire(p)
+ah.Podest.ProximityPrompt.Triggered:Fire(p)
 M.laufen(M.zeit() + 1)
 print("dialog title:", p.PlayerGui.LicenseGUI.Enabled)
 print("park away:", frage("autoWeg").text, workspace:FindFirstChild("Auto_Lukas") == nil)

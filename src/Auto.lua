@@ -3,6 +3,19 @@
 -- (FuehrerscheinClient), which makes the car feel direct instead of floaty.
 local Auto = {}
 
+-- Car paint: metallic look (deep colour with a soft sheen). Very light colours stay plastic,
+-- otherwise white turns grey. Only looks – no effect on driving.
+function Auto.lack(p, farbe)
+	local hell = 0.299 * farbe.R + 0.587 * farbe.G + 0.114 * farbe.B
+	if hell > 0.72 then
+		p.Material = Enum.Material.SmoothPlastic
+		p.Reflectance = 0.06
+	else
+		p.Material = Enum.Material.Metal
+		p.Reflectance = 0.05
+	end
+end
+
 -- Driving feel (read by the driver's client). If the car drives backwards on W, set RICHTUNG = -1.
 Auto.EINSTELLUNGEN = {
 	RICHTUNG = 1,
@@ -181,7 +194,7 @@ function Auto.bauen(cf, farbe, dachText)
 		p.Transparency = opt.transparenz or 0
 		if opt.form then p.Shape = opt.form end
 		if f == farbe and p.Material == Enum.Material.SmoothPlastic then
-			p.Reflectance = 0.12 -- glossy paint
+			Auto.lack(p, farbe)
 		elseif f == CHROM then
 			p.Reflectance = 0.35
 		end
@@ -388,8 +401,7 @@ function Auto.bauen(cf, farbe, dachText)
 					mp.CastShadow = false
 				else
 					mp.Color = farbe
-					mp.Material = Enum.Material.SmoothPlastic
-					mp.Reflectance = 0.15
+					Auto.lack(mp, farbe)
 					mp.Transparency = 0
 				end
 				for _, kind in mp:GetChildren() do
@@ -605,7 +617,7 @@ function Auto.bauenLkw(cf, farbe, aufschrift, stufe)
 		p.CastShadow = opt.schatten ~= false
 		p.Transparency = opt.transparenz or 0
 		if opt.form then p.Shape = opt.form end
-		if f == farbe then p.Reflectance = 0.1 end
+		if f == farbe and p.Material == Enum.Material.SmoothPlastic then Auto.lack(p, farbe) end
 		p.Parent = m
 		local w = Instance.new("WeldConstraint")
 		w.Part0, w.Part1 = chassis, p
@@ -1030,8 +1042,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 					mp.Transparency = 0
 				else
 					mp.Color = farbe
-					mp.Material = Enum.Material.SmoothPlastic
-					mp.Reflectance = 0.15
+					Auto.lack(mp, farbe)
 					mp.Transparency = 0
 				end
 				mp.Parent = m

@@ -178,7 +178,10 @@ function Verkehr.modell(art, farbIndex, firmaIndex)
 		p.CanQuery = false
 		p.CanTouch = false
 		if form then p.Shape = form end
-		if f == farbe and p.Material == Enum.Material.SmoothPlastic then p.Reflectance = 0.12 end
+		if f == farbe and p.Material == Enum.Material.SmoothPlastic then
+			-- metallic paint like the player cars (very light colours stay plastic)
+			if 0.299 * f.R + 0.587 * f.G + 0.114 * f.B > 0.72 then p.Reflectance = 0.06 else p.Material = Enum.Material.Metal p.Reflectance = 0.05 end
+		end
 		p.Parent = m
 		return p
 	end

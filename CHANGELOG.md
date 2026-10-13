@@ -1,5 +1,11 @@
 # Changelog
 
+## v27 – Autohaus & Grafik
+- **Autohaus neu:** Nur noch 2 Plattformen im Showroom (exklusiver Vanta GS Night Edition + Top-Auto), mit Spot und Namensschild. Alle anderen Autos kauft man in der **grünen „BUY CARS“-Zone** vor der Rezeption – reinlaufen öffnet den Katalog.
+- **Sophie (Sales):** neue Verkäuferin hinter der Rezeption, grauer Anzug mit Weste und blondem Zopf; Marco steht daneben.
+- **Autolack:** Metallic-Look statt rosa-blasser Glanz (dunkle und kräftige Farben metallic, Weiß/helle Farben glänzend) – auch beim NPC-Verkehr.
+- **Licht:** weniger Dunst, tiefere Schatten, etwas mehr Kontrast und Farbe.
+
 ## v26 – Fahrschule & Verkehr
 - **Spawn vor der Tür:** Man startet draußen vor dem Eingang der Fahrschule, Blick zur Tür.
 - **HUD kompakt:** Shop, Rewards, Daily, My Cars, Record, Kamera, Settings als eine Reihe kleiner Symbol-Knöpfe.

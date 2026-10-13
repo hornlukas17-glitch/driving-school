@@ -1,4 +1,4 @@
--- Track car "Striker TR": showroom podium outside, block body without model, round body with model: with and without the imported model, lights, indicators, spoiler tuning
+-- Track car "Striker TR": block body without model, round body with model: with and without the imported model, lights, indicators, spoiler tuning
 M.log = function() end
 lade("gen", Q.gen)()
 M.laufen(1)
@@ -19,9 +19,8 @@ frage("adminGeld", 20000)
 frage("adminGeld", 20000)
 M.laufen(M.zeit() + 15)
 local ah = workspace.Karte.Vorstadt.Autohaus
-pruefe("showroom car outside", ah:FindFirstChild("Ausstellung_track") ~= nil)
-local n = 0 for _, x in ah:GetChildren() do if x.Name == "Ausstellungsplatz" then n += 1 end end
-pruefe("9 podiums (one per car)", n == #require(game.ServerScriptService.FuehrerscheinServer.Auto).MODELL_REIHENFOLGE and n == 9)
+local n = 0 for _, x in ah:GetChildren() do if x.Name == "Podest" then n += 1 end end
+pruefe("only 2 showroom podiums", n == 2)
 frage("autoKaufen", "track")
 p.Character:PivotTo(CFrame.new(60, 3, -376))
 

@@ -16,6 +16,12 @@ function Umwelt.starten(ordner)
 	Lighting.ClockTime = 9
 	local atmo = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
 	atmo.Parent = Lighting
+	-- clearer, richer look: less haze, deeper shadows, a bit more contrast and colour
+	atmo.Density, atmo.Haze, atmo.Glare = 0.26, 0.6, 0.2
+	Lighting.OutdoorAmbient = Color3.fromRGB(105, 110, 125)
+	Lighting.Ambient = Color3.fromRGB(60, 62, 72)
+	local farbe = Lighting:FindFirstChildOfClass("ColorCorrectionEffect")
+	if farbe then farbe.Contrast, farbe.Saturation = 0.14, 0.2 end
 	local wolken = workspace.Terrain:FindFirstChildOfClass("Clouds")
 	local basis = { dichte = atmo.Density or 0.3, dunst = atmo.Haze or 0, bedeckt = wolken and wolken.Cover or 0.5 }
 	atmo.Density, atmo.Haze = basis.dichte, basis.dunst

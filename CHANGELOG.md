@@ -1,5 +1,9 @@
 # Changelog
 
+## v20
+- Vanta GS: Frontecken sauber – die schwarze Frontzone läuft nicht mehr um die Ecke (keine blauen Zacken mehr), Lack/Schwarz-Grenzen glatter. Neue `dist/mesh/VantaGS.obj` importieren.
+- In Studio geprüft: Fahrer sitzt komplett im Auto (Arm innerhalb der Tür, Kopf unter dem Dach).
+
 ## v19
 - Vanta GS in echtem Studio getestet und nachgebessert (neue `dist/mesh/VantaGS.obj` importieren, altes Modell im ServerStorage ersetzen):
   - Karosserie stand verkehrt herum (Front hinten) – jetzt richtig gedreht.

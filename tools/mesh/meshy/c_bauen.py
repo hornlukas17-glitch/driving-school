@@ -26,7 +26,11 @@ print("Inseln",n,"entfernt",(~keep).sum())
 F=F[keep]; L=L[keep]; A=adj_faces(F,len(V))
 # schwarze Zonen aus der Form: Frontgrill/Lippe, Diffusor, Schweller zwischen den Rädern
 cg=V[F].mean(1)
-zone=((cg[:,2]<-7.3)&(cg[:,1]<1.55)&(L<=1))|((cg[:,2]>8.3)&(cg[:,1]<1.35)&(L<=1))|((np.abs(cg[:,0])>2.9)&(cg[:,1]<0.95)&(np.abs(cg[:,2])<3.2)&(L<=1))
+fn=np.cross(V[F[:,1]]-V[F[:,0]],V[F[:,2]]-V[F[:,0]]); fn/=np.linalg.norm(fn,axis=1,keepdims=True)+1e-12
+vorne=(cg[:,2]<-7.0)&(cg[:,1]<1.55)&(fn[:,2]<-0.35)&(L<=1)        # nur nach vorn zeigende Flächen (nicht um die Ecke)
+for _ in range(4):                                                  # Zone glätten
+    vorne=((A@vorne.astype(float)+1.2*vorne)/(np.asarray(A.sum(1)).ravel()+1.2)>0.5)&(cg[:,2]<-6.8)&(L<=1)
+zone=vorne|((cg[:,2]>8.3)&(cg[:,1]<1.35)&(L<=1))|((np.abs(cg[:,0])>2.9)&(cg[:,1]<0.95)&(np.abs(cg[:,2])<3.2)&(L<=1))
 print("schwarze Zonen",zone.sum())
 # Beschriftung glätten (Lichter schützen: dürfen nur schrumpfen/wachsen unter sich)
 for _ in range(15):
@@ -76,7 +80,7 @@ baum=cKDTree(cen[rest]); Lr_alt=L[rest]
 _,nn=baum.query(Vr[Fr].mean(1),k=9)
 Lr=(Lr_alt[nn]==1).mean(1)>0.5           # True = Verkleidung
 Ar=adj_faces(Fr,len(Vr))
-for _ in range(3):
+for _ in range(6):
     anteil=(Ar@Lr.astype(float)+1.5*Lr)/(np.asarray(Ar.sum(1)).ravel()+1.5)
     Lr=anteil>0.5
 cr=Vr[Fr].mean(1)

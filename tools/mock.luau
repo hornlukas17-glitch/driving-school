@@ -536,6 +536,7 @@ function M.dienst(n)
 		methoden.GetPlayers = function(x) local l = {} for _, k in x.__kinder do if k.__klasse == "Player" then table.insert(l, k) end end return l end
 		methoden.GetPlayerFromCharacter = function(x, c) for _, p in x:GetPlayers() do if p.Character == c then return p end end return nil end
 		methoden.CreateHumanoidModelFromDescription = function(x, desc, typ)
+			if desc then M.npcBeschreibungen = M.npcBeschreibungen or {} table.insert(M.npcBeschreibungen, desc) end
 			local m = neueInstanz("Model")
 			local hum = neueInstanz("Humanoid") hum.__props.HipHeight = 2 hum.Parent = m
 			local w = Instance.new("Part") w.Name = "HumanoidRootPart" w.Size = V.new(2, 2, 1) w.Parent = m

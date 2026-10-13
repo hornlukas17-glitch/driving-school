@@ -1,5 +1,13 @@
 # Changelog
 
+## v26 – Fahrschule & Verkehr
+- **Spawn vor der Tür:** Man startet draußen vor dem Eingang der Fahrschule, Blick zur Tür.
+- **HUD kompakt:** Shop, Rewards, Daily, My Cars, Record, Kamera, Settings als eine Reihe kleiner Symbol-Knöpfe.
+- **Anna:** Business-Anzug, Haare, freundliches Gesicht. Ihr Menü fragt zuerst **PKW oder LKW** und zählt dann alle Schritte als Checkliste auf (✅ erledigt, 👉 nächster Schritt).
+- **Fußgänger & NPCs** tragen Kleidung, Frisuren und Gesichter (kostenlose Roblox-Katalog-Sachen); Polizei/Jobgeber behalten ihre Uniformfarben.
+- **STOP-Schilder:** Schrift groß wie beim echten Schild; Pfosten sticht nicht mehr durchs Schild.
+- **NPC-Autos fahren auf den Spuren:** Die Karte war in Studio um (8, -8) verschoben, deshalb fuhren die Autos durch die Siedlungsmauer. Karte zurück auf Originalposition, Gelände neu angepasst. Der Server warnt jetzt im Output, falls die Karte wieder verschoben wird.
+
 ## v25 – Karte repariert
 - **Kein Rausfallen mehr:** Gras liegt jetzt knapp unter dem Asphalt (vorher 2 Studs darüber), Spalten im Gelände an Straßenrändern sind zu, unsichtbarer Kartenrand rundherum plus Sicherheitsboden.
 - **Autos fahren auf den Reifen:** Die Karte war in Studio um 2,8 Studs angehoben – NPC-Verkehr fuhr dadurch *in* der Straße. Karte wieder auf Originalhöhe.

@@ -193,17 +193,60 @@ local function mischen(t)
 	return t
 end
 
-local function npc(name, anzeigeName, haut, oberteil, hose)
-	local desc = Instance.new("HumanoidDescription")
-	desc.HeadColor = haut
-	desc.LeftArmColor = haut
-	desc.RightArmColor = haut
-	desc.TorsoColor = oberteil
-	desc.LeftLegColor = hose
-	desc.RightLegColor = hose
+-- NPC looks: free items from the Roblox catalog (made by Roblox), so nobody walks around "naked".
+-- Faces are Roblox's free dynamic heads; the mood animation gives them a friendly expression.
+local NPC_LOOK = {
+	shirts = { 607785314, 398633584, 144076358, 398635081, 398634295, 4047886060, 4047884046, 144076436, 382537702, 382537085, 382538295 },
+	pants = { 398633812, 398635338, 398634487, 144076760, 382538503, 382537569, 382537950 },
+	haareFrau = { 7193448258, 9244097555, 9244111257, 7193442167, 9174354743, 6993754725, 376526888, 9244148336 },
+	haareMann = { 9243992729, 9244021842, 7193386173, 63690008, 3814474927, 376524487 },
+	koepfeFrau = { { kopf = 10725626210, mood = 13692973305 } },
+	koepfeMann = {
+		{ kopf = 10725826963, mood = 10725833199 },
+		{ kopf = 10723855306, mood = 10723858600 },
+		{ kopf = 10687288296, mood = 10687293613 },
+	},
+	anzug = { shirt = 2511715512, pants = 2511715750 }, -- black business suit
+}
+local function zufall(t) return t[math.random(#t)] end
+-- stil: nil = random casual clothes, "uniform" = keep the body colours (police, job givers) but add hair and face,
+-- or a table { shirt, pants, haar, kopf, frau } for a fixed look (Anna, Marco)
+local function npcAussehen(desc, stil)
+	local fest = type(stil) == "table" and stil or {}
+	local frau = fest.frau
+	if frau == nil then frau = math.random() < 0.5 end
+	local k = fest.kopf or zufall(frau and NPC_LOOK.koepfeFrau or NPC_LOOK.koepfeMann)
+	if stil ~= "uniform" then
+		desc.Shirt = fest.shirt or zufall(NPC_LOOK.shirts)
+		desc.Pants = fest.pants or zufall(NPC_LOOK.pants)
+	end
+	desc.Head = k.kopf
+	desc.MoodAnimation = k.mood
+	if frau then desc.WidthScale, desc.BodyTypeScale, desc.ProportionScale = 0.85, 0.3, 0.5 end
+	desc.HairAccessory = tostring(fest.haar or zufall(frau and NPC_LOOK.haareFrau or NPC_LOOK.haareMann))
+end
+
+local function npc(name, anzeigeName, haut, oberteil, hose, stil)
+	local function beschreibung(mitKleidung)
+		local desc = Instance.new("HumanoidDescription")
+		desc.HeadColor = haut
+		desc.LeftArmColor = haut
+		desc.RightArmColor = haut
+		desc.TorsoColor = oberteil
+		desc.LeftLegColor = hose
+		desc.RightLegColor = hose
+		if mitKleidung then pcall(npcAussehen, desc, stil) end
+		return desc
+	end
 	local ok, modell = pcall(function()
-		return Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+		return Players:CreateHumanoidModelFromDescription(beschreibung(true), Enum.HumanoidRigType.R15)
 	end)
+	if not ok or not modell then
+		-- catalog not reachable: plain colours as before
+		ok, modell = pcall(function()
+			return Players:CreateHumanoidModelFromDescription(beschreibung(false), Enum.HumanoidRigType.R15)
+		end)
+	end
 	if not ok or not modell then
 		warn("License system: could not create NPC " .. name .. ": " .. tostring(modell))
 		return nil
@@ -306,6 +349,41 @@ local jobs = {}         -- [player] = running delivery job
 local privatAutos = {}  -- [player] = own car from the dealership { model, sitz, chassis, blinkTeile }
 local autoWeg           -- defined with the car dealership further down
 
+-- All routes (NPC traffic, lessons, speed zones) use the generator's coordinates. If the "Karte" model was
+-- moved in Studio, cars drive through walls -> say so loudly in the output.
+do
+	local land = workspace.Karte:FindFirstChild("Strassen") and workspace.Karte.Strassen:FindFirstChild("Landstrasse")
+	if land and (Vector3.new(land.Position.X, 0, land.Position.Z) - Vector3.new(557, 0, 0)).Magnitude > 1 then
+		warn(("[Driving School] The map (Karte) was moved by %s – move it back, otherwise NPC cars and lessons don't match the roads!"):format(
+			tostring(Vector3.new(land.Position.X - 557, 0, land.Position.Z))))
+	end
+end
+
+-- Spawn outside in front of the entrance, looking at the door (works however the building was moved in Studio)
+do
+	local tuer, theke
+	for _, t in fahrschule:GetChildren() do
+		if t:IsA("BasePart") then
+			if t.Name == "Tuer" and (not tuer or t.Size.Magnitude > tuer.Size.Magnitude) then tuer = t end
+			if t.Name == "Theke" and (not theke or t.Size.X > theke.Size.X) then theke = t end
+		end
+	end
+	local spawnTeil = workspace:FindFirstChild("FahrschulSpawn")
+	if tuer and spawnTeil then
+		-- the door's thin side points outwards; outside = away from the reception desk
+		local n = tuer.Size.X < tuer.Size.Z and tuer.CFrame.RightVector or tuer.CFrame.LookVector
+		n = Vector3.new(n.X, 0, n.Z).Unit
+		local innen = theke and theke.Position or fahrschule:GetPivot().Position
+		if (innen - tuer.Position):Dot(n) > 0 then n = -n end
+		spawnTeil.CanQuery = false
+		local pos = tuer.Position + n * 9
+		local boden = workspace:Raycast(Vector3.new(pos.X, tuer.Position.Y + 10, pos.Z), Vector3.new(0, -40, 0))
+		local y = (boden and boden.Position.Y or 0.2) + 0.5
+		pos = Vector3.new(pos.X, y, pos.Z)
+		spawnTeil.CFrame = CFrame.lookAt(pos, pos - n)
+	end
+end
+
 -- area of the driving school parking lot (no turn-signal check while manoeuvring)
 local parkMin, parkMax = Vector3.new(math.huge, 0, math.huge), Vector3.new(-math.huge, 0, -math.huge)
 for _, b in buchtOrdner:GetChildren() do
@@ -349,7 +427,8 @@ task.spawn(function()
 		warn("License system: counter (Theke) not found")
 		return
 	end
-	local anna, hum = npc("Rezeptionistin", "Anna (Reception)", Color3.fromRGB(234, 192, 160), Color3.fromRGB(30, 90, 180), Color3.fromRGB(40, 40, 50))
+	local anna, hum = npc("Rezeptionistin", "Anna (Reception)", Color3.fromRGB(234, 192, 160), Color3.fromRGB(30, 90, 180), Color3.fromRGB(40, 40, 50),
+		{ shirt = NPC_LOOK.anzug.shirt, pants = NPC_LOOK.anzug.pants, haar = 7193448258, kopf = NPC_LOOK.koepfeFrau[1], frau = true })
 	if not anna then return end
 	local wurzel = anna:WaitForChild("HumanoidRootPart")
 	wurzel.Anchored = true
@@ -561,7 +640,7 @@ end
 -- Instructor / examiner sitting in a vehicle
 local function mitfahrer(modell, name, anzeige, haut, oberteil, hose, platz)
 	task.spawn(function()
-		local figur, hum = npc(name, anzeige, haut, oberteil, hose)
+		local figur, hum = npc(name, anzeige, haut, oberteil, hose, "uniform")
 		if not figur or not modell.Parent then return end
 		for _, teilchen in figur:GetDescendants() do
 			if teilchen:IsA("BasePart") then
@@ -1843,7 +1922,7 @@ end)
 
 -- Job givers: Tom at the depot, Luigi at the pizzeria
 local function jobGeber(platz, name, anzeige, oberteil, kappenFarbe, eltern, oeffnenArt, blick)
-	local figur, hum = npc(name, anzeige, Color3.fromRGB(205, 160, 125), oberteil, Color3.fromRGB(45, 50, 65))
+	local figur, hum = npc(name, anzeige, Color3.fromRGB(205, 160, 125), oberteil, Color3.fromRGB(45, 50, 65), "uniform")
 	if not figur then return end
 	local wurzel = figur:WaitForChild("HumanoidRootPart")
 	wurzel.Anchored = true
@@ -2047,7 +2126,7 @@ local function rechtsVon(d) return Vector3.new(-d.Z, 0, d.X) end
 local function flach(v) return Vector3.new(v.X, 0, v.Z) end
 
 local function polizist(cf, eltern)
-	local figur, hum = npc("Polizist", "Police Officer", Color3.fromRGB(225, 185, 150), Color3.fromRGB(25, 45, 95), Color3.fromRGB(25, 30, 45))
+	local figur, hum = npc("Polizist", "Police Officer", Color3.fromRGB(225, 185, 150), Color3.fromRGB(25, 45, 95), Color3.fromRGB(25, 30, 45), "uniform")
 	if not figur then return nil end
 	local wurzel = figur:WaitForChild("HumanoidRootPart")
 	local kopf = figur:FindFirstChild("Head")
@@ -2612,7 +2691,8 @@ task.spawn(function()
 	end
 	local platz = autohaus:FindFirstChild("VerkaeuferPlatz")
 	if platz then
-		local figur, hum = npc("Verkaeufer", "Marco (Sales)", Color3.fromRGB(198, 145, 105), Color3.fromRGB(30, 30, 35), Color3.fromRGB(30, 30, 35))
+		local figur, hum = npc("Verkaeufer", "Marco (Sales)", Color3.fromRGB(198, 145, 105), Color3.fromRGB(30, 30, 35), Color3.fromRGB(30, 30, 35),
+			{ shirt = NPC_LOOK.anzug.shirt, pants = NPC_LOOK.anzug.pants, haar = 9244021842, kopf = NPC_LOOK.koepfeMann[1], frau = false })
 		if figur then
 			local wurzel = figur:WaitForChild("HumanoidRootPart")
 			wurzel.Anchored = true

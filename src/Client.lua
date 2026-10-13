@@ -86,6 +86,11 @@ text.TextWrapped = true
 text.RichText = true
 text.TextXAlignment = Enum.TextXAlignment.Left
 text.TextYAlignment = Enum.TextYAlignment.Top
+text.TextScaled = true -- long checklists shrink to fit, never bigger than 18
+local textGrenze = Instance.new("UITextSizeConstraint")
+textGrenze.MaxTextSize = 18
+textGrenze.MinTextSize = 11
+textGrenze.Parent = text
 text.Parent = rahmen
 
 local knoepfe = Instance.new("Frame")
@@ -163,7 +168,7 @@ end
 -- ---------------------------------------------------------------
 -- Receptionist dialog
 -- ---------------------------------------------------------------
-local dialog, unterricht, pruefungsplatz
+local dialog, unterricht, pruefungsplatz, pkwMenue, lkwMenue
 
 function dialog()
 	local r = frage("status")
@@ -200,20 +205,62 @@ function dialog()
 			end },
 			tschuess,
 		}, "dialog")
-	elseif not s.angemeldet then
-		zeige(name, "Hi, welcome to the driving school! 😊\nWould you like to sign up for your driver's license?" .. unten, {
+	else
+		-- first choose the license class, then Anna lists every step
+		zeige(name, "Hi, welcome to the driving school! 😊\nWhich license are you interested in?", {
+			{ text = "🚗  Car license (B)", farbe = GRUEN, klick = function() pkwMenue(r) end },
+			{ text = "🚛  Truck license (C)", farbe = BLAU, klick = function() lkwMenue(r) end },
+			tschuess,
+		}, "dialog")
+	end
+end
+
+-- numbered checklist: { done, text } -> "✅ 1. ..."
+local function schritte(liste)
+	local zeilen = {}
+	local naechsterGefunden = false
+	for i, sch in liste do
+		local marke
+		if sch[1] then
+			marke = "✅"
+		elseif not naechsterGefunden then
+			marke = "👉"
+			naechsterGefunden = true
+		else
+			marke = "⬜"
+		end
+		table.insert(zeilen, ("%s <b>%d.</b> %s"):format(marke, i, sch[2]))
+	end
+	return table.concat(zeilen, "\n")
+end
+
+function pkwMenue(r)
+	local s = r.status
+	local name = "Anna – Car license (B)"
+	local zurueck = { text = "Back", farbe = GRAU, klick = dialog }
+	local liste = "Here is everything you need to do:\n\n" .. schritte({
+		{ s.angemeldet, "Sign up here at the reception" },
+		{ s.unterricht, "Theory lesson at the <b>whiteboard</b> (classroom)" },
+		{ s.theorie, "Theory test at an <b>exam desk</b> (17 of 20 correct)" },
+		{ s.fahrstunden >= r.anzahlLektionen, ("Driving lessons with Mike (%d/%d)"):format(math.min(s.fahrstunden, r.anzahlLektionen), r.anzahlLektionen) },
+		{ s.fuehrerschein, "Practical driving test (max 3 mistakes)" },
+	}) .. "\n\n"
+	if not s.angemeldet then
+		zeige(name, liste .. "Shall I sign you up?", {
 			{ text = "Yes, sign me up!", farbe = GRUEN, klick = function()
 				local a = frage("anmelden")
-				if a.fehler then hinweis(a.fehler) else dialog() end
+				if a.fehler then hinweis(a.fehler) return end
+				local neu = frage("status")
+				if not neu.fehler then pkwMenue(neu) end
 			end },
-			{ text = "Just looking around", farbe = GRAU, klick = schliessen },
+			zurueck,
 		}, "dialog")
 	elseif not s.unterricht then
-		zeige(name, "You're signed up! First step: the <b>theory lesson</b>.\nGo into the classroom on the left and press E at the <b>whiteboard</b>." .. unten, { tschuess }, "dialog")
+		zeige(name, liste .. "Next: go into the classroom on the left and press E at the <b>whiteboard</b>.", { zurueck, { text = "Okay!", farbe = GRUEN, klick = schliessen } }, "dialog")
 	elseif not s.theorie then
-		zeige(name, "Great, you attended the lesson! Now take a seat at one of the <b>exam desks</b> in the classroom to start your theory test.\nYou need at least 17 of 20 correct answers." .. unten, { tschuess }, "dialog")
+		zeige(name, liste .. "Next: sit down at one of the <b>exam desks</b> in the classroom to start your theory test.", { zurueck, { text = "Okay!", farbe = GRUEN, klick = schliessen } }, "dialog")
 	elseif r.naechste then
-		zeige(name, ("Your next driving lesson:\n<b>%s</b>\n\nYour instructor Mike will be waiting in the car on the parking lot."):format(r.naechste) .. unten, {
+		zeige(name, liste .. ("Your next lesson: <b>%s</b>\nMike is waiting in the car on the parking lot."):format(r.naechste), {
 			{ text = "Start the lesson", farbe = GRUEN, klick = function()
 				local a = frage("fahrstundeStarten")
 				if a.fehler then
@@ -222,36 +269,54 @@ function dialog()
 					zeige(name, a.text, { { text = "Okay!", farbe = GRUEN, klick = schliessen } }, "dialog")
 				end
 			end },
-			{ text = "Not now", farbe = GRAU, klick = schliessen },
+			zurueck,
+		}, "dialog")
+	elseif not s.fuehrerschein then
+		zeige(name, liste .. "Your examiner Mr. Becker rides in the back, Mike sits next to you. The route is random – hitting a pedestrian counts as 3 mistakes!", {
+			{ text = "Start the driving test", farbe = GRUEN, klick = function()
+				local a = frage("pruefungStarten")
+				if a.fehler then
+					hinweis(a.fehler)
+				else
+					zeige(name, a.text, { { text = "Let's go!", farbe = GRUEN, klick = schliessen } }, "dialog")
+				end
+			end },
+			zurueck,
 		}, "dialog")
 	else
-		if s.fuehrerschein and s.lkwFuehrerschein then
-			zeige(name, "You have both licenses: car (B) and truck (C)! 🎉\n\nTruck drivers are needed at the <b>Parcel Express</b> depot south of the neighbourhood. Talk to Tom, the dispatcher, to earn coins by delivering packages." .. unten, { tschuess }, "dialog")
-		elseif s.fuehrerschein then
-			zeige(name, "Congratulations on your driver's license! 🎉\n\nWant to drive big trucks? Take the <b>truck driving test (class C)</b>. The truck waits at the Parcel Express depot, south of the neighbourhood. Max 3 mistakes. With the truck license you can work as a delivery driver!" .. unten, {
-				{ text = "Start the truck test", farbe = GRUEN, klick = function()
-					local a = frage("lkwPruefungStarten")
-					if a.fehler then
-						hinweis(a.fehler)
-					else
-						zeige(name, a.text, { { text = "Let's go!", farbe = GRUEN, klick = schliessen } }, "dialog")
-					end
-				end },
-				{ text = "Not now", farbe = GRAU, klick = schliessen },
-			}, "dialog")
-		else
-			zeige(name, "You have completed all driving lessons! Now it's time for the <b>practical driving test</b>.\n\nYour examiner Mr. Becker rides in the back, Mike sits next to you. The route is random and you may make <b>at most 3 mistakes</b>. Hitting a pedestrian counts as 3!" .. unten, {
-				{ text = "Start the driving test", farbe = GRUEN, klick = function()
-					local a = frage("pruefungStarten")
-					if a.fehler then
-						hinweis(a.fehler)
-					else
-						zeige(name, a.text, { { text = "Let's go!", farbe = GRUEN, klick = schliessen } }, "dialog")
-					end
-				end },
-				{ text = "Not now", farbe = GRAU, klick = schliessen },
-			}, "dialog")
-		end
+		zeige(name, liste .. "You have your car license! 🎉 Buy a car at the dealership or earn coins with taxi and pizza jobs.", { zurueck, { text = "Thanks!", farbe = GRUEN, klick = schliessen } }, "dialog")
+	end
+end
+
+function lkwMenue(r)
+	local s = r.status
+	local name = "Anna – Truck license (C)"
+	local zurueck = { text = "Back", farbe = GRAU, klick = dialog }
+	local fahrten = s.lkwFahrten or 0
+	local liste = "Here is everything you need to do:\n\n" .. schritte({
+		{ s.fuehrerschein, "Car license (B) first" },
+		{ s.lkwFuehrerschein, "Truck test at the <b>Parcel Express</b> depot (max 3 mistakes)" },
+		{ fahrten >= 15, ("Deliver packages for Tom – class CE / Mega Truck after 15 jobs (%d/15)"):format(math.min(fahrten, 15)) },
+	}) .. "\n\n"
+	if not s.fuehrerschein then
+		zeige(name, liste .. "You need your <b>car license</b> before you can drive trucks.", {
+			{ text = "Show the car license steps", farbe = GRUEN, klick = function() pkwMenue(r) end },
+			zurueck,
+		}, "dialog")
+	elseif not s.lkwFuehrerschein then
+		zeige(name, liste .. "The truck waits at the Parcel Express depot, south of the neighbourhood.", {
+			{ text = "Start the truck test", farbe = GRUEN, klick = function()
+				local a = frage("lkwPruefungStarten")
+				if a.fehler then
+					hinweis(a.fehler)
+				else
+					zeige(name, a.text, { { text = "Let's go!", farbe = GRUEN, klick = schliessen } }, "dialog")
+				end
+			end },
+			zurueck,
+		}, "dialog")
+	else
+		zeige(name, liste .. "You have the truck license! 🎉 Talk to <b>Tom</b>, the dispatcher at the depot, to earn coins with deliveries.", { zurueck, { text = "Thanks!", farbe = GRUEN, klick = schliessen } }, "dialog")
 	end
 end
 
@@ -1173,31 +1238,66 @@ local kameraGui = Instance.new("ScreenGui")
 kameraGui.Name = "CameraToggle"
 kameraGui.ResetOnSpawn = false
 kameraGui.Parent = spieler.PlayerGui
-local kameraKnopf = Instance.new("TextButton")
-kameraKnopf.Position = UDim2.new(0, 12, 0, 64)
-kameraKnopf.Size = UDim2.fromOffset(150, 32)
-kameraKnopf.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
-kameraKnopf.BackgroundTransparency = 0.2
-kameraKnopf.Font = Enum.Font.GothamBold
-kameraKnopf.TextSize = 14
-kameraKnopf.TextColor3 = Color3.new(1, 1, 1)
-kameraKnopf.Text = "1st person (V)"
-kameraKnopf.Parent = kameraGui
-Instance.new("UICorner", kameraKnopf)
+-- compact button bar top left: one row of small icon buttons with a short caption
+local leiste = Instance.new("Frame")
+leiste.Name = "Leiste"
+leiste.BackgroundTransparency = 1
+leiste.Position = UDim2.new(0, 12, 0, 60)
+leiste.Size = UDim2.fromOffset(0, 48)
+leiste.AutomaticSize = Enum.AutomaticSize.X
+leiste.Parent = kameraGui
+local leistenLayout = Instance.new("UIListLayout")
+leistenLayout.FillDirection = Enum.FillDirection.Horizontal
+leistenLayout.Padding = UDim.new(0, 5)
+leistenLayout.SortOrder = Enum.SortOrder.LayoutOrder
+leistenLayout.Parent = leiste
+local function leistenKnopf(icon, text, reihenfolge, farbe)
+	local k = Instance.new("TextButton")
+	k.Name = text
+	k.LayoutOrder = reihenfolge
+	k.Size = UDim2.fromOffset(52, 48)
+	k.BackgroundColor3 = farbe or Color3.fromRGB(25, 30, 40)
+	k.BackgroundTransparency = 0.15
+	k.Text = ""
+	k.Parent = leiste
+	Instance.new("UICorner", k).CornerRadius = UDim.new(0, 10)
+	local bild = Instance.new("TextLabel")
+	bild.Name = "Icon"
+	bild.BackgroundTransparency = 1
+	bild.Position = UDim2.fromOffset(0, 3)
+	bild.Size = UDim2.new(1, 0, 0, 26)
+	bild.Font = Enum.Font.GothamBold
+	bild.TextSize = 21
+	bild.TextColor3 = Color3.new(1, 1, 1)
+	bild.Text = icon
+	bild.Parent = k
+	local name = Instance.new("TextLabel")
+	name.Name = "Beschriftung"
+	name.BackgroundTransparency = 1
+	name.Position = UDim2.new(0, 0, 1, -17)
+	name.Size = UDim2.new(1, 0, 0, 14)
+	name.Font = Enum.Font.GothamBold
+	name.TextSize = 10
+	name.TextColor3 = Color3.fromRGB(225, 230, 240)
+	name.Text = text
+	name.Parent = k
+	return k
+end
+local kameraKnopf = leistenKnopf("🎥", "1st (V)", 6)
 
 local ersteP = false
 local function perspektive(an)
 	ersteP = an
 	if an then
 		spieler.CameraMode = Enum.CameraMode.LockFirstPerson
-		kameraKnopf.Text = "3rd person (V)"
+		kameraKnopf.Beschriftung.Text = "3rd (V)"
 	else
 		spieler.CameraMode = Enum.CameraMode.Classic
 		spieler.CameraMinZoomDistance = 12 -- jump out of first person ...
 		task.delay(0.15, function()
 			spieler.CameraMinZoomDistance = 0.5 -- ... but still allow zooming in with the mouse wheel
 		end)
-		kameraKnopf.Text = "1st person (V)"
+		kameraKnopf.Beschriftung.Text = "1st (V)"
 	end
 end
 kameraKnopf.MouseButton1Click:Connect(function()
@@ -2317,17 +2417,7 @@ do
 		end
 		return true
 	end
-	local akteKnopf = Instance.new("TextButton")
-	akteKnopf.Position = UDim2.new(0, 12, 0, 100)
-	akteKnopf.Size = UDim2.fromOffset(110, 32)
-	akteKnopf.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
-	akteKnopf.BackgroundTransparency = 0.2
-	akteKnopf.Font = Enum.Font.GothamBold
-	akteKnopf.TextSize = 14
-	akteKnopf.TextColor3 = Color3.new(1, 1, 1)
-	akteKnopf.Text = "📋 Record"
-	akteKnopf.Parent = kameraGui
-	Instance.new("UICorner", akteKnopf)
+	local akteKnopf = leistenKnopf("📋", "Record", 5)
 	akteKnopf.MouseButton1Click:Connect(function()
 		if akteGui.Enabled then akteGui.Enabled = false return end
 		if akteFuellen() then akteGui.Enabled = true end
@@ -2504,17 +2594,7 @@ do
 
 	-- daily missions
 	local missionGui
-	local mKnopf = Instance.new("TextButton")
-	mKnopf.Position = UDim2.new(0, 128, 0, 100)
-	mKnopf.Size = UDim2.fromOffset(110, 32)
-	mKnopf.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
-	mKnopf.BackgroundTransparency = 0.2
-	mKnopf.Font = Enum.Font.GothamBold
-	mKnopf.TextSize = 14
-	mKnopf.TextColor3 = Color3.new(1, 1, 1)
-	mKnopf.Text = "🎯 Daily"
-	mKnopf.Parent = kameraGui
-	Instance.new("UICorner", mKnopf)
+	local mKnopf = leistenKnopf("🎯", "Daily", 3)
 	mKnopf.MouseButton1Click:Connect(function()
 		if missionGui then missionGui:Destroy() missionGui = nil return end
 		local r = frage("missionen")
@@ -2752,17 +2832,7 @@ eZurueck.MouseButton1Click:Connect(function()
 end)
 
 -- small gear button to open the settings at any time
-local zahnrad = Instance.new("TextButton")
-zahnrad.Position = UDim2.new(0, 170, 0, 64)
-zahnrad.Size = UDim2.fromOffset(110, 32)
-zahnrad.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
-zahnrad.BackgroundTransparency = 0.2
-zahnrad.Font = Enum.Font.GothamBold
-zahnrad.TextSize = 14
-zahnrad.TextColor3 = Color3.new(1, 1, 1)
-zahnrad.Text = "⚙ Settings"
-zahnrad.Parent = kameraGui
-Instance.new("UICorner", zahnrad)
+local zahnrad = leistenKnopf("⚙", "Settings", 7)
 zahnrad.MouseButton1Click:Connect(function()
 	knoepfeAktualisieren()
 	einstellGui.Enabled = true
@@ -2770,17 +2840,7 @@ end)
 
 -- "My Cars": get one of your bought cars to the nearest parking spot
 do
-	local autoKnopf = Instance.new("TextButton")
-	autoKnopf.Position = UDim2.new(0, 286, 0, 64)
-	autoKnopf.Size = UDim2.fromOffset(110, 32)
-	autoKnopf.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
-	autoKnopf.BackgroundTransparency = 0.2
-	autoKnopf.Font = Enum.Font.GothamBold
-	autoKnopf.TextSize = 14
-	autoKnopf.TextColor3 = Color3.new(1, 1, 1)
-	autoKnopf.Text = "🚗 My Cars"
-	autoKnopf.Parent = kameraGui
-	Instance.new("UICorner", autoKnopf)
+	local autoKnopf = leistenKnopf("🚗", "My Cars", 4)
 
 	local FARBEN = {
 		Color3.fromRGB(200, 25, 30), Color3.fromRGB(25, 70, 170), Color3.fromRGB(240, 240, 240), Color3.fromRGB(20, 20, 24),
@@ -3278,21 +3338,7 @@ do
 	end)
 
 	-- ---------- buttons top left ----------
-	local function hudKnopf(text, x, farbe)
-		local k = Instance.new("TextButton")
-		k.Position = UDim2.new(0, x, 0, 100)
-		k.Size = UDim2.fromOffset(110, 32)
-		k.BackgroundColor3 = farbe or Color3.fromRGB(25, 30, 40)
-		k.BackgroundTransparency = 0.15
-		k.Font = Enum.Font.GothamBold
-		k.TextSize = 14
-		k.TextColor3 = Color3.new(1, 1, 1)
-		k.Text = text
-		k.Parent = kameraGui
-		Instance.new("UICorner", k)
-		return k
-	end
-	local bKnopf = hudKnopf("🎁 Rewards", 244)
+	local bKnopf = leistenKnopf("🎁", "Rewards", 2)
 	local punkt = Instance.new("TextLabel")
 	punkt.AnchorPoint = Vector2.new(0.5, 0.5)
 	punkt.Position = UDim2.new(1, -2, 0, 2)
@@ -3316,7 +3362,7 @@ do
 		if g then g:Destroy() return end
 		belohnungenOeffnen()
 	end)
-	local sKnopf = hudKnopf("🛒 Shop", 360, Color3.fromRGB(110, 60, 200))
+	local sKnopf = leistenKnopf("🛒", "Shop", 1, Color3.fromRGB(110, 60, 200))
 	sKnopf.MouseButton1Click:Connect(function()
 		local g = spieler.PlayerGui:FindFirstChild("Shop")
 		if g then g:Destroy() return end

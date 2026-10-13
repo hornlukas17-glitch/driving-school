@@ -237,7 +237,8 @@ local function zeichen(art, cx, cz, d, schildVor, schildSeite, linieVor, spurMit
 	local fuss = V(cx, 0, cz) + d * schildVor + rechts * schildSeite
 	teil("Pfosten", V(0.4, 7, 0.4), fuss + V(0, bodenY + 3.5, 0), RGB(170, 170, 175), M.Metal, m)
 	local mitte = fuss + V(0, bodenY + 7.6, 0)
-	local cf = CFrame.lookAt(mitte, mitte + d) * CFrame.Angles(0, math.rad(90), 0) -- Schildseite (+X) zeigt zu den Autos
+	-- Schildseite (+X) zeigt zu den Autos; 0.3 vor den Pfosten, damit er nicht durchs Schild sticht
+	local cf = CFrame.lookAt(mitte, mitte + d) * CFrame.Angles(0, math.rad(90), 0) * CFrame.new(0.3, 0, 0)
 	local hl = V(cx, 0, cz) + d * linieVor + rechts * spurMitte
 
 	if art == "stop" then
@@ -253,13 +254,20 @@ local function zeichen(art, cx, cz, d, schildVor, schildSeite, linieVor, spurMit
 			if i == 1 then schild = t end
 		end
 		teil("Rueckseite", V(0.1, 2.6, 2.6), cf * CFrame.new(-0.1, 0, 0), RGB(150, 150, 155), M.Metal, m)
+		-- Schrift auf einer eigenen quadratischen Flaeche vor dem Achteck: so gross wie beim echten Schild
+		local flaeche = teil("Schrift", V(0.05, 3.1, 3.1), cf * CFrame.new(0.14, 0, 0), RGB(195, 20, 25), M.SmoothPlastic, m, true)
+		flaeche.Transparency = 1
+		flaeche.CastShadow = false
 		local g = Instance.new("SurfaceGui")
 		g.Face = Enum.NormalId.Right
-		g.Parent = schild
+		g.LightInfluence = 0.3
+		g.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		g.PixelsPerStud = 50
+		g.Parent = flaeche
 		local l = Instance.new("TextLabel")
 		l.AnchorPoint = Vector2.new(0.5, 0.5)
 		l.Position = UDim2.fromScale(0.5, 0.5)
-		l.Size = UDim2.fromScale(0.85, 0.85)
+		l.Size = UDim2.fromScale(0.92, 0.5)
 		l.BackgroundTransparency = 1
 		l.Text = "STOP"
 		l.Font = Enum.Font.GothamBlack
@@ -1827,7 +1835,7 @@ spawn.Duration = 0
 spawn.Transparency = 1
 spawn.CanCollide = false
 spawn.Size = V(6, 1, 6)
-spawn.CFrame = CFrame.new(FX, 0.7, vorneZ - 6)
+spawn.CFrame = CFrame.lookAt(V(FX, 0.7, vorneZ - 9), V(FX, 0.7, vorneZ)) -- Blick zur Eingangstuer
 spawn.Parent = workspace
 for _, d in spawn:GetChildren() do
 	if d:IsA("Decal") then d:Destroy() end
@@ -1979,7 +1987,8 @@ task.spawn(function() -- laeuft im Hintergrund, damit Studio nicht einfriert
 		for cz = -KARTE, KARTE, 4 do
 			for _, o in ECKEN do
 				if not workspace:Raycast(V(cx, 60, cz) + o, V(0, -80, 0), lochStrahl) then
-					gelaende:FillBlock(CFrame.new(cx, GRAS_Y, cz), V(4, 4, 4), M.Grass)
+					-- -8..-2: unterer Voxel voll, oberer halb -> feste Oberflaeche knapp unter 0
+					gelaende:FillBlock(CFrame.new(cx, GRAS_Y - 1, cz), V(4, 6, 4), M.Grass)
 					loecher += 1
 					break
 				end

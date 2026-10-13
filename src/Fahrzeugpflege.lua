@@ -7,7 +7,7 @@ local Pflege = {}
 
 Pflege.TANKPREIS = 1.5                 -- coins per % of fuel
 Pflege.REICHWEITE = {                  -- km per full tank
-	kleinwagen = 10, suv = 7, limousine = 9, sport = 7, track = 6, renn = 5, supersport = 6,
+	kleinwagen = 10, suv = 7, limousine = 9, sport = 7, track = 6, gs = 7, renn = 5, supersport = 6,
 }
 Pflege.PANNENHILFE = { preis = 120, prozent = 15 } -- roadside fuel delivery
 Pflege.ABSCHLEPPEN = 200                -- broken car is towed to the garage

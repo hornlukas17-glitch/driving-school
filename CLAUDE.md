@@ -21,11 +21,11 @@ Roblox-Fahrschulspiel von Lukas. Antworten an Lukas auf **Deutsch**, kurz und eh
 DataStore `Fuehrerschein_v1` (nie umbenennen, sonst verlieren Spieler alles). Neue Felder immer mit Standardwert ergänzen. OrderedDataStores `Rangliste_Level/Km/Perfekt`.
 
 ## Karte (Studs)
-Stadt |x|,|z| ≤ 324 (50 km/h) · Autobahn z = -520 (130) · Siedlungen x 405–790 (30) · Fahrschule ~(550,40) · Depot (600,386) · Pizzeria (375,~60) · Autohaus (85,-376) · Servicestation x 336–412, z -96..-10 · Tankstelle West (-819,-160) · Parkhaus (156,-156) · Park/Bestenlisten (-156,156) · Kreisel (0,600) und (780,600).
+Stadt |x|,|z| ≤ 324 (50 km/h) · Autobahn z = -520 (130) · Siedlungen x 405–790 (30) · Fahrschule ~(550,40) · Depot (600,386) · Pizzeria (375,~60) · Autohaus (85,-376, Außenpodeste track (78,-395), gs (78,-357)) · Servicestation x 336–412, z -96..-10 · Tankstelle West (-819,-160) · Parkhaus (156,-156) · Park/Bestenlisten (-156,156) · Kreisel (0,600) und (780,600).
 Tempolimits zentral in `src/Verkehrsregeln.lua` (WOHNSTRASSEN muss zum Generator passen).
 
 ## Offene Punkte
-- **Stand 13.10. (v17):** Auto.lua v17 ist in Lukas' Studio eingespielt. Offen: Lukas importiert die vier OBJ (+ .mtl) `RangerX`, `VelocityGT`, `StrikerTR`, `Executive`; dann Modelle in den ServerStorage (Namen angleichen, Browser hängt Zahlen an), `Karosserien.Source` komplett auf Repo-Stand setzen (Länge prüfen), Vorschau + Bilder. Neue Mesh-Teile (Lichter/Grill) heißen im OBJ z. B. `LichtVR` und bekommen im Spiel ihren Teilnamen (`Scheinwerfer`, `BlinkerR` …) über `n`/`a` in `Karosserien.lua`.
+- **Stand 13.10. (v18):** Neues Auto `gs` „Vanta GS“ aus Lukas' Meshy-Modell (Aufbereitung `tools/mesh/meshy/`, Ergebnis `tools/mesh/vanta_teile.npz`, `python3 tools/mesh/vanta.py`). Offen in Studio: Auto.lua/Server.lua/Fahrzeugpflege.lua/Karosserien.lua v18 einspielen, fünf OBJ importieren (`RangerX`, `VelocityGT`, `StrikerTR`, `Executive`, `VantaGS`), Modelle in den ServerStorage (Namen angleichen). Neue Mesh-Teile heißen im OBJ z. B. `LichtVR` und bekommen im Spiel ihren Teilnamen über `n`/`a` in `Karosserien.lua`.
 - Studio-Verbindung: MCP-Server von Roblox Studio + Claude Desktop; Änderungen per Ersetzungs-Patch (`execute_luau`), danach Längen gegen das Repo prüfen.
 - Etappe 2 Rest: Busfahrer-Job, Abschlepp-Job.
 - Etappe 3: Spieler-Polizei, Gebrauchtwagenmarkt, echte Spieler als Fahrlehrer, Rettungsdienst/Feuerwehr, Schaltgetriebe, Hupe (Sound-ID von Lukas nötig).

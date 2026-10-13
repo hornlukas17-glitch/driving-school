@@ -21,7 +21,7 @@ M.laufen(M.zeit() + 15)
 local ah = workspace.Karte.Vorstadt.Autohaus
 pruefe("showroom car outside", ah:FindFirstChild("Ausstellung_track") ~= nil)
 local n = 0 for _, x in ah:GetChildren() do if x.Name == "Ausstellungsplatz" then n += 1 end end
-pruefe("7 podiums", n == 7)
+pruefe("8 podiums (one per car)", n == #require(game.ServerScriptService.FuehrerscheinServer.Auto).MODELL_REIHENFOLGE and n == 8)
 frage("autoKaufen", "track")
 p.Character:PivotTo(CFrame.new(60, 3, -376))
 

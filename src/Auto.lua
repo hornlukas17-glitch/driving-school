@@ -845,13 +845,18 @@ Auto.MODELLE = {
 		R = 1.35, spur = 3.45, achse = 5.3, laenge = 16.5, breite = 7.6,
 		werte = { MaxTempo = 190, Antrieb = 8400, Bremse = 21000, Lenkwinkel = 31, Grip = 17, Lenkdirekt = 16, Anpressdruck = 88 },
 	},
+	gs = {
+		name = "Vanta GS", art = "Sport sedan", preis = 16000, beschreibung = "A sleek four-door fastback with an LED light bar. 180 km/h top speed.",
+		R = 1.4, spur = 3.0, achse = 5.14, laenge = 17.4, breite = 7.0,
+		werte = { MaxTempo = 180, Antrieb = 7800, Bremse = 19000, Lenkwinkel = 32, Grip = 16, Lenkdirekt = 15, Anpressdruck = 80 },
+	},
 	renn = {
 		name = "Apex R1", art = "Race car", preis = 35000, beschreibung = "A real race car with a huge rear wing. 210 km/h top speed.",
 		R = 1.35, spur = 3.5, achse = 5.4, laenge = 17, breite = 7.8,
 		werte = { MaxTempo = 210, Antrieb = 9500, Bremse = 22000, Lenkwinkel = 30, Grip = 18, Lenkdirekt = 16, Anpressdruck = 95 },
 	},
 }
-Auto.MODELL_REIHENFOLGE = { "kleinwagen", "suv", "limousine", "sport", "track", "renn", "supersport" }
+Auto.MODELL_REIHENFOLGE = { "kleinwagen", "suv", "limousine", "sport", "gs", "track", "renn", "supersport" }
 
 -- ---------------------------------------------------------------
 -- Round bodies for private cars (own designs, made with tools/mesh/*.py -> dist/mesh/<vorlage>.obj).
@@ -1183,6 +1188,22 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 			k("Heckfluegel", V3(B - 0.6, 0.15, 1.3), at(0, oben + 1.4, L / 2 - 1.2), SCHWARZ)
 			lichter(unten + 0.9, -L / 2 + 0.45, L / 2 - 0.45, 2.6)
 		end
+	elseif typ == "gs" then
+		if rundVorlage then
+			rundBauen()
+		else
+			-- simple block body until the round body (VantaGS) is imported
+			sitzY = 1.3
+			local unten = R + 0.1
+			k("Karosserie", V3(B - 0.4, 1.7, L - 0.8), at(0, unten + 0.85, 0.3), farbe)
+			k("Kollision", V3(B - 0.4, 0.4, L - 1.5), at(0, 2 * R + 0.3, 0.3), farbe, nil, { kollision = true, transparenz = 1, schatten = false })
+			local oben = unten + 1.7
+			k("Dach", V3(B - 1.6, 0.3, 4.4), at(0, oben + 1.6, 1.0), farbe, nil, { kollision = true })
+			glas("Frontscheibe", V3(B - 1.6, 1.5, 2.6), at(0, oben + 0.75, -2.3), "WedgePart")
+			glas("Seitenscheiben", V3(B - 1.5, 1.4, 4.4), at(0, oben + 0.75, 1.0))
+			glas("Heckscheibe", V3(B - 1.6, 1.5, 3.8), at(0, oben + 0.75, 5.1) * CFrame.Angles(0, math.rad(180), 0), "WedgePart")
+			lichter(unten + 1.0, -L / 2 + 0.6, L / 2 - 0.2, 2.4)
+		end
 	else -- race car
 		sitzY = 1.2
 		local unten = R + 0.05
@@ -1295,12 +1316,12 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 
 	-- wheels (same hinge setup as the driving school car)
 	local reifen = PhysicalProperties.new(0.9, 2, 0, 100, 1)
-	local felgenFarbe = typ == "renn" and Color3.fromRGB(40, 40, 45) or (typ == "sport" and Color3.fromRGB(45, 45, 50) or CHROM)
+	local felgenFarbe = typ == "renn" and Color3.fromRGB(40, 40, 45) or (typ == "sport" and Color3.fromRGB(45, 45, 50) or (typ == "gs" and Color3.fromRGB(95, 97, 104) or CHROM))
 	-- spoke rims and brake calipers: only looks, all massless and without collision (driving feel unchanged)
-	local SPEICHEN = { kleinwagen = 4, suv = 6, limousine = 5, sport = 5, track = 5, renn = 6, supersport = 10 }
+	local SPEICHEN = { kleinwagen = 4, suv = 6, limousine = 5, sport = 5, track = 5, gs = 10, renn = 6, supersport = 10 }
 	local SATTEL_FARBE = {
 		sport = Color3.fromRGB(235, 175, 20), renn = Color3.fromRGB(200, 25, 30), supersport = Color3.fromRGB(200, 25, 30),
-		track = Color3.fromRGB(235, 95, 20),
+		track = Color3.fromRGB(235, 95, 20), gs = Color3.fromRGB(240, 140, 25),
 		suv = Color3.fromRGB(70, 70, 75), limousine = Color3.fromRGB(70, 70, 75), kleinwagen = Color3.fromRGB(70, 70, 75),
 	}
 	local function deko(name, gr, lage, farbeT, mat, an, form)

@@ -2,6 +2,34 @@
 -- Round bodies for the private cars. Import dist/mesh/<vorlage>.obj with the 3D Importer
 -- and put the model (named like <vorlage>) into ServerStorage; then the car uses it.
 return {
+	gs = {
+		vorlage = "VantaGS",
+		sitzY = 1.3,
+		armaturenZ = -2,
+		mesh = {
+			Karosserie = { groesse = { 7.1284, 2.6071, 1.8322 }, mitte = { -0.0055, 1.7871, -7.4136 } },
+			Heckpartie = { groesse = { 7.4938, 4.4463, 16.0361 }, mitte = { 0.0042, 2.7112, 1.0623 } },
+			Verkleidung = { groesse = { 7.4922, 3.3167, 17.278 }, mitte = { 0.005, 2.1419, 0.3386 } },
+			Glas = { groesse = { 6.1914, 1.9372, 10.8202 }, mitte = { 0.0067, 4.0465, 1.9069 } },
+			BlinkHL = { groesse = { 0.4397, 0.189, 0.9417 }, mitte = { -2.8602, 3.1557, 7.5847 }, n = "BlinkerL", a = "blinker" },
+			BlinkHR = { groesse = { 0.4289, 0.1884, 0.9786 }, mitte = { 2.8773, 3.1523, 7.5486 }, n = "BlinkerR", a = "blinker" },
+			BlinkVL = { groesse = { 0.7025, 2.1198, 0.8841 }, mitte = { -3.188, 1.5451, -6.9954 }, n = "BlinkerL", a = "blinker" },
+			BlinkVR = { groesse = { 0.7762, 2.1619, 1.3196 }, mitte = { 3.2145, 1.5487, -7.1729 }, n = "BlinkerR", a = "blinker" },
+			LichtHL = { groesse = { 2.7927, 0.288, 0.744 }, mitte = { -1.2928, 3.2257, 8.3201 }, n = "Ruecklicht", a = "neon_rot" },
+			LichtHR = { groesse = { 2.7314, 0.2735, 0.7043 }, mitte = { 1.3273, 3.2181, 8.3403 }, n = "Ruecklicht", a = "neon_rot" },
+			LichtVL = { groesse = { 2.9349, 2.7272, 2.1055 }, mitte = { -1.3854, 1.8522, -7.2883 }, n = "Scheinwerfer", a = "scheinwerfer" },
+			LichtVR = { groesse = { 2.8872, 2.6528, 2.0646 }, mitte = { 1.4099, 1.8452, -7.3158 }, n = "Scheinwerfer", a = "scheinwerfer" },
+			Radhaus = { groesse = { 6.9, 2.3083, 13.7185 }, mitte = { 0, 1.9659, 0 }, n = "Radhaus", a = "schwarz" },
+		},
+		anbau = {
+		},
+		kollision = {
+			{ g = { 6.6, 0.4, 15.6 }, p = { 0, 3.1, 0.3 } },
+			{ g = { 5.6, 1.3, 7 }, p = { 0, 4.2, 1 } },
+		},
+		kennzeichen = { vorne = { 1.45, -8.181 }, hinten = { 2.05, 9.16 } },
+		spoiler = { 4.259, 7.6, 0.4 },
+	},
 	limousine = {
 		vorlage = "Executive",
 		sitzY = 1.45,

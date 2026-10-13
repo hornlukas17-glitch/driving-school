@@ -1,5 +1,10 @@
 # Changelog
 
+## v18
+- Neues Auto „Vanta GS“ (Sportlimousine aus Lukas' eigenem Meshy-Modell, 16.000 Coins, 180 km/h) mit eigenem Podest vor dem Autohaus. Runde Karosserie: `dist/mesh/VantaGS.obj` importieren, Modell `VantaGS` in den ServerStorage.
+- Lichter funktionieren: LED-Leiste vorne als Scheinwerfer (mit Licht), durchgehendes Rücklichtband, Blinker an den Enden – aus den Lichtflächen des Modells ausgeschnitten.
+- Modell aufbereitet: Meshy-Räder und Innenraum entfernt, Oberfläche geglättet, von 1,45 Mio. auf ~50.000 Dreiecke reduziert, Radhäuser ergänzt. Fahrgefühl wie alle Autos (nur eigene Werte).
+
 ## v17
 - Neue runde Karosserie für die Limousine „Executive“ (eigenes Design): sportliche Oberklasse-Limousine mit flacher Front, vier Türen, Fensterleiste in Chrom, Diffusor und vier runden Endrohren. `dist/mesh/Executive.obj` importieren.
 - Alle runden Autos realistischer: echter Karosserie-Querschnitt (unten eingezogen, Schulter, runde Oberkante) statt senkrechter Seiten.

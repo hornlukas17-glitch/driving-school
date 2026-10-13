@@ -25,7 +25,7 @@ ART = {"lack": (KFARBE, 0.5), "chrom": ((0.75, 0.75, 0.78), 0.9), "alu": ((0.66,
        "scheinwerfer": ((0.95, 0.97, 1.0), 1), "neon_weiss": ((0.95, 0.95, 0.95), 1), "neon_rot": ((0.75, 0.04, 0.04), 0.8),
        "blinker": ((0.6, 0.38, 0.14), 0.5), "fuge": ((0.02, 0.02, 0.025), 0.1), "glanzschwarz": ((0.02, 0.02, 0.025), 0.9),
        "rueckglas": ((0.35, 0.02, 0.03), 0.9)}
-FARBEN = {"Karosserie": (KFARBE, 0.5), "Dach": (KFARBE, 0.5), "Verkleidung": ((0.06, 0.06, 0.065), 0.1), "Glas": ((0.05, 0.07, 0.1), 0.5)}
+FARBEN = {"Karosserie": (KFARBE, 0.5), "Heckpartie": (KFARBE, 0.5), "Dach": (KFARBE, 0.5), "Verkleidung": ((0.06, 0.06, 0.065), 0.1), "Glas": ((0.05, 0.07, 0.1), 0.5)}
 for name, f in objs.items():
     art = INFO["mesh"].get(name, {}).get("a")
     farbe, glanz = ART[art] if art in ART else FARBEN.get(name, ((0.5, 0.5, 0.5), 0.5))

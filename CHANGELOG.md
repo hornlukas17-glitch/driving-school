@@ -1,5 +1,12 @@
 # Changelog
 
+## v19
+- Vanta GS in echtem Studio getestet und nachgebessert (neue `dist/mesh/VantaGS.obj` importieren, altes Modell im ServerStorage ersetzen):
+  - Karosserie stand verkehrt herum (Front hinten) – jetzt richtig gedreht.
+  - Saubere Kanten: Fenster ohne Zacken, gerade schwarze Schweller, schwarzer Frontgrill und Diffusor, keine Fransen mehr unten.
+  - Fahrer sitzt tiefer und weiter innen: Kopf nicht mehr durchs Dach, Arm nicht mehr durch die Tür.
+- Fahrtest: 0–178 km/h in 4 s, bremst sauber, fährt stabil wie der Velocity GT.
+
 ## v18
 - Neues Auto „Vanta GS“ (Sportlimousine aus Lukas' eigenem Meshy-Modell, 16.000 Coins, 180 km/h) mit eigenem Podest vor dem Autohaus. Runde Karosserie: `dist/mesh/VantaGS.obj` importieren, Modell `VantaGS` in den ServerStorage.
 - Lichter funktionieren: LED-Leiste vorne als Scheinwerfer (mit Licht), durchgehendes Rücklichtband, Blinker an den Enden – aus den Lichtflächen des Modells ausgeschnitten.

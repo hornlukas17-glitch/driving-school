@@ -370,7 +370,7 @@ def linie(name, punkte, art="fuge", dicke=0.035, spiegeln=False):
     return teile
 
 
-def erzeugen(typ, vorlage, titel, rad, meshes, anbau, kollision, kennzeichen, spoiler, sitz_y=None, armaturen_z=None):
+def erzeugen(typ, vorlage, titel, rad, meshes, anbau, kollision, kennzeichen, spoiler, sitz_y=None, armaturen_z=None, drehung=None, sitz_x=None):
     """meshes: {"Karosserie": (verts, faces), ...}; rad = (R, spur, achse)"""
     for name, m in meshes.items():
         assert len(m[1]) <= 20000, f"{name} hat {len(m[1])} Dreiecke (Roblox-Limit 20000)"
@@ -381,6 +381,10 @@ def erzeugen(typ, vorlage, titel, rad, meshes, anbau, kollision, kennzeichen, sp
         info["sitzY"] = sitz_y
     if armaturen_z is not None:
         info["armaturenZ"] = armaturen_z
+    if sitz_x is not None:                      # Sitzabstand zur Mitte (Standard 1.5)
+        info["sitzX"] = sitz_x
+    if drehung is not None:                     # Grad um die Hochachse, falls der Importer das Modell verkehrt herum einliest
+        info["drehung"] = drehung
     for name, m in meshes.items():
         verts, faces = m[0], m[1]
         v = np.array(verts)
@@ -422,7 +426,7 @@ def exportieren():
             continue
         zeilen.append(f"\t{d['typ']} = {{")
         zeilen.append(f"\t\tvorlage = {lua_wert(d['vorlage'])},")
-        for feld in ("sitzY", "armaturenZ"):
+        for feld in ("sitzY", "sitzX", "armaturenZ", "drehung"):
             if feld in d:
                 zeilen.append(f"\t\t{feld} = {lua_wert(d[feld])},")
         zeilen.append("\t\tmesh = {")

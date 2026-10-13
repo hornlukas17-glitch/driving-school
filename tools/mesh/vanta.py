@@ -16,7 +16,7 @@ HIER = os.path.dirname(os.path.abspath(__file__))
 RAD_R = 1.4
 SPUR = 3.0
 ACHSE = 5.14
-SITZ_Y = 1.3
+SITZ_Y = 0.55          # tief, sonst schaut der Kopf durchs flache Dach (in Studio gemessen)
 
 d = np.load(os.path.join(HIER, "vanta_teile.npz"))
 meta = json.loads(str(d["meta"]))
@@ -38,20 +38,16 @@ def liste(V, F):
 
 
 meshes = {}
-# Lack in zwei Teile (Roblox: max. 20000 Dreiecke je MeshPart)
-V, F = holen("Karosserie")
-dachV, dachF = holen("Dach")              # die paar Lackflächen ganz oben (Dachkante) gehören dazu
-F = np.concatenate([F, dachF + len(V)])
-V = np.concatenate([V, dachV])
-fz = V[F].mean(1)[:, 2]
-vorne = fz < np.median(fz)
-meshes["Karosserie"] = liste(*teil_von(V, F, vorne))
-meshes["Heckpartie"] = liste(*teil_von(V, F, ~vorne))   # ohne "a": wird wie Karosserie lackiert (mit Schatten)
-meshes["Verkleidung"] = liste(*holen("Verkleidung"))
-meshes["Glas"] = liste(*holen("Glas"))
+# Teile kommen fertig aufgeteilt aus meshy/c_bauen.py (je max. 20000 Dreiecke):
+# Karosserie/Heckpartie(/Mittelteil) = Lack, Verkleidung(2) = schwarz, Glas, Lichter mit Teilnamen
 for name in namen:
+    V, F = holen(name)
+    if len(F) == 0:
+        continue
     if name in meta:
-        meshes[name] = (*liste(*holen(name)), meta[name])
+        meshes[name] = (*liste(V, F), meta[name])
+    else:
+        meshes[name] = liste(V, F)
 
 
 def radhaus(z0):
@@ -79,7 +75,7 @@ for z0 in (-ACHSE, ACHSE):
 meshes["Radhaus"] = (rv, rf, {"n": "Radhaus", "a": "schwarz"})
 
 # Kennzeichen, Spoiler-Platz, Kollision aus der echten Form
-alle = np.concatenate([holen("Karosserie")[0], holen("Verkleidung")[0]])
+alle = np.concatenate([holen(n)[0] for n in namen if n in ("Karosserie", "Heckpartie", "Mittelteil", "Verkleidung", "Verkleidung2")])
 def front_z(y):
     m = (np.abs(alle[:, 0]) < 0.6) & (np.abs(alle[:, 1] - y) < 0.2)
     return float(alle[m, 2].min())
@@ -95,4 +91,4 @@ spoiler = [round(deck_y(7.6) + 0.5, 3), 7.6, 0.4]
 kollision = [{"g": [6.6, 0.4, 15.6], "p": [0, 2 * RAD_R + 0.3, 0.3]}, {"g": [5.6, 1.3, 7.0], "p": [0, 4.2, 1.0]}]
 
 erzeugen("gs", "VantaGS", "Vanta GS sport sedan body", (RAD_R, SPUR, ACHSE), meshes, [], kollision, kennz, spoiler,
-         sitz_y=SITZ_Y, armaturen_z=-2.0)
+         sitz_y=SITZ_Y, armaturen_z=-2.0, drehung=180, sitz_x=0.85)   # Studio liest dieses OBJ gedreht ein (in Studio geprüft)

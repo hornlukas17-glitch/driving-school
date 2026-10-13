@@ -985,7 +985,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 				mp.CanTouch = false
 				mp.Massless = true
 				mp.Size = v3(d.groesse)
-				mp.CFrame = at(d.mitte[1], d.mitte[2], d.mitte[3]) * CFrame.Angles(0, math.rad(Auto.MESH_DREHUNG), 0)
+				mp.CFrame = at(d.mitte[1], d.mitte[2], d.mitte[3]) * CFrame.Angles(0, math.rad(rundDef.drehung or Auto.MESH_DREHUNG), 0)
 				for _, kind in mp:GetChildren() do
 					if kind:IsA("SurfaceAppearance") or kind:IsA("Decal") or kind:IsA("Texture") then kind:Destroy() end
 				end
@@ -1280,16 +1280,17 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 
 	-- dashboard and steering wheel (all cars)
 	local armZ = rundVorlage and rundDef.armaturenZ or -1.9
+	local sx = rundVorlage and rundDef.sitzX or 1.5 -- narrow bodies seat closer to the middle (arms stay inside the doors)
 	k("Armaturenbrett", V3(5.6, 0.7, 1.0), at(0, sitzY + 1.6, armZ), INNEN)
-	k("Lenkrad", V3(0.15, 1.3, 1.3), at(-1.5, sitzY + 2.1, armZ + 0.5) * CFrame.Angles(math.rad(-25), math.rad(90), 0), SCHWARZ, nil, { form = Enum.PartType.Cylinder })
-	for _, x in { -1.5, 1.5 } do
+	k("Lenkrad", V3(0.15, 1.3, 1.3), at(-sx, sitzY + 2.1, armZ + 0.5) * CFrame.Angles(math.rad(-25), math.rad(90), 0), SCHWARZ, nil, { form = Enum.PartType.Cylinder })
+	for _, x in { -sx, sx } do
 		k("Sitz", V3(2.1, 0.5, 2.1), at(x, sitzY - 0.1, 0.6), INNEN, Enum.Material.Fabric)
 		k("Rueckenlehne", V3(2.1, 2.4, 0.4), at(x, sitzY + 1.1, 1.8) * CFrame.Angles(math.rad(-12), 0, 0), typ == "renn" and Color3.fromRGB(180, 30, 30) or INNEN, Enum.Material.Fabric)
 		k("Kopfstuetze", V3(1.2, 0.7, 0.35), at(x, sitzY + 2.55, 2.05) * CFrame.Angles(math.rad(-12), 0, 0), INNEN, Enum.Material.Fabric)
 	end
 	-- a bit of interior that you can see through the windows
 	k("Mittelkonsole", V3(0.8, 0.9, 2.6), at(0, sitzY + 0.35, armZ + 1.6), Color3.fromRGB(35, 35, 38))
-	k("Tacho", V3(1.2, 0.45, 0.06), at(-1.5, sitzY + 2.1, armZ + 0.3) * CFrame.Angles(math.rad(-25), 0, 0), Color3.fromRGB(60, 160, 255), Enum.Material.Neon, { schatten = false })
+	k("Tacho", V3(1.2, 0.45, 0.06), at(-sx, sitzY + 2.1, armZ + 0.3) * CFrame.Angles(math.rad(-25), 0, 0), Color3.fromRGB(60, 160, 255), Enum.Material.Neon, { schatten = false })
 
 	-- seats
 	local function sitzBauen(klasse, name, x)
@@ -1311,8 +1312,8 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		w.Parent = s
 		return s
 	end
-	local sitz = sitzBauen("VehicleSeat", "Fahrersitz", -1.5)
-	local beifahrer = sitzBauen("Seat", "Beifahrersitz", 1.5)
+	local sitz = sitzBauen("VehicleSeat", "Fahrersitz", -sx)
+	local beifahrer = sitzBauen("Seat", "Beifahrersitz", sx)
 
 	-- wheels (same hinge setup as the driving school car)
 	local reifen = PhysicalProperties.new(0.9, 2, 0, 100, 1)

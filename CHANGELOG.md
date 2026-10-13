@@ -1,5 +1,11 @@
 # Changelog
 
+## v29 – Performance für Handy, Tablet und schwache PCs
+- **Grafik-Schalter** in den Settings: „⚡ Fast“ / „Best“. Handys und Tablets starten automatisch in „Fast“; am PC schaltet es sich ein, wenn das Spiel 10 Sekunden unter 30 FPS läuft (nur solange man nicht selbst gewählt hat).
+- „Fast“: keine Sonnenstrahlen/Tiefenunschärfe/Bloom, weniger Regen, Minimap seltener neu gezeichnet, ferne NPC-Autos seltener bewegt.
+- **Für alle:** Straßenlaternen leuchten nur nachts und nur in der Nähe (vorher 332 Lichter rund um die Uhr). Ferne NPC-Autos werden seltener bewegt, die Minimap höchstens 30-mal pro Sekunde gezeichnet.
+- **Kleine Bildschirme:** große Fenster (Autohaus, Werkstatt, Akte, My Cars, Settings) werden auf dem Handy automatisch verkleinert statt abgeschnitten.
+
 ## v28 – Aufklappmenü
 - **Menü oben links:** Nur noch ein „☰ Menu“-Knopf; ein Klick klappt Shop, Rewards, Daily, My Cars, Record, Kamera und Settings aus. Nach der Auswahl klappt es wieder zu. Roter Punkt am Menü-Knopf, wenn Belohnungen warten.
 - **Autohaus:** Statt der beschrifteten Fläche ein runder, transparenter grüner Kreis (wie die Tore in den Fahrstunden) mit leichter Lichtsäule – reinlaufen öffnet den Katalog.

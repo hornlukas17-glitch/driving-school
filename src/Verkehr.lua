@@ -755,17 +755,27 @@ function Verkehr.anzeigen(liste, event)
 		end
 	end)
 	local hoch = Vector3.new(0, 0.2, 0)
+	local bild = 0
 	RunService.RenderStepped:Connect(function(dt)
 		dt = math.min(dt, 0.1)
+		bild += 1
+		local kam = workspace.CurrentCamera
+		local auge = kam and kam.CFrame and kam.CFrame.Position or Vector3.zero
 		for _, a in autos do
 			local korrektur = a.fehl * math.min(1, dt * 4)
 			a.fehl -= korrektur
 			a.s = (a.s + a.v * dt + korrektur) % a.spur.gesamt
 			local pos = Verkehr.ort(a.spur, a.s)
-			local _, blick = Verkehr.ort(a.spur, a.s + 3)
-			a.modell:PivotTo(CFrame.lookAt(pos + hoch, pos + hoch + blick))
-			if #a.blaulicht > 0 then
-				Verkehr.blaulichtZeigen(a.blaulicht, event.Parent:GetAttribute("Blaulicht_" .. a.nr) == true)
+			-- far away vehicles are moved less often (saves a lot on phones and weak PCs, nobody sees it)
+			local weit = Vector3.new(pos.X - auge.X, 0, pos.Z - auge.Z).Magnitude
+			local takt = weit > 500 and 8 or (weit > 220 and 3 or 1)
+			if Verkehr.sparmodus and weit > 120 then takt *= 2 end
+			if takt == 1 or (bild + a.nr) % takt == 0 then
+				local _, blick = Verkehr.ort(a.spur, a.s + 3)
+				a.modell:PivotTo(CFrame.lookAt(pos + hoch, pos + hoch + blick))
+				if #a.blaulicht > 0 then
+					Verkehr.blaulichtZeigen(a.blaulicht, event.Parent:GetAttribute("Blaulicht_" .. a.nr) == true)
+				end
 			end
 		end
 	end)

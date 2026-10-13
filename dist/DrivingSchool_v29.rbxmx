@@ -876,17 +876,27 @@ function Verkehr.anzeigen(liste, event)
 		end
 	end)
 	local hoch = Vector3.new(0, 0.2, 0)
+	local bild = 0
 	RunService.RenderStepped:Connect(function(dt)
 		dt = math.min(dt, 0.1)
+		bild += 1
+		local kam = workspace.CurrentCamera
+		local auge = kam and kam.CFrame and kam.CFrame.Position or Vector3.zero
 		for _, a in autos do
 			local korrektur = a.fehl * math.min(1, dt * 4)
 			a.fehl -= korrektur
 			a.s = (a.s + a.v * dt + korrektur) % a.spur.gesamt
 			local pos = Verkehr.ort(a.spur, a.s)
-			local _, blick = Verkehr.ort(a.spur, a.s + 3)
-			a.modell:PivotTo(CFrame.lookAt(pos + hoch, pos + hoch + blick))
-			if #a.blaulicht > 0 then
-				Verkehr.blaulichtZeigen(a.blaulicht, event.Parent:GetAttribute("Blaulicht_" .. a.nr) == true)
+			-- far away vehicles are moved less often (saves a lot on phones and weak PCs, nobody sees it)
+			local weit = Vector3.new(pos.X - auge.X, 0, pos.Z - auge.Z).Magnitude
+			local takt = weit > 500 and 8 or (weit > 220 and 3 or 1)
+			if Verkehr.sparmodus and weit > 120 then takt *= 2 end
+			if takt == 1 or (bild + a.nr) % takt == 0 then
+				local _, blick = Verkehr.ort(a.spur, a.s + 3)
+				a.modell:PivotTo(CFrame.lookAt(pos + hoch, pos + hoch + blick))
+				if #a.blaulicht > 0 then
+					Verkehr.blaulichtZeigen(a.blaulicht, event.Parent:GetAttribute("Blaulicht_" .. a.nr) == true)
+				end
 			end
 		end
 	end)
@@ -7462,7 +7472,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v28 loaded")
+print("[Driving School] client v29 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -9117,8 +9127,13 @@ do
 	abstandText.Text = ""
 	abstandText.Parent = halter
 
+	local naechsteKarte = 0
 	RunService.RenderStepped:Connect(function()
 		if not mmGui.Enabled then return end
+		-- the minimap is a 3D view of its own: redraw it at most 30 times a second (12 in performance mode)
+		local jetzt = os.clock()
+		if jetzt < naechsteKarte then return end
+		naechsteKarte = jetzt + (_G.Sparmodus and 1 / 12 or 1 / 30)
 		local char = spieler.Character
 		local wurzel = char and char:FindFirstChild("HumanoidRootPart")
 		if not wurzel then return end
@@ -9785,7 +9800,7 @@ do
 		local kam = workspace.CurrentCamera
 		if not kam or not kam.CFrame then return end
 		regen.CFrame = CFrame.new(kam.CFrame.Position + Vector3.new(0, 35, 0))
-		tropfen.Rate = (ordner:GetAttribute("Wetter") == "Rain") and 900 or 0
+		tropfen.Rate = (ordner:GetAttribute("Wetter") == "Rain") and (_G.Sparmodus and 250 or 900) or 0
 	end)
 
 	-- personal traffic record (license, points, history)
@@ -10219,6 +10234,131 @@ do
 end
 
 -- ---------------------------------------------------------------
+-- Phones, tablets and weak PCs
+-- * big windows are scaled down so they fit on small screens
+-- * street lamps only light up at night and near the camera
+-- * performance mode ("Graphics: Fast" in the settings): no sun rays / depth of field / bloom,
+--   less rain, far NPC cars and the minimap are updated less often.
+--   It switches on by itself on phones/tablets and when the frame rate stays low.
+-- ---------------------------------------------------------------
+do
+	local Lighting = game:GetService("Lighting")
+	local GuiService = game:GetService("GuiService")
+	local UIS = game:GetService("UserInputService")
+
+	_G.SparmodusSetzen = function(an)
+		_G.Sparmodus = an == true
+		Verkehr.sparmodus = _G.Sparmodus
+		for _, e in Lighting:GetChildren() do
+			if e:IsA("SunRaysEffect") or e:IsA("DepthOfFieldEffect") or e:IsA("BloomEffect") then
+				e.Enabled = not _G.Sparmodus
+			end
+		end
+	end
+	local function nurTouch()
+		return UIS.TouchEnabled == true and UIS.KeyboardEnabled ~= true
+	end
+	-- not chosen by the player yet: phones and tablets start in performance mode
+	_G.SparmodusAuto = function()
+		local e = _G.Einstellungen
+		if e and not e.sparmodusGewaehlt then
+			e.sparmodus = nurTouch()
+		end
+		_G.SparmodusSetzen(e and e.sparmodus)
+	end
+	_G.SparmodusAuto()
+
+	-- frame rate watch: stays below 30 fps for 10 seconds -> performance mode (only if the player didn't choose)
+	local bilder, langsam = 0, 0
+	RunService.RenderStepped:Connect(function() bilder += 1 end)
+	task.spawn(function()
+		while true do
+			bilder = 0
+			task.wait(5)
+			local fps = bilder / 5
+			local e = _G.Einstellungen
+			if _G.ImSpiel and e and not e.sparmodusGewaehlt and not e.sparmodus then
+				langsam = fps < 30 and langsam + 1 or 0
+				if langsam >= 2 then
+					e.sparmodus = true
+					_G.SparmodusSetzen(true)
+					warnen("⚡ Performance mode switched on (Settings → Graphics)", Color3.fromRGB(40, 150, 70))
+				end
+			end
+		end
+	end)
+
+	-- street lamps: light only at night and near the camera (hundreds of lights cost a lot)
+	local lampen = {}
+	local karte = workspace:WaitForChild("Karte")
+	local function merken(x)
+		if x:IsA("PointLight") and x.Parent and x.Parent.Name == "Leuchte" then lampen[x] = true end
+	end
+	for _, x in karte:GetDescendants() do merken(x) end
+	karte.DescendantAdded:Connect(merken)
+	karte.DescendantRemoving:Connect(function(x) lampen[x] = nil end)
+	task.spawn(function()
+		while true do
+			local zeit = ordner:GetAttribute("Uhrzeit") or 12
+			local nacht = zeit < 6.8 or zeit > 18.2 or ordner:GetAttribute("Wetter") == "Fog"
+			local kam = workspace.CurrentCamera
+			local auge = kam and kam.CFrame and kam.CFrame.Position or Vector3.zero
+			local reichweite = _G.Sparmodus and 150 or 420
+			for licht in lampen do
+				local teil = licht.Parent
+				if teil and teil:IsA("BasePart") then
+					local an = nacht and Vector3.new(teil.Position.X - auge.X, 0, teil.Position.Z - auge.Z).Magnitude < reichweite
+					if licht.Enabled ~= an then licht.Enabled = an end
+				end
+			end
+			task.wait(1.5)
+		end
+	end)
+
+	-- big fixed-size windows: scale down on small screens (phones in landscape are only ~350 px high)
+	local function einpassen(panel)
+		if not panel:IsA("GuiObject") or panel.AnchorPoint ~= Vector2.new(0.5, 0.5) then return end
+		if panel.Size.X.Scale ~= 0 or panel.Size.Y.Scale ~= 0 or panel.Size.Y.Offset < 200 then return end
+		for _, k in panel:GetChildren() do
+			if k:IsA("UIScale") and k.Name ~= "Einpassen" then return end -- has its own pop animation
+		end
+		local kam = workspace.CurrentCamera
+		local vp = kam and kam.ViewportSize
+		if not vp or vp.X < 10 then return end
+		local okInset, oben = pcall(function() return GuiService:GetGuiInset() end)
+		local obenY = (okInset and oben and oben.Y) or 36
+		local faktor = math.min(1, (vp.X - 20) / panel.Size.X.Offset, (vp.Y - obenY - 16) / panel.Size.Y.Offset)
+		local s = panel:FindFirstChild("Einpassen")
+		if faktor >= 0.999 then
+			if s then s:Destroy() end
+			return
+		end
+		s = s or Instance.new("UIScale")
+		s.Name = "Einpassen"
+		s.Scale = math.max(0.45, faktor)
+		s.Parent = panel
+	end
+	local function guiPruefen(g)
+		if not g:IsA("ScreenGui") then return end
+		for _, k in g:GetChildren() do einpassen(k) end
+		g.ChildAdded:Connect(function(k) task.defer(einpassen, k) end)
+	end
+	local pg = spieler:WaitForChild("PlayerGui")
+	for _, g in pg:GetChildren() do guiPruefen(g) end
+	pg.ChildAdded:Connect(function(g) task.defer(guiPruefen, g) end)
+	local kam = workspace.CurrentCamera
+	if kam then
+		kam:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+			for _, g in pg:GetChildren() do
+				if g:IsA("ScreenGui") then
+					for _, k in g:GetChildren() do einpassen(k) end
+				end
+			end
+		end)
+	end
+end
+
+-- ---------------------------------------------------------------
 -- NPC traffic: the server sends where the vehicles are, we draw them here
 -- ---------------------------------------------------------------
 task.spawn(function()
@@ -10238,10 +10378,12 @@ end)
 -- ---------------------------------------------------------------
 -- Settings (saved on the server) and the start screen
 -- ---------------------------------------------------------------
-_G.Einstellungen = { minimap = true, mph = false, grosseAnzeige = false, ersteP = false }
+_G.Einstellungen = { minimap = true, mph = false, grosseAnzeige = false, ersteP = false, sparmodus = false, sparmodusGewaehlt = false }
+_G.SparmodusAuto() -- phones / tablets: performance mode until the saved settings say otherwise
 
 local function einstellungenAnwenden()
 	local e = _G.Einstellungen
+	if _G.SparmodusSetzen then _G.SparmodusSetzen(e.sparmodus) end
 	if _G.MinimapGui then _G.MinimapGui.Enabled = e.minimap end
 	if e.grosseAnzeige then
 		anweisung.Size = UDim2.new(0.85, 0, 0, 84)
@@ -10264,7 +10406,7 @@ einstellGui.Parent = spieler.PlayerGui
 local einstellRahmen = Instance.new("Frame")
 einstellRahmen.AnchorPoint = Vector2.new(0.5, 0.5)
 einstellRahmen.Position = UDim2.fromScale(0.5, 0.5)
-einstellRahmen.Size = UDim2.fromOffset(380, 330)
+einstellRahmen.Size = UDim2.fromOffset(380, 384)
 einstellRahmen.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
 einstellRahmen.Parent = einstellGui
 Instance.new("UICorner", einstellRahmen).CornerRadius = UDim.new(0, 14)
@@ -10284,6 +10426,7 @@ local OPTIONEN = {
 	{ "mph", "Speed unit", "mph", "km/h" },
 	{ "grosseAnzeige", "Instruction box", "Large", "Small" },
 	{ "ersteP", "Start in first person", "On", "Off" },
+	{ "sparmodus", "Graphics", "⚡ Fast", "Best" },
 }
 local optionKnoepfe = {}
 for i, o in OPTIONEN do
@@ -10308,6 +10451,7 @@ for i, o in OPTIONEN do
 	optionKnoepfe[o[1]] = { knopf = k, an = o[3], aus = o[4] }
 	k.MouseButton1Click:Connect(function()
 		_G.Einstellungen[o[1]] = not _G.Einstellungen[o[1]]
+		if o[1] == "sparmodus" then _G.Einstellungen.sparmodusGewaehlt = true end
 		for schl, ok in optionKnoepfe do
 			local wert = _G.Einstellungen[schl]
 			ok.knopf.Text = wert and ok.an or ok.aus
@@ -10941,7 +11085,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v28 loading")
+	print("[Driving School] start screen v29 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -11118,6 +11262,7 @@ do
 				if _G.Einstellungen[k] ~= nil and type(v) == "boolean" then _G.Einstellungen[k] = v end
 			end
 		end
+		if _G.SparmodusAuto then _G.SparmodusAuto() end
 		knoepfeAktualisieren()
 	end)
 	print("[Driving School] start screen ready")

@@ -7,7 +7,7 @@ local Pflege = {}
 
 Pflege.TANKPREIS = 1.5                 -- coins per % of fuel
 Pflege.REICHWEITE = {                  -- km per full tank
-	kleinwagen = 10, suv = 7, limousine = 9, sport = 7, track = 6, gs = 7, renn = 5, supersport = 6,
+	kleinwagen = 10, suv = 7, limousine = 9, sport = 7, track = 6, gs = 7, gs_night = 7, renn = 5, supersport = 6,
 }
 Pflege.PANNENHILFE = { preis = 120, prozent = 15 } -- roadside fuel delivery
 Pflege.ABSCHLEPPEN = 200                -- broken car is towed to the garage
@@ -33,7 +33,7 @@ function Pflege.daten(d, typ)
 end
 
 local function reparaturProProzent(typ)
-	local preis = ctx.Auto.MODELLE[typ] and ctx.Auto.MODELLE[typ].preis or 3000
+	local preis = ctx.Auto.MODELLE[typ] and (ctx.Auto.MODELLE[typ].wert or ctx.Auto.MODELLE[typ].preis) or 3000
 	return math.max(2, math.floor(preis * 0.0008))
 end
 
@@ -141,8 +141,8 @@ function Pflege.werkstattInfo(p)
 			local m = ctx.Auto.MODELLE[typ]
 			table.insert(liste, {
 				typ = typ, name = m.name, zustand = math.floor(a.zustand), tank = math.floor(a.tank), versichert = a.versichert,
-				reparatur = Pflege.reparaturKosten(d, typ), versicherung = math.floor(m.preis * Pflege.VERSICHERUNG),
-				motor = a.motor or 0, motorPreis = a.motor < 3 and math.floor(m.preis * Pflege.MOTOR[a.motor + 1]) or nil,
+				reparatur = Pflege.reparaturKosten(d, typ), versicherung = math.floor((m.wert or m.preis) * Pflege.VERSICHERUNG),
+				motor = a.motor or 0, motorPreis = a.motor < 3 and math.floor((m.wert or m.preis) * Pflege.MOTOR[a.motor + 1]) or nil,
 				spoiler = a.spoiler, neon = a.neon or 0, felgen = a.felgen or 1,
 			})
 		end
@@ -170,11 +170,11 @@ function Pflege.werkstatt(p, eingabe)
 		text = m.name .. " repaired"
 	elseif eingabe.art == "versichern" then
 		if a.versichert then return { fehler = "This car is already insured." } end
-		preis = math.floor(m.preis * Pflege.VERSICHERUNG)
+		preis = math.floor((m.wert or m.preis) * Pflege.VERSICHERUNG)
 		text = "Insurance for the " .. m.name
 	elseif eingabe.art == "motor" then
 		if a.motor >= 3 then return { fehler = "The engine is already at the highest stage." } end
-		preis = math.floor(m.preis * Pflege.MOTOR[a.motor + 1])
+		preis = math.floor((m.wert or m.preis) * Pflege.MOTOR[a.motor + 1])
 		text = ("Engine stage %d for the %s"):format(a.motor + 1, m.name)
 	elseif eingabe.art == "spoiler" then
 		preis = a.spoiler and 0 or Pflege.SPOILER

@@ -549,6 +549,14 @@ local function autohausDialog(info)
 		if a.gehoert then
 			k.Text = "OWNED ✓"
 			k.BackgroundColor3 = Color3.fromRGB(50, 90, 60)
+		elseif a.pass then
+			-- exclusive car: comes with a game pass from the shop
+			k.Text = "🌙 EXCLUSIVE"
+			k.BackgroundColor3 = Color3.fromRGB(110, 60, 200)
+			k.MouseButton1Click:Connect(function()
+				if autohausGui then autohausGui:Destroy() autohausGui = nil end
+				if _G.ShopOeffnen then _G.ShopOeffnen() end
+			end)
 		else
 			local leisten = info.geld >= a.preis
 			k.Text = ("🪙 %d"):format(a.preis)
@@ -2777,6 +2785,9 @@ do
 	local FARBEN = {
 		Color3.fromRGB(200, 25, 30), Color3.fromRGB(25, 70, 170), Color3.fromRGB(240, 240, 240), Color3.fromRGB(20, 20, 24),
 		Color3.fromRGB(150, 155, 160), Color3.fromRGB(245, 190, 30), Color3.fromRGB(30, 130, 70), Color3.fromRGB(240, 110, 20),
+		-- exclusive colors (VIP / Paint Studio, same order as Shop.FARBEN on the server)
+		Color3.fromRGB(212, 168, 60), Color3.fromRGB(236, 232, 222), Color3.fromRGB(45, 25, 80),
+		Color3.fromRGB(20, 70, 45), Color3.fromRGB(150, 10, 25), Color3.fromRGB(150, 200, 235),
 	}
 	local gewaehlt = 1
 	local ag2 = Instance.new("ScreenGui")
@@ -2788,7 +2799,7 @@ do
 	local panel = Instance.new("Frame")
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromOffset(380, 370)
+	panel.Size = UDim2.fromOffset(380, 412)
 	panel.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
 	panel.Parent = ag2
 	Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 14)
@@ -2833,15 +2844,19 @@ do
 	farbText.TextSize = 13
 	farbText.TextColor3 = Color3.fromRGB(180, 185, 195)
 	farbText.TextXAlignment = Enum.TextXAlignment.Left
-	farbText.Text = "Paint color"
+	farbText.Text = "Paint color   (✦ = exclusive: VIP / Paint Studio)"
 	farbText.Parent = panel
 	local swatches = {}
 	for i, f in FARBEN do
 		local b = Instance.new("TextButton")
-		b.Position = UDim2.fromOffset(18 + (i - 1) * 42, 280)
+		local exklusiv = i > 8
+		b.Position = UDim2.fromOffset(18 + ((i - 1) % 8) * 42, exklusiv and 320 or 280)
 		b.Size = UDim2.fromOffset(34, 34)
 		b.BackgroundColor3 = f
-		b.Text = ""
+		b.Text = exklusiv and "✦" or ""
+		b.TextColor3 = Color3.fromRGB(255, 215, 90)
+		b.TextSize = 14
+		b.Font = Enum.Font.GothamBlack
 		b.Parent = panel
 		Instance.new("UICorner", b).CornerRadius = UDim.new(1, 0)
 		local rand2 = Instance.new("UIStroke")
@@ -2931,6 +2946,443 @@ do
 	end)
 end
 
+-- ---------------------------------------------------------------
+-- Rewards (daily streak, playtime gifts, achievements, bonuses) and the Robux shop
+-- ---------------------------------------------------------------
+do
+	local MarketplaceService = game:GetService("MarketplaceService")
+	local SocialService = game:GetService("SocialService")
+	local GOLD = Color3.fromRGB(245, 185, 40)
+	local LILA = Color3.fromRGB(130, 70, 230)
+	local KARTE = Color3.fromRGB(34, 38, 48)
+	local HELL = Color3.fromRGB(190, 195, 205)
+
+	local function zahlFormat(n)
+		local t = tostring(math.floor(n or 0))
+		while true do
+			local neu, k = t:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
+			t = neu
+			if k == 0 then break end
+		end
+		return t
+	end
+	local function label(eltern, t, groesse, farbe, x, y, w, h, fett, ausrichtung)
+		local l = Instance.new("TextLabel")
+		l.Position = UDim2.new(x[1], x[2], y[1], y[2])
+		l.Size = UDim2.new(w[1], w[2], h[1], h[2])
+		l.BackgroundTransparency = 1
+		l.Font = fett == 2 and Enum.Font.GothamBlack or (fett and Enum.Font.GothamBold or Enum.Font.Gotham)
+		l.TextSize = groesse
+		l.TextColor3 = farbe or Color3.new(1, 1, 1)
+		l.TextXAlignment = ausrichtung or Enum.TextXAlignment.Left
+		l.TextWrapped = true
+		l.RichText = true
+		l.Text = t
+		l.Parent = eltern
+		return l
+	end
+	local function taste(eltern, t, farbe, x, y, w, h, klick)
+		local k = Instance.new("TextButton")
+		k.Position = UDim2.new(x[1], x[2], y[1], y[2])
+		k.Size = UDim2.new(w[1], w[2], h[1], h[2])
+		k.BackgroundColor3 = farbe
+		k.Font = Enum.Font.GothamBlack
+		k.TextSize = 13
+		k.TextColor3 = Color3.new(1, 1, 1)
+		k.Text = t
+		k.AutoButtonColor = true
+		k.Parent = eltern
+		Instance.new("UICorner", k)
+		if klick then k.MouseButton1Click:Connect(klick) end
+		return k
+	end
+	local function karte(eltern, hoehe, farbe, nr)
+		local f = Instance.new("Frame")
+		f.LayoutOrder = nr or 0
+		f.Size = UDim2.new(1, -8, 0, hoehe)
+		f.BackgroundColor3 = farbe or KARTE
+		f.Parent = eltern
+		Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
+		return f
+	end
+	local function balken(eltern, anteil, farbe, x, y, w)
+		local hinten = Instance.new("Frame")
+		hinten.Position = UDim2.new(x[1], x[2], y[1], y[2])
+		hinten.Size = UDim2.new(w[1], w[2], 0, 8)
+		hinten.BackgroundColor3 = Color3.fromRGB(55, 60, 75)
+		hinten.Parent = eltern
+		Instance.new("UICorner", hinten)
+		local vorn = Instance.new("Frame")
+		vorn.Size = UDim2.fromScale(math.clamp(anteil, 0, 1), 1)
+		vorn.BackgroundColor3 = farbe
+		vorn.Parent = hinten
+		Instance.new("UICorner", vorn)
+	end
+	-- window that fits on phones too
+	local function fenster(name, titel, farbe)
+		local alt = spieler.PlayerGui:FindFirstChild(name)
+		if alt then alt:Destroy() end
+		local g = Instance.new("ScreenGui")
+		g.Name = name
+		g.ResetOnSpawn = false
+		g.DisplayOrder = 14
+		g.Parent = spieler.PlayerGui
+		local panel = Instance.new("Frame")
+		panel.AnchorPoint = Vector2.new(0.5, 0.5)
+		panel.Position = UDim2.fromScale(0.5, 0.5)
+		panel.Size = UDim2.fromScale(0.94, 0.86)
+		panel.BackgroundColor3 = Color3.fromRGB(22, 24, 30)
+		panel.Parent = g
+		Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 14)
+		local grenze = Instance.new("UISizeConstraint")
+		grenze.MaxSize = Vector2.new(580, 560)
+		grenze.Parent = panel
+		local kopf = Instance.new("Frame")
+		kopf.Size = UDim2.new(1, 0, 0, 50)
+		kopf.BackgroundColor3 = farbe
+		kopf.Parent = panel
+		Instance.new("UICorner", kopf).CornerRadius = UDim.new(0, 14)
+		local verlauf = Instance.new("UIGradient")
+		verlauf.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(170, 170, 170))
+		verlauf.Rotation = 90
+		verlauf.Parent = kopf
+		label(kopf, titel, 20, nil, { 0, 16 }, { 0, 0 }, { 1, -70 }, { 1, 0 }, 2)
+		taste(kopf, "X", Color3.fromRGB(40, 20, 20), { 1, -44 }, { 0, 10 }, { 0, 32 }, { 0, 30 }, function() g:Destroy() end)
+		local liste = Instance.new("ScrollingFrame")
+		liste.Position = UDim2.fromOffset(12, 60)
+		liste.Size = UDim2.new(1, -24, 1, -70)
+		liste.BackgroundTransparency = 1
+		liste.BorderSizePixel = 0
+		liste.ScrollBarThickness = 6
+		liste.AutomaticCanvasSize = Enum.AutomaticSize.Y
+		liste.CanvasSize = UDim2.new()
+		liste.Parent = panel
+		local l = Instance.new("UIListLayout")
+		l.Padding = UDim.new(0, 10)
+		l.SortOrder = Enum.SortOrder.LayoutOrder
+		l.Parent = liste
+		return g, liste
+	end
+	local function ueberschrift(liste, t, nr)
+		local f = Instance.new("Frame")
+		f.LayoutOrder = nr
+		f.Size = UDim2.new(1, -8, 0, 24)
+		f.BackgroundTransparency = 1
+		f.Parent = liste
+		label(f, t, 15, GOLD, { 0, 4 }, { 0, 0 }, { 1, -8 }, { 1, 0 }, 2)
+	end
+
+	-- ---------- rewards window ----------
+	local belohnungZeigen
+	local function abholen(eingabe)
+		local r = frage("belohnungAbholen", eingabe)
+		if r.fehler then hinweis(r.fehler) return end
+		warnen(r.text, Color3.fromRGB(190, 130, 20))
+		belohnungZeigen(r.status)
+	end
+	belohnungZeigen = function(info)
+		local _, liste = fenster("Belohnungen", "🎁 REWARDS", Color3.fromRGB(200, 120, 30))
+		local nr = 0
+		local function weiter() nr += 1 return nr end
+		-- daily streak
+		local t = info.taeglich
+		ueberschrift(liste, ("🔥 DAILY STREAK  ·  %d day%s in a row"):format(t.bereit and math.max(t.serie - 1, 0) or t.serie, (t.bereit and t.serie - 1 or t.serie) == 1 and "" or "s"), weiter())
+		local k = karte(liste, 150, nil, weiter())
+		for i, b in t.liste do
+			local feld = Instance.new("Frame")
+			feld.Position = UDim2.new((i - 1) / 7, 4, 0, 8)
+			feld.Size = UDim2.new(1 / 7, -8, 0, 78)
+			local heute = i == t.tag
+			local erledigt = (t.bereit and i < t.tag) or (not t.bereit and i <= t.tag)
+			feld.BackgroundColor3 = heute and (t.bereit and Color3.fromRGB(120, 85, 15) or Color3.fromRGB(35, 80, 50)) or (erledigt and Color3.fromRGB(35, 70, 45) or Color3.fromRGB(45, 50, 62))
+			feld.Parent = k
+			Instance.new("UICorner", feld)
+			if heute and t.bereit then
+				local r = Instance.new("UIStroke")
+				r.Color = GOLD
+				r.Thickness = 2
+				r.Parent = feld
+			end
+			label(feld, "Day " .. i, 11, HELL, { 0, 0 }, { 0, 4 }, { 1, 0 }, { 0, 14 }, true, Enum.TextXAlignment.Center)
+			label(feld, (b.gross and "🎁" or (erledigt and "✅" or "🪙")), 20, nil, { 0, 0 }, { 0, 20 }, { 1, 0 }, { 0, 26 }, nil, Enum.TextXAlignment.Center)
+			label(feld, zahlFormat(b.geld) .. (b.xp and ("\n+" .. b.xp .. " XP") or ""), 11, Color3.new(1, 1, 1), { 0, 0 }, { 0, 46 }, { 1, 0 }, { 0, 30 }, true, Enum.TextXAlignment.Center)
+		end
+		if t.bereit then
+			taste(k, ("CLAIM DAY %d"):format(t.tag), GRUEN, { 0, 12 }, { 0, 96 }, { 1, -24 }, { 0, 40 }, function() abholen({ art = "taeglich" }) end)
+		else
+			label(k, "✅ Claimed today – come back tomorrow to keep your streak! Day 7 is a big chest.", 13, HELL, { 0, 12 }, { 0, 96 }, { 1, -24 }, { 0, 40 }, true, Enum.TextXAlignment.Center)
+		end
+		if t.verloren then
+			label(k, "Streak ended – start again today!", 11, Color3.fromRGB(255, 140, 120), { 0, 12 }, { 0, 84 }, { 1, -24 }, { 0, 12 }, true, Enum.TextXAlignment.Center)
+		end
+		-- playtime gifts
+		local sz = info.spielzeit
+		ueberschrift(liste, ("⏱ PLAYTIME GIFTS TODAY  ·  %d min played"):format(math.floor(sz.sek / 60)), weiter())
+		local k2 = karte(liste, 118, nil, weiter())
+		for i, g in sz.geschenke do
+			local feld = Instance.new("Frame")
+			feld.Position = UDim2.new((i - 1) / #sz.geschenke, 4, 0, 8)
+			feld.Size = UDim2.new(1 / #sz.geschenke, -8, 1, -16)
+			feld.BackgroundColor3 = g.abgeholt and Color3.fromRGB(35, 70, 45) or Color3.fromRGB(45, 50, 62)
+			feld.Parent = k2
+			Instance.new("UICorner", feld)
+			label(feld, g.min .. " min", 12, HELL, { 0, 0 }, { 0, 4 }, { 1, 0 }, { 0, 16 }, true, Enum.TextXAlignment.Center)
+			label(feld, "🪙 " .. zahlFormat(g.geld) .. (g.xp and ("\n+" .. g.xp .. " XP") or ""), 12, nil, { 0, 0 }, { 0, 22 }, { 1, 0 }, { 0, 30 }, true, Enum.TextXAlignment.Center)
+			if g.abgeholt then
+				label(feld, "✅", 18, nil, { 0, 0 }, { 1, -36 }, { 1, 0 }, { 0, 30 }, nil, Enum.TextXAlignment.Center)
+			elseif g.bereit then
+				taste(feld, "CLAIM", GRUEN, { 0, 6 }, { 1, -36 }, { 1, -12 }, { 0, 28 }, function() abholen({ art = "spielzeit", nr = g.nr }) end)
+			else
+				balken(feld, sz.sek / (g.min * 60), Color3.fromRGB(80, 160, 255), { 0, 8 }, { 1, -22 }, { 1, -16 })
+			end
+		end
+		-- bonuses
+		ueberschrift(liste, "🚀 YOUR BONUSES", weiter())
+		local k3 = karte(liste, 96, nil, weiter())
+		local zeilen = {}
+		table.insert(zeilen, (spieler:GetAttribute("VIP") and "👑 VIP: 2x coins ✓" or "👑 VIP: <font color=\"#8a90a0\">not active</font>"))
+		table.insert(zeilen, (spieler:GetAttribute("FreundeBonus") and "🤝 Friend online: +10 % ✓" or "🤝 Play with a friend: +10 %"))
+		table.insert(zeilen, ((spieler:GetAttribute("BoostBis") or 0) > os.time() and ("⚡ 2x boost: %d min left"):format(math.ceil(((spieler:GetAttribute("BoostBis") or 0) - os.time()) / 60)) or "⚡ 2x boost: <font color=\"#8a90a0\">off</font>"))
+		label(k3, table.concat(zeilen, "\n"), 13, nil, { 0, 12 }, { 0, 8 }, { 0.6, -12 }, { 1, -16 }, true)
+		label(k3, ("Coins  <b>x%.1f</b>\nXP  <b>x%.1f</b>"):format(spieler:GetAttribute("GeldFaktor") or 1, spieler:GetAttribute("XpFaktor") or 1), 16, GOLD, { 0.6, 0 }, { 0, 8 }, { 0.4, -12 }, { 0, 44 }, 2, Enum.TextXAlignment.Right)
+		taste(k3, "📨 INVITE FRIENDS", BLAU, { 0.6, 0 }, { 0, 56 }, { 0.4, -12 }, { 0, 32 }, function()
+			pcall(function() SocialService:PromptGameInvite(spieler) end)
+		end)
+		if info.gruppe and not info.gruppe.abgeholt then
+			local kg = karte(liste, 50, Color3.fromRGB(40, 45, 70), weiter())
+			label(kg, ("👥 Join our Roblox group: <b>%s coins</b> gift"):format(zahlFormat(info.gruppe.geschenk)), 14, nil, { 0, 12 }, { 0, 0 }, { 0.65, 0 }, { 1, 0 }, true)
+			taste(kg, info.gruppe.drin and "CLAIM" or "How?", info.gruppe.drin and GRUEN or GRAU, { 0.68, 0 }, { 0, 9 }, { 0.32, -12 }, { 0, 32 }, function()
+				if info.gruppe.drin then abholen({ art = "gruppe" }) else hinweis("Search our group on Roblox (see the game page), join it and rejoin the game.") end
+			end)
+		end
+		-- achievements
+		ueberschrift(liste, "🏆 ACHIEVEMENTS & LICENSE CLASSES", weiter())
+		table.sort(info.erfolge, function(a, b)
+			local function ber(e) local s = e.stufen[e.abgeholt + 1] return s and e.wert >= s.ziel and 0 or (s and 1 or 2) end
+			local ra, rb = ber(a), ber(b)
+			if ra ~= rb then return ra < rb end
+			return false
+		end)
+		for _, e in info.erfolge do
+			local naechste = e.stufen[e.abgeholt + 1]
+			local fertig = naechste == nil
+			local bereit = naechste and e.wert >= naechste.ziel
+			local ke = karte(liste, 78, bereit and Color3.fromRGB(70, 55, 20) or (fertig and Color3.fromRGB(35, 60, 45) or KARTE), weiter())
+			label(ke, e.icon, 28, nil, { 0, 8 }, { 0, 0 }, { 0, 40 }, { 1, 0 }, nil, Enum.TextXAlignment.Center)
+			label(ke, ("<b>%s</b>  <font color=\"#8a90a0\">%s</font>"):format(e.name, #e.stufen > 1 and ("tier %d/%d"):format(e.abgeholt, #e.stufen) or ""), 14, nil, { 0, 54 }, { 0, 6 }, { 1, -190 }, { 0, 18 })
+			label(ke, e.text, 12, HELL, { 0, 54 }, { 0, 24 }, { 1, -190 }, { 0, 16 })
+			if fertig then
+				label(ke, "✅ Completed!", 13, Color3.fromRGB(120, 220, 140), { 0, 54 }, { 0, 46 }, { 1, -190 }, { 0, 18 }, true)
+			else
+				balken(ke, e.wert / naechste.ziel, bereit and GOLD or Color3.fromRGB(80, 160, 255), { 0, 54 }, { 0, 48 }, { 1, -190 })
+				-- show this tier and the next ones (something to look forward to)
+				local vorschau = {}
+				for i = e.abgeholt + 1, math.min(#e.stufen, e.abgeholt + 3) do
+					local s = e.stufen[i]
+					table.insert(vorschau, ("%s: %s🪙%s"):format(zahlFormat(s.ziel), zahlFormat(s.geld), s.xp > 0 and (" +" .. s.xp .. "XP") or ""))
+				end
+				label(ke, ("%s / %s   ·   %s"):format(zahlFormat(math.min(e.wert, naechste.ziel)), zahlFormat(naechste.ziel), table.concat(vorschau, "  →  ")), 11, HELL, { 0, 54 }, { 0, 58 }, { 1, -70 }, { 0, 16 })
+				if bereit then
+					taste(ke, "CLAIM", GRUEN, { 1, -122 }, { 0, 12 }, { 0, 110 }, { 0, 34 }, function() abholen({ art = "erfolg", id = e.id }) end)
+				else
+					label(ke, ("🪙 %s"):format(zahlFormat(naechste.geld)), 14, GOLD, { 1, -130 }, { 0, 14 }, { 0, 118 }, { 0, 30 }, 2, Enum.TextXAlignment.Right)
+				end
+			end
+		end
+	end
+	local function belohnungenOeffnen()
+		local r = frage("belohnungen")
+		if r.fehler then hinweis(r.fehler) return end
+		belohnungZeigen(r)
+	end
+	_G.BelohnungenOeffnen = belohnungenOeffnen
+
+	-- ---------- shop window ----------
+	local shopZeigen
+	local function kaufen(art, eintrag)
+		if eintrag.bereit then
+			if art == "pass" then
+				MarketplaceService:PromptGamePassPurchase(spieler, eintrag.id)
+			else
+				MarketplaceService:PromptProductPurchase(spieler, eintrag.id)
+			end
+		elseif RunService:IsStudio() then
+			-- not set up yet: free test purchase in Studio
+			local r = frage("dev", { befehl = "kauf", key = eintrag.key })
+			warnen(r.fehler or r.text, GRUEN)
+			task.wait(0.3)
+			local s = frage("shop")
+			if not s.fehler then shopZeigen(s) end
+		else
+			hinweis("Coming soon!")
+		end
+	end
+	shopZeigen = function(info)
+		local _, liste = fenster("Shop", "🛒 SHOP", Color3.fromRGB(110, 60, 200))
+		local nr = 0
+		local function weiter() nr += 1 return nr end
+		local kopf = karte(liste, 56, nil, weiter())
+		label(kopf, ("🪙 <b>%s</b> coins"):format(zahlFormat(info.geld)), 18, nil, { 0, 14 }, { 0, 0 }, { 0.5, 0 }, { 1, 0 })
+		label(kopf, ("Coins x%.1f  ·  XP x%.1f%s"):format(info.geldFaktor, info.xpFaktor, info.boost > 0 and ("  ·  ⚡ %d min"):format(math.ceil(info.boost / 60)) or ""), 13, GOLD, { 0.45, 0 }, { 0, 0 }, { 0.55, -14 }, { 1, 0 }, true, Enum.TextXAlignment.Right)
+		local studio = RunService:IsStudio()
+		local function preisText(e)
+			if e.hat then return "OWNED ✓" end
+			if e.bereit then return "R$ " .. e.preis end
+			return studio and ("TEST · R$ " .. e.preis) or "SOON"
+		end
+		-- starter pack first (best offer for new players)
+		for _, pr in info.produkte do
+			if pr.einmal then
+				local k = karte(liste, 96, LILA, weiter())
+				local v = Instance.new("UIGradient")
+				v.Color = ColorSequence.new(Color3.fromRGB(150, 90, 255), Color3.fromRGB(240, 120, 60))
+				v.Parent = k
+				label(k, "⭐ " .. pr.name:upper() .. "  <font size=\"12\">ONLY ONCE</font>", 18, nil, { 0, 14 }, { 0, 8 }, { 1, -170 }, { 0, 24 }, 2)
+				label(k, pr.text, 13, nil, { 0, 14 }, { 0, 36 }, { 1, -170 }, { 0, 50 }, true)
+				taste(k, preisText(pr), GRUEN, { 1, -150 }, { 0.5, -22 }, { 0, 136 }, { 0, 44 }, function() kaufen("produkt", pr) end)
+			end
+		end
+		ueberschrift(liste, "🎟 GAME PASSES – keep forever", weiter())
+		for _, pass in info.passes do
+			local k = karte(liste, 84, pass.hat and Color3.fromRGB(35, 60, 45) or KARTE, weiter())
+			label(k, pass.icon, 34, nil, { 0, 6 }, { 0, 0 }, { 0, 56 }, { 1, 0 }, nil, Enum.TextXAlignment.Center)
+			label(k, pass.name, 16, nil, { 0, 66 }, { 0, 8 }, { 1, -220 }, { 0, 20 }, 2)
+			label(k, pass.text, 12, HELL, { 0, 66 }, { 0, 30 }, { 1, -220 }, { 0, 48 })
+			local b = taste(k, preisText(pass), pass.hat and GRAU or GRUEN, { 1, -146 }, { 0.5, -20 }, { 0, 134 }, { 0, 40 }, function()
+				if not pass.hat then kaufen("pass", pass) end
+			end)
+			b.AutoButtonColor = not pass.hat
+		end
+		ueberschrift(liste, "🪙 COINS & BOOSTS", weiter())
+		for _, pr in info.produkte do
+			if not pr.einmal then
+				local k = karte(liste, 56, nil, weiter())
+				label(k, (pr.geld and "🪙 " or "⚡ ") .. pr.name .. (pr.tag and ("   <font color=\"#ffcf4a\" size=\"12\">" .. pr.tag .. "</font>") or ""), 16, nil, { 0, 14 }, { 0, 0 }, { 1, -170 }, { 1, 0 }, true)
+				taste(k, preisText(pr), GRUEN, { 1, -146 }, { 0.5, -18 }, { 0, 134 }, { 0, 36 }, function() kaufen("produkt", pr) end)
+			end
+		end
+		local fuss = karte(liste, 40, Color3.fromRGB(28, 30, 38), weiter())
+		label(fuss, "Everything in the game can also be earned by playing. Purchases support the developer ❤", 11, HELL, { 0, 12 }, { 0, 0 }, { 1, -24 }, { 1, 0 }, nil, Enum.TextXAlignment.Center)
+	end
+	local function shopOeffnen()
+		local r = frage("shop")
+		if r.fehler then hinweis(r.fehler) return end
+		shopZeigen(r)
+	end
+	_G.ShopOeffnen = shopOeffnen
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(_, _, gekauft)
+		if gekauft then task.wait(1.5) if spieler.PlayerGui:FindFirstChild("Shop") then shopOeffnen() end end
+	end)
+	MarketplaceService.PromptProductPurchaseFinished:Connect(function(_, _, gekauft)
+		if gekauft then task.wait(2) if spieler.PlayerGui:FindFirstChild("Shop") then shopOeffnen() end end
+	end)
+
+	-- ---------- buttons top left ----------
+	local function hudKnopf(text, x, farbe)
+		local k = Instance.new("TextButton")
+		k.Position = UDim2.new(0, x, 0, 100)
+		k.Size = UDim2.fromOffset(110, 32)
+		k.BackgroundColor3 = farbe or Color3.fromRGB(25, 30, 40)
+		k.BackgroundTransparency = 0.15
+		k.Font = Enum.Font.GothamBold
+		k.TextSize = 14
+		k.TextColor3 = Color3.new(1, 1, 1)
+		k.Text = text
+		k.Parent = kameraGui
+		Instance.new("UICorner", k)
+		return k
+	end
+	local bKnopf = hudKnopf("🎁 Rewards", 244)
+	local punkt = Instance.new("TextLabel")
+	punkt.AnchorPoint = Vector2.new(0.5, 0.5)
+	punkt.Position = UDim2.new(1, -2, 0, 2)
+	punkt.Size = UDim2.fromOffset(20, 20)
+	punkt.BackgroundColor3 = Color3.fromRGB(230, 40, 50)
+	punkt.Font = Enum.Font.GothamBlack
+	punkt.TextSize = 12
+	punkt.TextColor3 = Color3.new(1, 1, 1)
+	punkt.Visible = false
+	punkt.Parent = bKnopf
+	Instance.new("UICorner", punkt).CornerRadius = UDim.new(1, 0)
+	local function punktNeu()
+		local n = spieler:GetAttribute("BelohnungenOffen") or 0
+		punkt.Visible = n > 0
+		punkt.Text = tostring(n)
+	end
+	spieler:GetAttributeChangedSignal("BelohnungenOffen"):Connect(punktNeu)
+	punktNeu()
+	bKnopf.MouseButton1Click:Connect(function()
+		local g = spieler.PlayerGui:FindFirstChild("Belohnungen")
+		if g then g:Destroy() return end
+		belohnungenOeffnen()
+	end)
+	local sKnopf = hudKnopf("🛒 Shop", 360, Color3.fromRGB(110, 60, 200))
+	sKnopf.MouseButton1Click:Connect(function()
+		local g = spieler.PlayerGui:FindFirstChild("Shop")
+		if g then g:Destroy() return end
+		shopOeffnen()
+	end)
+
+	-- coin multiplier next to the money display (e.g. "x2.1  ⚡12:30")
+	task.spawn(function()
+		local geldGui = spieler.PlayerGui:WaitForChild("Geld", 10)
+		local pille = geldGui and geldGui:FindFirstChildOfClass("Frame")
+		if not pille then return end
+		local faktor = Instance.new("TextButton")
+		faktor.LayoutOrder = 3
+		faktor.BackgroundColor3 = Color3.fromRGB(110, 60, 200)
+		faktor.Size = UDim2.fromOffset(0, 26)
+		faktor.AutomaticSize = Enum.AutomaticSize.X
+		faktor.Font = Enum.Font.GothamBlack
+		faktor.TextSize = 13
+		faktor.TextColor3 = Color3.new(1, 1, 1)
+		faktor.Text = "+"
+		faktor.Parent = pille
+		Instance.new("UICorner", faktor).CornerRadius = UDim.new(1, 0)
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 9), UDim.new(0, 9)
+		pad.Parent = faktor
+		faktor.MouseButton1Click:Connect(shopOeffnen)
+		while true do
+			local f = spieler:GetAttribute("GeldFaktor") or 1
+			local rest = (spieler:GetAttribute("BoostBis") or 0) - os.time()
+			local t = f > 1.01 and ("x%.1f"):format(f) or "+"
+			if rest > 0 then t ..= ("  ⚡%d:%02d"):format(rest // 60, rest % 60) end
+			faktor.Text = t
+			faktor.BackgroundColor3 = f > 1.01 and Color3.fromRGB(190, 130, 20) or Color3.fromRGB(110, 60, 200)
+			task.wait(1)
+		end
+	end)
+
+	-- VIP tag in the chat
+	pcall(function()
+		local TextChatService = game:GetService("TextChatService")
+		TextChatService.OnIncomingMessage = function(nachricht)
+			local quelle = nachricht.TextSource
+			local p = quelle and Players:GetPlayerByUserId(quelle.UserId)
+			if p and p:GetAttribute("VIP") then
+				local props = Instance.new("TextChatMessageProperties")
+				props.PrefixText = "<font color=\"#FFD24A\">[👑 VIP]</font> " .. nachricht.PrefixText
+				return props
+			end
+		end
+	end)
+
+	-- messages from the server
+	fahrEvent.OnClientEvent:Connect(function(info)
+		if info.typ == "belohnung" then
+			warnen(info.text, Color3.fromRGB(190, 130, 20))
+		elseif info.typ == "taeglich" then
+			-- daily reward waiting: open the rewards window once the player is in the game
+			task.spawn(function()
+				while not _G.ImSpiel do task.wait(0.5) end
+				task.wait(1.5)
+				belohnungenOeffnen()
+			end)
+		end
+	end)
+end
+
 -- Start screen
 do
 	print("[Driving School] start screen v{VERSION} loading")
@@ -3006,6 +3458,7 @@ do
 	spielen.Activated:Connect(function()
 		if gestartet then return end
 		gestartet = true
+		_G.ImSpiel = true
 		print("[Driving School] PLAY pressed")
 		menue:Destroy()                    -- the menu disappears right away
 		einstellGui.Enabled = false

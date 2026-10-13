@@ -156,6 +156,7 @@ enumMeta = {
 	__tostring = function(t) return rawget(t, "__pfad") end,
 }
 Enum = setmetatable({ __pfad = "Enum" }, enumMeta)
+warn = warn or function(...) print("WARN:", ...) end
 typeof = function(v)
 	if type(v) == "table" then
 		if v.__v then return "Vector3" end
@@ -451,6 +452,19 @@ for _, n in { "SetNetworkOwner", "SetNetworkOwnershipAuto", "ApplyImpulse", "App
 	methoden[n] = function() end
 end
 function methoden.GetNetworkOwner() return nil end
+-- monetization / social (tests can set M.passes[id] = true)
+M.passes = {}
+M.kaeufe = {}
+function methoden.UserOwnsGamePassAsync(o, userId, id) return M.passes[id] == true end
+function methoden.PromptGamePassPurchase(o, p, id) table.insert(M.kaeufe, { "pass", id }) end
+function methoden.PromptProductPurchase(o, p, id) table.insert(M.kaeufe, { "produkt", id }) end
+function methoden.PromptPremiumPurchase() end
+function methoden.IsFriendsWith(o, id) return M.freunde and M.freunde[id] == true or false end
+function methoden.IsInGroup(o, id) return M.gruppe == id end
+function methoden.PromptGameInvite() table.insert(M.kaeufe, { "einladung" }) end
+function methoden.CanSendGameInviteAsync() return true end
+function methoden.AwardBadge(o, userId, id) table.insert(M.kaeufe, { "badge", id }) return true end
+function methoden.UserHasBadgeAsync() return false end
 function methoden.HasTag() return false end
 function methoden.EquipTool(o, t) local c = o.Parent t.Parent = c end
 function methoden.Sit(seat, hum)
@@ -517,6 +531,7 @@ function M.dienst(n)
 	if n == "Workspace" then d.__props.Terrain = neueInstanz("Terrain") d.Terrain.Parent = d end
 	if n == "Players" then
 		function d.GetPlayers() local l = {} for _, k in d.__kinder do if k.__klasse == "Player" then table.insert(l, k) end end return l end
+		function d.GetPlayerByUserId(_, id) for _, k in d.__kinder do if k.__klasse == "Player" and k.UserId == id then return k end end return nil end
 		d.__props.GetPlayers = nil
 		methoden.GetPlayers = function(x) local l = {} for _, k in x.__kinder do if k.__klasse == "Player" then table.insert(l, k) end end return l end
 		methoden.GetPlayerFromCharacter = function(x, c) for _, p in x:GetPlayers() do if p.Character == c then return p end end return nil end

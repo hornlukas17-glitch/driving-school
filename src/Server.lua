@@ -17,6 +17,8 @@ local Strafen = require(script:WaitForChild("Strafen"))
 local Umwelt = require(script:WaitForChild("Umwelt"))
 local Pflege = require(script:WaitForChild("Fahrzeugpflege"))
 local Missionen = require(script:WaitForChild("Missionen"))
+local Shop = require(script:WaitForChild("Shop"))
+local Belohnungen = require(script:WaitForChild("Belohnungen"))
 local Verkehr = require(ordner:WaitForChild("Verkehr"))
 local verkehrEvent = ordner:WaitForChild("VerkehrDaten")
 
@@ -50,6 +52,9 @@ local function standard()
 		lkwFahrten = 0, pizzaFahrten = 0, villen = {}, autos = {},
 		punkte = 0, historie = {}, entzogen = false, nachschulung = false, lkwGesperrt = false, punkteZeit = 0,
 		xp = 0, autoKm = {}, autoDaten = {}, kmGesamt = 0, perfekt = 0,
+		-- shop and rewards (v24)
+		passes = {}, kaeufe = {}, boostBis = 0, starterGekauft = false, login = { letzte = "", serie = 0, beste = 0 },
+		erfolge = {}, erfolgGemeldet = {}, taxiFahrten = 0, freundeSek = 0, gruppeGeschenk = false,
 	}
 end
 
@@ -74,13 +79,14 @@ end
 
 local function speichern(p)
 	local d = daten[p]
-	if not d or not store then return end
+	if not d or not store then return false end
 	local ok, e = pcall(function()
 		store:SetAsync("spieler_" .. p.UserId, d)
 	end)
 	if not ok then
 		warn("License system: saving failed: " .. tostring(e))
 	end
+	return ok
 end
 
 local function anzeigen(p)
@@ -133,9 +139,10 @@ end
 
 -- XP and level: level = floor(sqrt(xp / 150)) + 1  (level 2 at 150 XP, level 5 at 2400 XP, ...)
 local function levelVon(xp) return math.floor(math.sqrt(xp / 150)) + 1 end
-local function xpGeben(p, menge, grund)
+local function xpGeben(p, menge, grund, ohneBonus)
 	local d = daten[p]
 	if not d or menge <= 0 then return end
+	if not ohneBonus then menge = math.floor(menge * Shop.faktor(p, "xp") + 0.5) end -- 2x XP pass, Premium, friends
 	local vorher = levelVon(d.xp or 0)
 	d.xp = (d.xp or 0) + menge
 	local nachher = levelVon(d.xp)
@@ -145,9 +152,11 @@ local function xpGeben(p, menge, grund)
 end
 
 -- Money ("Drive Coins"): shown top right on the player's screen
-local function geldGeben(p, betrag, grund)
+local function geldGeben(p, betrag, grund, ohneBonus)
 	local d = daten[p]
 	if not d or betrag == 0 then return end
+	-- earned coins get the bonus (VIP, 2x boost, Premium, friends); purchases and admin money don't
+	if betrag > 0 and not ohneBonus then betrag = math.floor(betrag * Shop.faktor(p, "geld") + 0.5) end
 	d.geld = math.max(0, d.geld + betrag)
 	geaendert(p)
 	fahrEvent:FireClient(p, { typ = "geld", betrag = betrag, grund = grund })
@@ -1729,6 +1738,7 @@ local function fahrgastAussteigen(p, job, h)
 	geldGeben(p, fahrpreis + trinkgeld, trinkgeld > 0 and ("Taxi fare + %d tip"):format(trinkgeld) or "Taxi fare")
 	xpGeben(p, 20, "Passenger delivered")
 	if Missionen then Missionen.fortschritt(p, "taxi", 1) end
+	if daten[p] then daten[p].taxiFahrten = (daten[p].taxiFahrten or 0) + 1 end
 	local figur = job.fahrgast
 	job.fahrgast = nil
 	if figur then
@@ -2400,9 +2410,13 @@ local function katalog(d)
 	local liste = {}
 	for _, typ in Auto.MODELL_REIHENFOLGE do
 		local m = Auto.MODELLE[typ]
+		local pass = m.pass and Shop.PASSES and (function()
+			for _, x in Shop.PASSES do if x.key == m.pass then return x end end
+		end)()
 		table.insert(liste, {
 			typ = typ, name = m.name, art = m.art, preis = m.preis, beschreibung = m.beschreibung,
 			tempo = m.werte.MaxTempo, gehoert = d and table.find(d.autos or {}, typ) ~= nil,
+			pass = pass and { key = pass.key, id = pass.id, name = pass.name, preis = pass.preis, bereit = pass.id ~= 0 } or nil,
 		})
 	end
 	return liste
@@ -2414,6 +2428,9 @@ local function autoKaufen(p, typ)
 	if not modell then return { fehler = "This car does not exist." } end
 	d.autos = d.autos or {}
 	if table.find(d.autos, typ) then return { fehler = "You already own the " .. modell.name .. "." } end
+	if modell.pass and not Shop.hat(p, modell.pass) then
+		return { fehler = ("The %s is exclusive – get it in the 🛒 Shop."):format(modell.name) }
+	end
 	if d.geld < modell.preis then
 		return { fehler = ("The %s costs %d coins, you have %d. Earn more with the delivery jobs!"):format(modell.name, modell.preis, d.geld) }
 	end
@@ -2493,7 +2510,13 @@ local function autoHolen(p, eingabe)
 		if abstand < besterAbstand and platzFrei(cf) then bester, besterAbstand = cf, abstand end
 	end
 	if not bester then return { fehler = "All parking spots are taken. Try again in a moment." } end
-	local farbe = AUTOFARBEN_PRIVAT[tonumber(eingabe.farbe) or 1] or AUTOFARBEN_PRIVAT[1]
+	local nr = math.floor(tonumber(eingabe.farbe) or 1)
+	local farbe = AUTOFARBEN_PRIVAT[nr] or AUTOFARBEN_PRIVAT[1]
+	if nr > #AUTOFARBEN_PRIVAT and Shop.FARBEN[nr - #AUTOFARBEN_PRIVAT] then
+		if not Shop.farbeErlaubt(p, nr) then return { fehler = "This paint color is exclusive – unlock it in the 🛒 Shop (Paint Studio or VIP)." } end
+		farbe = Shop.FARBEN[nr - #AUTOFARBEN_PRIVAT].farbe
+	end
+	if Auto.MODELLE[typ].festeFarbe then farbe = Auto.MODELLE[typ].festeFarbe end
 	local kennzeichen = (p.Name:sub(1, 2):upper():gsub("[^%u]", "X")) .. "-" .. (p.UserId % 9000 + 1000)
 	local modell, sitz, _, chassis = Auto.bauenPrivat(bester, typ, farbe, kennzeichen)
 	modell.Name = "Auto_" .. p.Name
@@ -2527,15 +2550,15 @@ task.spawn(function()
 	local farben = {
 		kleinwagen = Color3.fromRGB(90, 170, 220), suv = Color3.fromRGB(30, 130, 70), limousine = Color3.fromRGB(20, 20, 24),
 		sport = Color3.fromRGB(200, 25, 30), renn = Color3.fromRGB(245, 190, 30), supersport = Color3.fromRGB(240, 110, 20),
-		track = Color3.fromRGB(20, 90, 200), gs = Color3.fromRGB(78, 88, 102),
+		track = Color3.fromRGB(20, 90, 200), gs = Color3.fromRGB(78, 88, 102), gs_night = Color3.fromRGB(18, 16, 24),
 	}
 	-- cars added after the map (Striker TR, Vanta GS) get their own podiums outside, in front of the showroom glass
-	local DRAUSSEN = { track = Vector3.new(78, 0, -395), gs = Vector3.new(78, 0, -357) }
+	local DRAUSSEN = { track = Vector3.new(78, 0, -395), gs = Vector3.new(78, 0, -357), gs_night = Vector3.new(58, 0, -376) }
 	local vorhanden = {}
 	for _, p in autohaus:GetChildren() do
 		if p.Name == "Ausstellungsplatz" and p:GetAttribute("Typ") then vorhanden[p:GetAttribute("Typ")] = true end
 	end
-	for _, typ in { "track", "gs" } do
+	for _, typ in { "track", "gs", "gs_night" } do
 		if not vorhanden[typ] then
 			local pos = DRAUSSEN[typ]
 			local treffer = workspace:Raycast(pos + Vector3.new(0, 20, 0), Vector3.new(0, -40, 0))
@@ -2548,9 +2571,9 @@ task.spawn(function()
 				return p
 			end
 			neu("Podest", Vector3.new(1, 16, 16), CFrame.new(pos.X, y + 0.5, pos.Z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(30, 30, 34), Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
-			local ring = neu("Podestlicht", Vector3.new(1.02, 16.4, 16.4), CFrame.new(pos.X, y + 0.45, pos.Z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(255, 60, 70), Enum.Material.Neon, Enum.PartType.Cylinder)
+			local ring = neu("Podestlicht", Vector3.new(1.02, 16.4, 16.4), CFrame.new(pos.X, y + 0.45, pos.Z) * CFrame.Angles(0, 0, math.rad(90)), typ == "gs_night" and Color3.fromRGB(150, 70, 255) or Color3.fromRGB(255, 60, 70), Enum.Material.Neon, Enum.PartType.Cylinder)
 			ring.CanCollide = false
-			local platz = neu("Ausstellungsplatz", Vector3.new(2, 1, 2), CFrame.new(pos.X, y + 1.5, pos.Z) * CFrame.Angles(0, math.rad(typ == "gs" and -60 or -120), 0), Color3.new(1, 0, 0), Enum.Material.SmoothPlastic)
+			local platz = neu("Ausstellungsplatz", Vector3.new(2, 1, 2), CFrame.new(pos.X, y + 1.5, pos.Z) * CFrame.Angles(0, math.rad(typ == "gs" and -60 or (typ == "gs_night" and -150 or -120)), 0), Color3.new(1, 0, 0), Enum.Material.SmoothPlastic)
 			platz.Transparency = 1
 			platz.CanCollide = false
 			platz.CanQuery = false
@@ -2569,7 +2592,7 @@ task.spawn(function()
 			m.Parent = autohaus
 			local daten2 = Auto.MODELLE[typ]
 			local pp = Instance.new("ProximityPrompt")
-			pp.ActionText = ("Buy – %d coins"):format(daten2.preis)
+			pp.ActionText = daten2.pass and "🌙 Exclusive – look" or ("Buy – %d coins"):format(daten2.preis)
 			pp.ObjectText = daten2.name .. " (" .. daten2.art .. ")"
 			pp.HoldDuration = 0
 			pp.MaxActivationDistance = 14
@@ -2793,6 +2816,12 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 
 	elseif was == "missionen" then
 		return Missionen.status(p)
+	elseif was == "shop" then
+		return Shop.status(p)
+	elseif was == "belohnungen" then
+		return Belohnungen.status(p)
+	elseif was == "belohnungAbholen" then
+		return Belohnungen.abholen(p, eingabe)
 
 	elseif was == "taxiStarten" then
 		return jobStarten(p, "taxi")
@@ -2853,7 +2882,7 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 		if not istAdmin(p) then return { fehler = "Only the owner of the game can do this." } end
 		local betrag = math.clamp(math.floor(tonumber(eingabe) or 0), -1000000, 1000000)
 		if betrag < 0 then betrag = -d.geld end -- negative = back to 0 coins
-		geldGeben(p, betrag, "Admin")
+		geldGeben(p, betrag, "Admin", true)
 		return { text = ("You now have %d coins."):format(d.geld) }
 
 	elseif was == "dev" then
@@ -2912,8 +2941,20 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 			if befehl == "lkw" then return lektionStarten(p, "lkw") end
 			return { text = "Car + truck license granted. Talk to Tom at the Parcel Express depot for a job." }
 		elseif befehl == "geld" then
-			geldGeben(p, 500, "Test money")
+			geldGeben(p, 500, "Test money", true)
 			return { text = "+500 coins." }
+		elseif befehl == "kauf" then
+			-- test purchase: pass on/off or developer product (free, Studio only)
+			return Shop.testKauf(p, eingabe.key)
+		elseif befehl == "spielzeit" then
+			Belohnungen.takt(p, (tonumber(eingabe.min) or 10) * 60)
+			return { text = "Playtime added." }
+		elseif befehl == "neuerTag" then
+			d.login = d.login or { letzte = "", serie = 0, beste = 0 }
+			d.login.letzte = os.date("!%Y-%m-%d", os.time() - 86400)
+			d.spielzeit = nil
+			Belohnungen.markieren(p)
+			return { text = "Next day simulated (daily reward ready)." }
 		elseif befehl == "reset" then
 			if lektionen[p] then lektionBeenden(p, false, "Lesson cancelled (test menu).") end
 			if jobs[p] then jobBeenden(p, false, "Job cancelled (test menu).") end
@@ -2988,6 +3029,8 @@ Pflege.starten({
 	geldGeben = geldGeben, geaendert = geaendert, autoWeg = autoWeg, mission = Missionen.fortschritt,
 })
 Missionen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent })
+Shop.starten({ daten = daten, geldGeben = geldGeben, fahrEvent = fahrEvent, geaendert = geaendert, speichernSofort = speichern, Auto = Auto, Pflege = Pflege })
+Belohnungen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent, geaendert = geaendert, Shop = Shop })
 
 -- odometer of the bought cars
 task.spawn(function()

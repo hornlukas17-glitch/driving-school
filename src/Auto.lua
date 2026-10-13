@@ -850,13 +850,21 @@ Auto.MODELLE = {
 		R = 1.4, spur = 3.0, achse = 5.14, laenge = 17.4, breite = 7.0,
 		werte = { MaxTempo = 180, Antrieb = 7800, Bremse = 19000, Lenkwinkel = 32, Grip = 16, Lenkdirekt = 15, Anpressdruck = 80 },
 	},
+	-- exclusive (game pass "nacht" in Shop.lua): same body as the Vanta GS, own look and a bit more power
+	gs_night = {
+		name = "Vanta GS Night Edition", art = "Exclusive", preis = 0, wert = 20000, pass = "nacht", basis = "gs",
+		beschreibung = "Exclusive: midnight black, gold rims, purple underglow. 195 km/h.",
+		festeFarbe = Color3.fromRGB(18, 16, 24), tuning = { felgen = 3, neon = 4 },
+		R = 1.4, spur = 3.0, achse = 5.14, laenge = 17.4, breite = 7.0,
+		werte = { MaxTempo = 195, Antrieb = 8400, Bremse = 20000, Lenkwinkel = 32, Grip = 16, Lenkdirekt = 15, Anpressdruck = 82 },
+	},
 	renn = {
 		name = "Apex R1", art = "Race car", preis = 35000, beschreibung = "A real race car with a huge rear wing. 210 km/h top speed.",
 		R = 1.35, spur = 3.5, achse = 5.4, laenge = 17, breite = 7.8,
 		werte = { MaxTempo = 210, Antrieb = 9500, Bremse = 22000, Lenkwinkel = 30, Grip = 18, Lenkdirekt = 16, Anpressdruck = 95 },
 	},
 }
-Auto.MODELL_REIHENFOLGE = { "kleinwagen", "suv", "limousine", "sport", "gs", "track", "renn", "supersport" }
+Auto.MODELL_REIHENFOLGE = { "kleinwagen", "suv", "limousine", "sport", "gs", "track", "renn", "supersport", "gs_night" }
 
 -- ---------------------------------------------------------------
 -- Round bodies for private cars (own designs, made with tools/mesh/*.py -> dist/mesh/<vorlage>.obj).
@@ -892,6 +900,7 @@ end
 
 function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 	local D = Auto.MODELLE[typ] or Auto.MODELLE.suv
+	local basis = D.basis or typ -- special editions use the body of their base car
 	farbe = farbe or Color3.fromRGB(200, 30, 35)
 	local R, SP, A = D.R, D.spur, D.achse
 	local L, B = D.laenge, D.breite
@@ -965,7 +974,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 	local sitzY = 1.6
 
 	-- round body from the 3D model (only if the model was imported into ServerStorage)
-	local rundDef = KAROSSERIEN[typ]
+	local rundDef = KAROSSERIEN[basis]
 	local rundVorlage = rundDef and game:GetService("ServerStorage"):FindFirstChild(rundDef.vorlage)
 	if rundVorlage and not meshTeil(rundVorlage, "Karosserie") then rundVorlage = nil end
 	local function v3(t) return V3(t[1], t[2], t[3]) end
@@ -1062,7 +1071,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		end
 	end
 
-	if typ == "kleinwagen" then
+	if basis == "kleinwagen" then
 		sitzY = 1.7
 		local unten = R + 0.35
 		k("Karosserie", V3(B, 1.8, L - 0.6), at(0, unten + 0.9, 0), farbe)
@@ -1076,7 +1085,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		k("Heckklappe", V3(B - 0.7, 2.1, 0.4), at(0, oben + 1.05, L / 2 - 1.5), farbe)
 		k("Dachspoiler", V3(B - 1, 0.2, 0.8), at(0, oben + 2.25, L / 2 - 1.6), SCHWARZ)
 		lichter(unten + 1.1, -L / 2 + 0.3, L / 2 - 0.3, 2.3)
-	elseif typ == "limousine" then
+	elseif basis == "limousine" then
 		if rundVorlage then
 			rundBauen()
 		else
@@ -1096,7 +1105,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		end
 		lichter(unten + 1.2, -L / 2 + 0.4, L / 2 - 0.4, 2.6)
 		end
-	elseif typ == "supersport" then
+	elseif basis == "supersport" then
 		sitzY = 1.15
 		local unten = R + 0.1
 		k("Karosserie", V3(B, 1.45, L - 1), at(0, unten + 0.72, 0), farbe)
@@ -1120,7 +1129,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 			licht.Parent = glow
 		end
 		lichter(unten + 0.9, -L / 2 + 0.5, L / 2 - 0.4, 2.6)
-	elseif typ == "suv" then
+	elseif basis == "suv" then
 		sitzY = 2.4
 		if rundVorlage then
 			rundBauen()
@@ -1149,7 +1158,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 			reserve.CastShadow = false
 			lichter(unten + 1.9, -L / 2 + 0.45, L / 2 - 0.45, 2.6)
 		end
-	elseif typ == "sport" then
+	elseif basis == "sport" then
 		if rundVorlage then
 			rundBauen()
 		else
@@ -1175,7 +1184,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 			end
 			lichter(unten + 1.0, -L / 2 + 0.45, L / 2 - 0.45, 2.5)
 		end
-	elseif typ == "track" then
+	elseif basis == "track" then
 		if rundVorlage then
 			rundBauen()
 		else
@@ -1189,7 +1198,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 			k("Heckfluegel", V3(B - 0.6, 0.15, 1.3), at(0, oben + 1.4, L / 2 - 1.2), SCHWARZ)
 			lichter(unten + 0.9, -L / 2 + 0.45, L / 2 - 0.45, 2.6)
 		end
-	elseif typ == "gs" then
+	elseif basis == "gs" then
 		if rundVorlage then
 			rundBauen()
 		else
@@ -1286,7 +1295,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 	k("Lenkrad", V3(0.15, 1.3, 1.3), at(-sx, sitzY + 2.1, armZ + 0.5) * CFrame.Angles(math.rad(-25), math.rad(90), 0), SCHWARZ, nil, { form = Enum.PartType.Cylinder })
 	for _, x in { -sx, sx } do
 		k("Sitz", V3(2.1, 0.5, 2.1), at(x, sitzY - 0.1, 0.6), INNEN, Enum.Material.Fabric)
-		k("Rueckenlehne", V3(2.1, 2.4, 0.4), at(x, sitzY + 1.1, 1.8) * CFrame.Angles(math.rad(-12), 0, 0), typ == "renn" and Color3.fromRGB(180, 30, 30) or INNEN, Enum.Material.Fabric)
+		k("Rueckenlehne", V3(2.1, 2.4, 0.4), at(x, sitzY + 1.1, 1.8) * CFrame.Angles(math.rad(-12), 0, 0), basis == "renn" and Color3.fromRGB(180, 30, 30) or INNEN, Enum.Material.Fabric)
 		k("Kopfstuetze", V3(1.2, 0.7, 0.35), at(x, sitzY + 2.55, 2.05) * CFrame.Angles(math.rad(-12), 0, 0), INNEN, Enum.Material.Fabric)
 	end
 	-- a bit of interior that you can see through the windows
@@ -1318,7 +1327,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 
 	-- wheels (same hinge setup as the driving school car)
 	local reifen = PhysicalProperties.new(0.9, 2, 0, 100, 1)
-	local felgenFarbe = typ == "renn" and Color3.fromRGB(40, 40, 45) or (typ == "sport" and Color3.fromRGB(45, 45, 50) or (typ == "gs" and Color3.fromRGB(95, 97, 104) or CHROM))
+	local felgenFarbe = basis == "renn" and Color3.fromRGB(40, 40, 45) or (basis == "sport" and Color3.fromRGB(45, 45, 50) or (basis == "gs" and Color3.fromRGB(95, 97, 104) or CHROM))
 	-- spoke rims and brake calipers: only looks, all massless and without collision (driving feel unchanged)
 	local SPEICHEN = { kleinwagen = 4, suv = 6, limousine = 5, sport = 5, track = 5, gs = 10, renn = 6, supersport = 10 }
 	local SATTEL_FARBE = {
@@ -1349,7 +1358,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		local r = Instance.new("Part")
 		r.Name = "Rad"
 		r.Shape = Enum.PartType.Cylinder
-		r.Size = Vector3.new(typ == "suv" and 1.3 or 1.2, 2 * R, 2 * R)
+		r.Size = Vector3.new(basis == "suv" and 1.3 or 1.2, 2 * R, 2 * R)
 		r.CFrame = at(x, R, z)
 		r.Color = SCHWARZ
 		r.CustomPhysicalProperties = reifen
@@ -1363,9 +1372,9 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		deko("Felgenbett", Vector3.new(0.04, felgeR * 1.8, felgeR * 1.8), schicht(0.04), Color3.fromRGB(18, 18, 20), nil, r, Enum.PartType.Cylinder)
 		-- brake caliper: fixed to the chassis / steering knuckle, so it does not spin
 		local sattelLage = schicht(0.07) * CFrame.Angles(math.rad(-40), 0, 0) * CFrame.new(0, felgeR * 0.55, 0)
-		deko("Bremssattel", Vector3.new(0.05, felgeR * 0.32, felgeR * 0.75), sattelLage, SATTEL_FARBE[typ] or SATTEL_FARBE.suv, nil, halter)
+		deko("Bremssattel", Vector3.new(0.05, felgeR * 0.32, felgeR * 0.75), sattelLage, SATTEL_FARBE[basis] or SATTEL_FARBE.suv, nil, halter)
 		deko("Bremsscheibe", Vector3.new(0.03, felgeR * 1.45, felgeR * 1.45), schicht(0.055), Color3.fromRGB(95, 95, 100), Enum.Material.Metal, r, Enum.PartType.Cylinder)
-		local n = SPEICHEN[typ] or 5
+		local n = SPEICHEN[basis] or 5
 		for i = 1, n do
 			local spoke = schicht(0.1) * CFrame.Angles(math.rad(360 / n * i), 0, 0) * CFrame.new(0, felgeR * 0.48, 0)
 			deko("Felge", Vector3.new(0.05, felgeR * 0.9, n > 6 and 0.12 or 0.2), spoke, felgenFarbe, Enum.Material.Metal, r)

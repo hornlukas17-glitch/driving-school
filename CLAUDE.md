@@ -11,7 +11,8 @@ Roblox-Fahrschulspiel von Lukas. Antworten an Lukas auf **Deutsch**, kurz und eh
 - `karte/stadt_generator.lua` – Karte, läuft einmal in der Studio-Befehlszeile. Nur neu ausliefern, wenn sich die Karte ändert.
 - `src/` – Spielcode. `tools/build.py` baut daraus `dist/fuehrerschein_installer.lua` (Befehlszeile) und `dist/DrivingSchool_v<N>.rbxmx` (Drag & Drop).
   - ReplicatedStorage/Fuehrerschein: `Verkehrsregeln`, `Verkehr`, Remotes `Aktion` (RF), `Oeffnen`, `Fahrstunde`, `Blinker`, `VerkehrDaten`.
-  - Server-Script `FuehrerscheinServer` (`Server.lua`) mit Modulen Fragen, Auto, Fahrstunden, Strafen, Umwelt, Fahrzeugpflege, Missionen.
+  - Server-Script `FuehrerscheinServer` (`Server.lua`) mit Modulen Fragen, Auto, Fahrstunden, Strafen, Umwelt, Fahrzeugpflege, Missionen, Shop (Robux: Passes/Produkte, Multiplikatoren), Belohnungen (Tagesserie, Spielzeit, Erfolge, Freunde), Karosserien.
+  - `geldGeben(p, betrag, grund, ohneBonus)` / `xpGeben`: verdiente Beträge bekommen den Shop-Faktor (VIP, Boost, Premium, Freunde); Käufe/Admin mit `ohneBonus = true`.
   - LocalScript `FuehrerscheinClient` (`Client.lua`). `v{VERSION}` im Code wird beim Build ersetzt.
 - `tools/mock.luau` – Roblox-Nachbau zum Testen ohne Studio. `tests/*.luau` – Szenarien (laufen über `tools/runner.py`). Ein Test schlägt fehl, wenn eine `ERROR:`-Zeile erscheint.
 - Neue Funktion → passenden Test in `tests/` ergänzen.
@@ -25,7 +26,8 @@ Stadt |x|,|z| ≤ 324 (50 km/h) · Autobahn z = -520 (130) · Siedlungen x 405�
 Tempolimits zentral in `src/Verkehrsregeln.lua` (WOHNSTRASSEN muss zum Generator passen).
 
 ## Offene Punkte
-- **Stand 13.10. (v23):** Lukas muss die v23-`VantaGS.obj` importieren (Studio-Code ist schon auf v23) (altes Modell heißt im ServerStorage `VantaGS_alt`, löschen); Studio-Karosserien ist schon auf v20. Vorher (v19): Code eingespielt (Auto/Server/Fahrzeugpflege/Karosserien per Patch), Lukas muss die neue `VantaGS.obj` importieren und das alte Modell im ServerStorage ersetzen. Neue Karosserien-Felder: `drehung` (Grad, falls Importer verdreht), `sitzX`. Studio-Karosserien enthält sonst noch die alten (v16) Einträge, passend zu den alten OBJ.
+- **Stand 13.10. (v24):** Belohnungen & Shop gebaut (Test 16). Lukas muss Passes/Produkte im Creator Dashboard anlegen und IDs in `Shop.lua` eintragen. Exklusives Auto `gs_night` (Basis `gs`, Pass `nacht`).
+- **(v23):** Lukas muss die v23-`VantaGS.obj` importieren (Studio-Code ist schon auf v23) (altes Modell heißt im ServerStorage `VantaGS_alt`, löschen); Studio-Karosserien ist schon auf v20. Vorher (v19): Code eingespielt (Auto/Server/Fahrzeugpflege/Karosserien per Patch), Lukas muss die neue `VantaGS.obj` importieren und das alte Modell im ServerStorage ersetzen. Neue Karosserien-Felder: `drehung` (Grad, falls Importer verdreht), `sitzX`. Studio-Karosserien enthält sonst noch die alten (v16) Einträge, passend zu den alten OBJ.
 - **(v18):** Neues Auto `gs` „Vanta GS“ aus Lukas' Meshy-Modell (Aufbereitung `tools/mesh/meshy/`, Ergebnis `tools/mesh/vanta_teile.npz`, `python3 tools/mesh/vanta.py`). Offen in Studio: Auto.lua/Server.lua/Fahrzeugpflege.lua/Karosserien.lua v18 einspielen, fünf OBJ importieren (`RangerX`, `VelocityGT`, `StrikerTR`, `Executive`, `VantaGS`), Modelle in den ServerStorage (Namen angleichen). Neue Mesh-Teile heißen im OBJ z. B. `LichtVR` und bekommen im Spiel ihren Teilnamen über `n`/`a` in `Karosserien.lua`.
 - Studio-Verbindung: MCP-Server von Roblox Studio + Claude Desktop; Änderungen per Ersetzungs-Patch (`execute_luau`), danach Längen gegen das Repo prüfen.
 - Etappe 2 Rest: Busfahrer-Job, Abschlepp-Job.

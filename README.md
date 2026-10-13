@@ -18,3 +18,10 @@ Ohne Import bleibt das jeweilige Auto im Block-Look. Steht ein Auto verkehrt her
 
 ## Für Entwicklung
 `./tools/check.sh` – prüft Syntax, baut `dist/` und lässt alle Tests laufen.
+
+## Shop einrichten (Robux)
+1. Spiel veröffentlichen (File → Publish to Roblox).
+2. Creator Dashboard → dein Spiel → **Monetization → Passes**: VIP, 2x XP, Vanta GS Night Edition, Paint Studio anlegen (Bild + Preis).
+3. **Monetization → Developer Products**: Starter Pack, 2x Coins – 30 min, 2,500 / 10,000 / 30,000 / 100,000 coins.
+4. Die IDs in `src/Shop.lua` bei `id = 0` eintragen (oder Claude schicken). Preise im Spiel kommen automatisch von Roblox.
+5. Optional: Roblox-Gruppe → ID in `src/Belohnungen.lua` (`GRUPPE_ID`), Badges → `badge = <ID>` bei den Erfolgen.

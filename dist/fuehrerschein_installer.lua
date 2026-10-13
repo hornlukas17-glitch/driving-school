@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v23
+--  DRIVER'S LICENSE SYSTEM v24
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -948,6 +948,8 @@ local Strafen = require(script:WaitForChild("Strafen"))
 local Umwelt = require(script:WaitForChild("Umwelt"))
 local Pflege = require(script:WaitForChild("Fahrzeugpflege"))
 local Missionen = require(script:WaitForChild("Missionen"))
+local Shop = require(script:WaitForChild("Shop"))
+local Belohnungen = require(script:WaitForChild("Belohnungen"))
 local Verkehr = require(ordner:WaitForChild("Verkehr"))
 local verkehrEvent = ordner:WaitForChild("VerkehrDaten")
 
@@ -981,6 +983,9 @@ local function standard()
 		lkwFahrten = 0, pizzaFahrten = 0, villen = {}, autos = {},
 		punkte = 0, historie = {}, entzogen = false, nachschulung = false, lkwGesperrt = false, punkteZeit = 0,
 		xp = 0, autoKm = {}, autoDaten = {}, kmGesamt = 0, perfekt = 0,
+		-- shop and rewards (v24)
+		passes = {}, kaeufe = {}, boostBis = 0, starterGekauft = false, login = { letzte = "", serie = 0, beste = 0 },
+		erfolge = {}, erfolgGemeldet = {}, taxiFahrten = 0, freundeSek = 0, gruppeGeschenk = false,
 	}
 end
 
@@ -1005,13 +1010,14 @@ end
 
 local function speichern(p)
 	local d = daten[p]
-	if not d or not store then return end
+	if not d or not store then return false end
 	local ok, e = pcall(function()
 		store:SetAsync("spieler_" .. p.UserId, d)
 	end)
 	if not ok then
 		warn("License system: saving failed: " .. tostring(e))
 	end
+	return ok
 end
 
 local function anzeigen(p)
@@ -1064,9 +1070,10 @@ end
 
 -- XP and level: level = floor(sqrt(xp / 150)) + 1  (level 2 at 150 XP, level 5 at 2400 XP, ...)
 local function levelVon(xp) return math.floor(math.sqrt(xp / 150)) + 1 end
-local function xpGeben(p, menge, grund)
+local function xpGeben(p, menge, grund, ohneBonus)
 	local d = daten[p]
 	if not d or menge <= 0 then return end
+	if not ohneBonus then menge = math.floor(menge * Shop.faktor(p, "xp") + 0.5) end -- 2x XP pass, Premium, friends
 	local vorher = levelVon(d.xp or 0)
 	d.xp = (d.xp or 0) + menge
 	local nachher = levelVon(d.xp)
@@ -1076,9 +1083,11 @@ local function xpGeben(p, menge, grund)
 end
 
 -- Money ("Drive Coins"): shown top right on the player's screen
-local function geldGeben(p, betrag, grund)
+local function geldGeben(p, betrag, grund, ohneBonus)
 	local d = daten[p]
 	if not d or betrag == 0 then return end
+	-- earned coins get the bonus (VIP, 2x boost, Premium, friends); purchases and admin money don't
+	if betrag > 0 and not ohneBonus then betrag = math.floor(betrag * Shop.faktor(p, "geld") + 0.5) end
 	d.geld = math.max(0, d.geld + betrag)
 	geaendert(p)
 	fahrEvent:FireClient(p, { typ = "geld", betrag = betrag, grund = grund })
@@ -2660,6 +2669,7 @@ local function fahrgastAussteigen(p, job, h)
 	geldGeben(p, fahrpreis + trinkgeld, trinkgeld > 0 and ("Taxi fare + %d tip"):format(trinkgeld) or "Taxi fare")
 	xpGeben(p, 20, "Passenger delivered")
 	if Missionen then Missionen.fortschritt(p, "taxi", 1) end
+	if daten[p] then daten[p].taxiFahrten = (daten[p].taxiFahrten or 0) + 1 end
 	local figur = job.fahrgast
 	job.fahrgast = nil
 	if figur then
@@ -3331,9 +3341,13 @@ local function katalog(d)
 	local liste = {}
 	for _, typ in Auto.MODELL_REIHENFOLGE do
 		local m = Auto.MODELLE[typ]
+		local pass = m.pass and Shop.PASSES and (function()
+			for _, x in Shop.PASSES do if x.key == m.pass then return x end end
+		end)()
 		table.insert(liste, {
 			typ = typ, name = m.name, art = m.art, preis = m.preis, beschreibung = m.beschreibung,
 			tempo = m.werte.MaxTempo, gehoert = d and table.find(d.autos or {}, typ) ~= nil,
+			pass = pass and { key = pass.key, id = pass.id, name = pass.name, preis = pass.preis, bereit = pass.id ~= 0 } or nil,
 		})
 	end
 	return liste
@@ -3345,6 +3359,9 @@ local function autoKaufen(p, typ)
 	if not modell then return { fehler = "This car does not exist." } end
 	d.autos = d.autos or {}
 	if table.find(d.autos, typ) then return { fehler = "You already own the " .. modell.name .. "." } end
+	if modell.pass and not Shop.hat(p, modell.pass) then
+		return { fehler = ("The %s is exclusive – get it in the 🛒 Shop."):format(modell.name) }
+	end
 	if d.geld < modell.preis then
 		return { fehler = ("The %s costs %d coins, you have %d. Earn more with the delivery jobs!"):format(modell.name, modell.preis, d.geld) }
 	end
@@ -3424,7 +3441,13 @@ local function autoHolen(p, eingabe)
 		if abstand < besterAbstand and platzFrei(cf) then bester, besterAbstand = cf, abstand end
 	end
 	if not bester then return { fehler = "All parking spots are taken. Try again in a moment." } end
-	local farbe = AUTOFARBEN_PRIVAT[tonumber(eingabe.farbe) or 1] or AUTOFARBEN_PRIVAT[1]
+	local nr = math.floor(tonumber(eingabe.farbe) or 1)
+	local farbe = AUTOFARBEN_PRIVAT[nr] or AUTOFARBEN_PRIVAT[1]
+	if nr > #AUTOFARBEN_PRIVAT and Shop.FARBEN[nr - #AUTOFARBEN_PRIVAT] then
+		if not Shop.farbeErlaubt(p, nr) then return { fehler = "This paint color is exclusive – unlock it in the 🛒 Shop (Paint Studio or VIP)." } end
+		farbe = Shop.FARBEN[nr - #AUTOFARBEN_PRIVAT].farbe
+	end
+	if Auto.MODELLE[typ].festeFarbe then farbe = Auto.MODELLE[typ].festeFarbe end
 	local kennzeichen = (p.Name:sub(1, 2):upper():gsub("[^%u]", "X")) .. "-" .. (p.UserId % 9000 + 1000)
 	local modell, sitz, _, chassis = Auto.bauenPrivat(bester, typ, farbe, kennzeichen)
 	modell.Name = "Auto_" .. p.Name
@@ -3458,15 +3481,15 @@ task.spawn(function()
 	local farben = {
 		kleinwagen = Color3.fromRGB(90, 170, 220), suv = Color3.fromRGB(30, 130, 70), limousine = Color3.fromRGB(20, 20, 24),
 		sport = Color3.fromRGB(200, 25, 30), renn = Color3.fromRGB(245, 190, 30), supersport = Color3.fromRGB(240, 110, 20),
-		track = Color3.fromRGB(20, 90, 200), gs = Color3.fromRGB(78, 88, 102),
+		track = Color3.fromRGB(20, 90, 200), gs = Color3.fromRGB(78, 88, 102), gs_night = Color3.fromRGB(18, 16, 24),
 	}
 	-- cars added after the map (Striker TR, Vanta GS) get their own podiums outside, in front of the showroom glass
-	local DRAUSSEN = { track = Vector3.new(78, 0, -395), gs = Vector3.new(78, 0, -357) }
+	local DRAUSSEN = { track = Vector3.new(78, 0, -395), gs = Vector3.new(78, 0, -357), gs_night = Vector3.new(58, 0, -376) }
 	local vorhanden = {}
 	for _, p in autohaus:GetChildren() do
 		if p.Name == "Ausstellungsplatz" and p:GetAttribute("Typ") then vorhanden[p:GetAttribute("Typ")] = true end
 	end
-	for _, typ in { "track", "gs" } do
+	for _, typ in { "track", "gs", "gs_night" } do
 		if not vorhanden[typ] then
 			local pos = DRAUSSEN[typ]
 			local treffer = workspace:Raycast(pos + Vector3.new(0, 20, 0), Vector3.new(0, -40, 0))
@@ -3479,9 +3502,9 @@ task.spawn(function()
 				return p
 			end
 			neu("Podest", Vector3.new(1, 16, 16), CFrame.new(pos.X, y + 0.5, pos.Z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(30, 30, 34), Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
-			local ring = neu("Podestlicht", Vector3.new(1.02, 16.4, 16.4), CFrame.new(pos.X, y + 0.45, pos.Z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(255, 60, 70), Enum.Material.Neon, Enum.PartType.Cylinder)
+			local ring = neu("Podestlicht", Vector3.new(1.02, 16.4, 16.4), CFrame.new(pos.X, y + 0.45, pos.Z) * CFrame.Angles(0, 0, math.rad(90)), typ == "gs_night" and Color3.fromRGB(150, 70, 255) or Color3.fromRGB(255, 60, 70), Enum.Material.Neon, Enum.PartType.Cylinder)
 			ring.CanCollide = false
-			local platz = neu("Ausstellungsplatz", Vector3.new(2, 1, 2), CFrame.new(pos.X, y + 1.5, pos.Z) * CFrame.Angles(0, math.rad(typ == "gs" and -60 or -120), 0), Color3.new(1, 0, 0), Enum.Material.SmoothPlastic)
+			local platz = neu("Ausstellungsplatz", Vector3.new(2, 1, 2), CFrame.new(pos.X, y + 1.5, pos.Z) * CFrame.Angles(0, math.rad(typ == "gs" and -60 or (typ == "gs_night" and -150 or -120)), 0), Color3.new(1, 0, 0), Enum.Material.SmoothPlastic)
 			platz.Transparency = 1
 			platz.CanCollide = false
 			platz.CanQuery = false
@@ -3500,7 +3523,7 @@ task.spawn(function()
 			m.Parent = autohaus
 			local daten2 = Auto.MODELLE[typ]
 			local pp = Instance.new("ProximityPrompt")
-			pp.ActionText = ("Buy – %d coins"):format(daten2.preis)
+			pp.ActionText = daten2.pass and "🌙 Exclusive – look" or ("Buy – %d coins"):format(daten2.preis)
 			pp.ObjectText = daten2.name .. " (" .. daten2.art .. ")"
 			pp.HoldDuration = 0
 			pp.MaxActivationDistance = 14
@@ -3724,6 +3747,12 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 
 	elseif was == "missionen" then
 		return Missionen.status(p)
+	elseif was == "shop" then
+		return Shop.status(p)
+	elseif was == "belohnungen" then
+		return Belohnungen.status(p)
+	elseif was == "belohnungAbholen" then
+		return Belohnungen.abholen(p, eingabe)
 
 	elseif was == "taxiStarten" then
 		return jobStarten(p, "taxi")
@@ -3784,7 +3813,7 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 		if not istAdmin(p) then return { fehler = "Only the owner of the game can do this." } end
 		local betrag = math.clamp(math.floor(tonumber(eingabe) or 0), -1000000, 1000000)
 		if betrag < 0 then betrag = -d.geld end -- negative = back to 0 coins
-		geldGeben(p, betrag, "Admin")
+		geldGeben(p, betrag, "Admin", true)
 		return { text = ("You now have %d coins."):format(d.geld) }
 
 	elseif was == "dev" then
@@ -3843,8 +3872,20 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 			if befehl == "lkw" then return lektionStarten(p, "lkw") end
 			return { text = "Car + truck license granted. Talk to Tom at the Parcel Express depot for a job." }
 		elseif befehl == "geld" then
-			geldGeben(p, 500, "Test money")
+			geldGeben(p, 500, "Test money", true)
 			return { text = "+500 coins." }
+		elseif befehl == "kauf" then
+			-- test purchase: pass on/off or developer product (free, Studio only)
+			return Shop.testKauf(p, eingabe.key)
+		elseif befehl == "spielzeit" then
+			Belohnungen.takt(p, (tonumber(eingabe.min) or 10) * 60)
+			return { text = "Playtime added." }
+		elseif befehl == "neuerTag" then
+			d.login = d.login or { letzte = "", serie = 0, beste = 0 }
+			d.login.letzte = os.date("!%Y-%m-%d", os.time() - 86400)
+			d.spielzeit = nil
+			Belohnungen.markieren(p)
+			return { text = "Next day simulated (daily reward ready)." }
 		elseif befehl == "reset" then
 			if lektionen[p] then lektionBeenden(p, false, "Lesson cancelled (test menu).") end
 			if jobs[p] then jobBeenden(p, false, "Job cancelled (test menu).") end
@@ -3919,6 +3960,8 @@ Pflege.starten({
 	geldGeben = geldGeben, geaendert = geaendert, autoWeg = autoWeg, mission = Missionen.fortschritt,
 })
 Missionen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent })
+Shop.starten({ daten = daten, geldGeben = geldGeben, fahrEvent = fahrEvent, geaendert = geaendert, speichernSofort = speichern, Auto = Auto, Pflege = Pflege })
+Belohnungen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent, geaendert = geaendert, Shop = Shop })
 
 -- odometer of the bought cars
 task.spawn(function()
@@ -4839,13 +4882,21 @@ Auto.MODELLE = {
 		R = 1.4, spur = 3.0, achse = 5.14, laenge = 17.4, breite = 7.0,
 		werte = { MaxTempo = 180, Antrieb = 7800, Bremse = 19000, Lenkwinkel = 32, Grip = 16, Lenkdirekt = 15, Anpressdruck = 80 },
 	},
+	-- exclusive (game pass "nacht" in Shop.lua): same body as the Vanta GS, own look and a bit more power
+	gs_night = {
+		name = "Vanta GS Night Edition", art = "Exclusive", preis = 0, wert = 20000, pass = "nacht", basis = "gs",
+		beschreibung = "Exclusive: midnight black, gold rims, purple underglow. 195 km/h.",
+		festeFarbe = Color3.fromRGB(18, 16, 24), tuning = { felgen = 3, neon = 4 },
+		R = 1.4, spur = 3.0, achse = 5.14, laenge = 17.4, breite = 7.0,
+		werte = { MaxTempo = 195, Antrieb = 8400, Bremse = 20000, Lenkwinkel = 32, Grip = 16, Lenkdirekt = 15, Anpressdruck = 82 },
+	},
 	renn = {
 		name = "Apex R1", art = "Race car", preis = 35000, beschreibung = "A real race car with a huge rear wing. 210 km/h top speed.",
 		R = 1.35, spur = 3.5, achse = 5.4, laenge = 17, breite = 7.8,
 		werte = { MaxTempo = 210, Antrieb = 9500, Bremse = 22000, Lenkwinkel = 30, Grip = 18, Lenkdirekt = 16, Anpressdruck = 95 },
 	},
 }
-Auto.MODELL_REIHENFOLGE = { "kleinwagen", "suv", "limousine", "sport", "gs", "track", "renn", "supersport" }
+Auto.MODELL_REIHENFOLGE = { "kleinwagen", "suv", "limousine", "sport", "gs", "track", "renn", "supersport", "gs_night" }
 
 -- ---------------------------------------------------------------
 -- Round bodies for private cars (own designs, made with tools/mesh/*.py -> dist/mesh/<vorlage>.obj).
@@ -4881,6 +4932,7 @@ end
 
 function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 	local D = Auto.MODELLE[typ] or Auto.MODELLE.suv
+	local basis = D.basis or typ -- special editions use the body of their base car
 	farbe = farbe or Color3.fromRGB(200, 30, 35)
 	local R, SP, A = D.R, D.spur, D.achse
 	local L, B = D.laenge, D.breite
@@ -4954,7 +5006,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 	local sitzY = 1.6
 
 	-- round body from the 3D model (only if the model was imported into ServerStorage)
-	local rundDef = KAROSSERIEN[typ]
+	local rundDef = KAROSSERIEN[basis]
 	local rundVorlage = rundDef and game:GetService("ServerStorage"):FindFirstChild(rundDef.vorlage)
 	if rundVorlage and not meshTeil(rundVorlage, "Karosserie") then rundVorlage = nil end
 	local function v3(t) return V3(t[1], t[2], t[3]) end
@@ -5051,7 +5103,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		end
 	end
 
-	if typ == "kleinwagen" then
+	if basis == "kleinwagen" then
 		sitzY = 1.7
 		local unten = R + 0.35
 		k("Karosserie", V3(B, 1.8, L - 0.6), at(0, unten + 0.9, 0), farbe)
@@ -5065,7 +5117,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		k("Heckklappe", V3(B - 0.7, 2.1, 0.4), at(0, oben + 1.05, L / 2 - 1.5), farbe)
 		k("Dachspoiler", V3(B - 1, 0.2, 0.8), at(0, oben + 2.25, L / 2 - 1.6), SCHWARZ)
 		lichter(unten + 1.1, -L / 2 + 0.3, L / 2 - 0.3, 2.3)
-	elseif typ == "limousine" then
+	elseif basis == "limousine" then
 		if rundVorlage then
 			rundBauen()
 		else
@@ -5085,7 +5137,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		end
 		lichter(unten + 1.2, -L / 2 + 0.4, L / 2 - 0.4, 2.6)
 		end
-	elseif typ == "supersport" then
+	elseif basis == "supersport" then
 		sitzY = 1.15
 		local unten = R + 0.1
 		k("Karosserie", V3(B, 1.45, L - 1), at(0, unten + 0.72, 0), farbe)
@@ -5109,7 +5161,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 			licht.Parent = glow
 		end
 		lichter(unten + 0.9, -L / 2 + 0.5, L / 2 - 0.4, 2.6)
-	elseif typ == "suv" then
+	elseif basis == "suv" then
 		sitzY = 2.4
 		if rundVorlage then
 			rundBauen()
@@ -5138,7 +5190,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 			reserve.CastShadow = false
 			lichter(unten + 1.9, -L / 2 + 0.45, L / 2 - 0.45, 2.6)
 		end
-	elseif typ == "sport" then
+	elseif basis == "sport" then
 		if rundVorlage then
 			rundBauen()
 		else
@@ -5164,7 +5216,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 			end
 			lichter(unten + 1.0, -L / 2 + 0.45, L / 2 - 0.45, 2.5)
 		end
-	elseif typ == "track" then
+	elseif basis == "track" then
 		if rundVorlage then
 			rundBauen()
 		else
@@ -5178,7 +5230,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 			k("Heckfluegel", V3(B - 0.6, 0.15, 1.3), at(0, oben + 1.4, L / 2 - 1.2), SCHWARZ)
 			lichter(unten + 0.9, -L / 2 + 0.45, L / 2 - 0.45, 2.6)
 		end
-	elseif typ == "gs" then
+	elseif basis == "gs" then
 		if rundVorlage then
 			rundBauen()
 		else
@@ -5275,7 +5327,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 	k("Lenkrad", V3(0.15, 1.3, 1.3), at(-sx, sitzY + 2.1, armZ + 0.5) * CFrame.Angles(math.rad(-25), math.rad(90), 0), SCHWARZ, nil, { form = Enum.PartType.Cylinder })
 	for _, x in { -sx, sx } do
 		k("Sitz", V3(2.1, 0.5, 2.1), at(x, sitzY - 0.1, 0.6), INNEN, Enum.Material.Fabric)
-		k("Rueckenlehne", V3(2.1, 2.4, 0.4), at(x, sitzY + 1.1, 1.8) * CFrame.Angles(math.rad(-12), 0, 0), typ == "renn" and Color3.fromRGB(180, 30, 30) or INNEN, Enum.Material.Fabric)
+		k("Rueckenlehne", V3(2.1, 2.4, 0.4), at(x, sitzY + 1.1, 1.8) * CFrame.Angles(math.rad(-12), 0, 0), basis == "renn" and Color3.fromRGB(180, 30, 30) or INNEN, Enum.Material.Fabric)
 		k("Kopfstuetze", V3(1.2, 0.7, 0.35), at(x, sitzY + 2.55, 2.05) * CFrame.Angles(math.rad(-12), 0, 0), INNEN, Enum.Material.Fabric)
 	end
 	-- a bit of interior that you can see through the windows
@@ -5307,7 +5359,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 
 	-- wheels (same hinge setup as the driving school car)
 	local reifen = PhysicalProperties.new(0.9, 2, 0, 100, 1)
-	local felgenFarbe = typ == "renn" and Color3.fromRGB(40, 40, 45) or (typ == "sport" and Color3.fromRGB(45, 45, 50) or (typ == "gs" and Color3.fromRGB(95, 97, 104) or CHROM))
+	local felgenFarbe = basis == "renn" and Color3.fromRGB(40, 40, 45) or (basis == "sport" and Color3.fromRGB(45, 45, 50) or (basis == "gs" and Color3.fromRGB(95, 97, 104) or CHROM))
 	-- spoke rims and brake calipers: only looks, all massless and without collision (driving feel unchanged)
 	local SPEICHEN = { kleinwagen = 4, suv = 6, limousine = 5, sport = 5, track = 5, gs = 10, renn = 6, supersport = 10 }
 	local SATTEL_FARBE = {
@@ -5338,7 +5390,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		local r = Instance.new("Part")
 		r.Name = "Rad"
 		r.Shape = Enum.PartType.Cylinder
-		r.Size = Vector3.new(typ == "suv" and 1.3 or 1.2, 2 * R, 2 * R)
+		r.Size = Vector3.new(basis == "suv" and 1.3 or 1.2, 2 * R, 2 * R)
 		r.CFrame = at(x, R, z)
 		r.Color = SCHWARZ
 		r.CustomPhysicalProperties = reifen
@@ -5352,9 +5404,9 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		deko("Felgenbett", Vector3.new(0.04, felgeR * 1.8, felgeR * 1.8), schicht(0.04), Color3.fromRGB(18, 18, 20), nil, r, Enum.PartType.Cylinder)
 		-- brake caliper: fixed to the chassis / steering knuckle, so it does not spin
 		local sattelLage = schicht(0.07) * CFrame.Angles(math.rad(-40), 0, 0) * CFrame.new(0, felgeR * 0.55, 0)
-		deko("Bremssattel", Vector3.new(0.05, felgeR * 0.32, felgeR * 0.75), sattelLage, SATTEL_FARBE[typ] or SATTEL_FARBE.suv, nil, halter)
+		deko("Bremssattel", Vector3.new(0.05, felgeR * 0.32, felgeR * 0.75), sattelLage, SATTEL_FARBE[basis] or SATTEL_FARBE.suv, nil, halter)
 		deko("Bremsscheibe", Vector3.new(0.03, felgeR * 1.45, felgeR * 1.45), schicht(0.055), Color3.fromRGB(95, 95, 100), Enum.Material.Metal, r, Enum.PartType.Cylinder)
-		local n = SPEICHEN[typ] or 5
+		local n = SPEICHEN[basis] or 5
 		for i = 1, n do
 			local spoke = schicht(0.1) * CFrame.Angles(math.rad(360 / n * i), 0, 0) * CFrame.new(0, felgeR * 0.48, 0)
 			deko("Felge", Vector3.new(0.05, felgeR * 0.9, n > 6 and 0.12 or 0.2), spoke, felgenFarbe, Enum.Material.Metal, r)
@@ -5875,7 +5927,7 @@ local Pflege = {}
 
 Pflege.TANKPREIS = 1.5                 -- coins per % of fuel
 Pflege.REICHWEITE = {                  -- km per full tank
-	kleinwagen = 10, suv = 7, limousine = 9, sport = 7, track = 6, gs = 7, renn = 5, supersport = 6,
+	kleinwagen = 10, suv = 7, limousine = 9, sport = 7, track = 6, gs = 7, gs_night = 7, renn = 5, supersport = 6,
 }
 Pflege.PANNENHILFE = { preis = 120, prozent = 15 } -- roadside fuel delivery
 Pflege.ABSCHLEPPEN = 200                -- broken car is towed to the garage
@@ -5901,7 +5953,7 @@ function Pflege.daten(d, typ)
 end
 
 local function reparaturProProzent(typ)
-	local preis = ctx.Auto.MODELLE[typ] and ctx.Auto.MODELLE[typ].preis or 3000
+	local preis = ctx.Auto.MODELLE[typ] and (ctx.Auto.MODELLE[typ].wert or ctx.Auto.MODELLE[typ].preis) or 3000
 	return math.max(2, math.floor(preis * 0.0008))
 end
 
@@ -6009,8 +6061,8 @@ function Pflege.werkstattInfo(p)
 			local m = ctx.Auto.MODELLE[typ]
 			table.insert(liste, {
 				typ = typ, name = m.name, zustand = math.floor(a.zustand), tank = math.floor(a.tank), versichert = a.versichert,
-				reparatur = Pflege.reparaturKosten(d, typ), versicherung = math.floor(m.preis * Pflege.VERSICHERUNG),
-				motor = a.motor or 0, motorPreis = a.motor < 3 and math.floor(m.preis * Pflege.MOTOR[a.motor + 1]) or nil,
+				reparatur = Pflege.reparaturKosten(d, typ), versicherung = math.floor((m.wert or m.preis) * Pflege.VERSICHERUNG),
+				motor = a.motor or 0, motorPreis = a.motor < 3 and math.floor((m.wert or m.preis) * Pflege.MOTOR[a.motor + 1]) or nil,
 				spoiler = a.spoiler, neon = a.neon or 0, felgen = a.felgen or 1,
 			})
 		end
@@ -6038,11 +6090,11 @@ function Pflege.werkstatt(p, eingabe)
 		text = m.name .. " repaired"
 	elseif eingabe.art == "versichern" then
 		if a.versichert then return { fehler = "This car is already insured." } end
-		preis = math.floor(m.preis * Pflege.VERSICHERUNG)
+		preis = math.floor((m.wert or m.preis) * Pflege.VERSICHERUNG)
 		text = "Insurance for the " .. m.name
 	elseif eingabe.art == "motor" then
 		if a.motor >= 3 then return { fehler = "The engine is already at the highest stage." } end
-		preis = math.floor(m.preis * Pflege.MOTOR[a.motor + 1])
+		preis = math.floor((m.wert or m.preis) * Pflege.MOTOR[a.motor + 1])
 		text = ("Engine stage %d for the %s"):format(a.motor + 1, m.name)
 	elseif eingabe.art == "spoiler" then
 		preis = a.spoiler and 0 or Pflege.SPOILER
@@ -6394,6 +6446,607 @@ end
 
 return Missionen
 ]=====])
+neu("ModuleScript", "Shop", server, [=====[
+-- Robux shop: game passes, coin packs, 2x coin boosts, starter pack, VIP / Premium bonus (server).
+--
+-- SET UP (Creator Dashboard -> your experience -> Monetization):
+--   1. Create the game passes and developer products below with the same names.
+--   2. Copy each ID into "id" here. id = 0 means "not set up yet": the button shows "soon".
+--   The Robux price shown in the game is read from Roblox, so you only change prices in the dashboard.
+-- In Roblox Studio purchases are free test purchases, nobody pays anything there.
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
+local RunService = game:GetService("RunService")
+
+local Shop = {}
+
+-- one-time purchases (keep forever)
+Shop.PASSES = {
+	{ key = "vip", id = 0, preis = 399, icon = "👑", name = "VIP",
+		text = "2x coins from every job and reward, golden VIP tag, 2 VIP paint colors." },
+	{ key = "xp2", id = 0, preis = 249, icon = "⚡", name = "2x XP",
+		text = "Level up twice as fast – unlock the big trucks and cars sooner." },
+	{ key = "nacht", id = 0, preis = 699, icon = "🌙", name = "Vanta GS Night Edition",
+		text = "Exclusive car: midnight black, gold rims, purple underglow, 195 km/h. Only with this pass." },
+	{ key = "garage", id = 0, preis = 199, icon = "🎨", name = "Paint Studio",
+		text = "6 exclusive paint colors for all your cars." },
+}
+
+-- can be bought again and again (except the starter pack)
+Shop.PRODUKTE = {
+	{ key = "starter", id = 0, preis = 99, name = "Starter Pack", geld = 7500, boost = 30, einmal = true,
+		text = "7,500 coins + 30 min 2x coins. Only once per player!" },
+	{ key = "boost", id = 0, preis = 79, name = "2x Coins – 30 min", boost = 30, text = "Double coins for 30 minutes of play." },
+	{ key = "coins1", id = 0, preis = 49, name = "2,500 coins", geld = 2500 },
+	{ key = "coins2", id = 0, preis = 179, name = "10,000 coins", geld = 10000 },
+	{ key = "coins3", id = 0, preis = 449, name = "30,000 coins", geld = 30000, tag = "POPULAR" },
+	{ key = "coins4", id = 0, preis = 1199, name = "100,000 coins", geld = 100000, tag = "BEST VALUE" },
+}
+
+-- bonus shares on earned coins / XP (purchases and admin money never get a bonus)
+Shop.BONUS = { vip = 1.0, boost = 1.0, xp2 = 1.0, premium = 0.1, freunde = 0.1 }
+
+-- exclusive paint colors (index 9 and up in the color list of "My Cars")
+Shop.FARBEN = {
+	{ name = "VIP Gold", farbe = Color3.fromRGB(212, 168, 60), passes = { "vip", "garage" } },
+	{ name = "Pearl White", farbe = Color3.fromRGB(236, 232, 222), passes = { "vip", "garage" } },
+	{ name = "Midnight Purple", farbe = Color3.fromRGB(45, 25, 80), passes = { "garage" } },
+	{ name = "Racing Green", farbe = Color3.fromRGB(20, 70, 45), passes = { "garage" } },
+	{ name = "Candy Red", farbe = Color3.fromRGB(150, 10, 25), passes = { "garage" } },
+	{ name = "Ice Blue", farbe = Color3.fromRGB(150, 200, 235), passes = { "garage" } },
+}
+
+local ctx
+local besitz = {}   -- [player] = { key = true } (from Roblox, cached)
+local preise = {}   -- [id] = real Robux price from Roblox
+
+local function passNach(feld, wert)
+	for _, p in Shop.PASSES do if p[feld] == wert then return p end end
+end
+local function produktNach(feld, wert)
+	for _, p in Shop.PRODUKTE do if p[feld] == wert then return p end end
+end
+
+function Shop.hat(p, key)
+	if besitz[p] and besitz[p][key] then return true end
+	local d = ctx and ctx.daten[p]
+	return d ~= nil and d.passes ~= nil and d.passes[key] == true -- test grants in Studio
+end
+
+function Shop.premium(p)
+	local ok, typ = pcall(function() return p.MembershipType end)
+	return ok and typ == Enum.MembershipType.Premium
+end
+
+function Shop.boostRest(p)
+	local d = ctx.daten[p]
+	return d and math.max(0, (d.boostBis or 0) - os.time()) or 0
+end
+
+-- multiplier for earned coins / XP
+function Shop.faktor(p, art)
+	local f = 1
+	if art == "geld" then
+		if Shop.hat(p, "vip") then f += Shop.BONUS.vip end
+		if Shop.boostRest(p) > 0 then f += Shop.BONUS.boost end
+	else
+		if Shop.hat(p, "xp2") then f += Shop.BONUS.xp2 end
+	end
+	if Shop.premium(p) then f += Shop.BONUS.premium end
+	if p:GetAttribute("FreundeBonus") then f += Shop.BONUS.freunde end
+	return f
+end
+
+function Shop.farbeErlaubt(p, nr)
+	if nr <= 8 then return true end
+	local f = Shop.FARBEN[nr - 8]
+	if not f then return false end
+	for _, key in f.passes do
+		if Shop.hat(p, key) then return true end
+	end
+	return false
+end
+
+local function attribute(p)
+	p:SetAttribute("VIP", Shop.hat(p, "vip") or nil)
+	p:SetAttribute("BoostBis", ctx.daten[p] and ctx.daten[p].boostBis or nil)
+	p:SetAttribute("GeldFaktor", Shop.faktor(p, "geld"))
+	p:SetAttribute("XpFaktor", Shop.faktor(p, "xp"))
+end
+Shop.attribute = attribute
+
+-- golden tag above VIP players
+local function vipSchild(p)
+	local figur = p.Character
+	local kopf = figur and figur:FindFirstChild("Head")
+	if not kopf then return end
+	local alt = kopf:FindFirstChild("VipSchild")
+	if not Shop.hat(p, "vip") then
+		if alt then alt:Destroy() end
+		return
+	end
+	if alt then return end
+	local g = Instance.new("BillboardGui")
+	g.Name = "VipSchild"
+	g.Size = UDim2.fromOffset(70, 24)
+	g.StudsOffset = Vector3.new(0, 2.6, 0)
+	g.AlwaysOnTop = false
+	g.MaxDistance = 80
+	g.Parent = kopf
+	local t = Instance.new("TextLabel")
+	t.Size = UDim2.fromScale(1, 1)
+	t.BackgroundColor3 = Color3.fromRGB(40, 32, 10)
+	t.BackgroundTransparency = 0.25
+	t.Font = Enum.Font.GothamBlack
+	t.TextScaled = true
+	t.TextColor3 = Color3.fromRGB(255, 210, 70)
+	t.Text = "👑 VIP"
+	t.Parent = g
+	Instance.new("UICorner", t)
+end
+
+local function besitzLaden(p)
+	besitz[p] = besitz[p] or {}
+	for _, pass in Shop.PASSES do
+		if pass.id ~= 0 then
+			local ok, hat = pcall(function() return MarketplaceService:UserOwnsGamePassAsync(p.UserId, pass.id) end)
+			if ok and hat then besitz[p][pass.key] = true end
+		end
+	end
+end
+
+-- the car that comes with a pass is added to the garage automatically
+local function passAutos(p)
+	local d = ctx.daten[p]
+	if not d then return end
+	for typ, m in ctx.Auto.MODELLE do
+		if m.pass and Shop.hat(p, m.pass) and not table.find(d.autos or {}, typ) then
+			d.autos = d.autos or {}
+			table.insert(d.autos, typ)
+			if m.tuning then
+				local a = ctx.Pflege.daten(d, typ)
+				for k, v in m.tuning do a[k] = v end
+			end
+			ctx.geaendert(p)
+			ctx.fahrEvent:FireClient(p, { typ = "belohnung", text = ("🌙 The %s is in your garage! Get it with 🚗 My Cars."):format(m.name) })
+		end
+	end
+end
+Shop.passAutos = passAutos
+
+function Shop.spielerDa(p)
+	besitzLaden(p)
+	local function warten()
+		for _ = 1, 40 do
+			if ctx.daten[p] then return true end
+			task.wait(0.25)
+		end
+	end
+	if not warten() then return end
+	attribute(p)
+	passAutos(p)
+	if p.Character then vipSchild(p) end
+	p.CharacterAdded:Connect(function()
+		task.wait(1)
+		vipSchild(p)
+	end)
+end
+
+-- shop window data for the client
+function Shop.status(p)
+	local d = ctx.daten[p]
+	local passes, produkte = {}, {}
+	for _, pass in Shop.PASSES do
+		table.insert(passes, { key = pass.key, id = pass.id, icon = pass.icon, name = pass.name, text = pass.text,
+			preis = preise[pass.id] or pass.preis, hat = Shop.hat(p, pass.key), bereit = pass.id ~= 0 })
+	end
+	for _, pr in Shop.PRODUKTE do
+		if not (pr.einmal and d.starterGekauft) then
+			table.insert(produkte, { key = pr.key, id = pr.id, name = pr.name, text = pr.text, tag = pr.tag, geld = pr.geld,
+				preis = preise[pr.id] or pr.preis, bereit = pr.id ~= 0, einmal = pr.einmal })
+		end
+	end
+	return {
+		passes = passes, produkte = produkte, geld = d.geld, boost = Shop.boostRest(p), premium = Shop.premium(p),
+		freunde = p:GetAttribute("FreundeBonus") == true, geldFaktor = Shop.faktor(p, "geld"), xpFaktor = Shop.faktor(p, "xp"),
+		bonus = Shop.BONUS,
+	}
+end
+
+-- what a developer product gives (also used by the Studio test command)
+local function gewaehren(p, pr)
+	local d = ctx.daten[p]
+	if pr.geld then ctx.geldGeben(p, pr.geld, pr.name, true) end
+	if pr.boost then
+		d.boostBis = math.max(os.time(), d.boostBis or 0) + pr.boost * 60
+	end
+	if pr.einmal then d.starterGekauft = true end
+	attribute(p)
+	ctx.geaendert(p)
+	ctx.fahrEvent:FireClient(p, { typ = "belohnung", text = "🛒 Thank you! " .. pr.name .. " received." })
+end
+Shop.gewaehren = gewaehren
+
+function Shop.testKauf(p, key)
+	if not RunService:IsStudio() then return { fehler = "Only in Studio." } end
+	local pass = passNach("key", key)
+	if pass then
+		local d = ctx.daten[p]
+		d.passes = d.passes or {}
+		d.passes[key] = not d.passes[key] or nil
+		attribute(p)
+		vipSchild(p)
+		passAutos(p)
+		ctx.geaendert(p)
+		return { text = ("Test: pass %s %s."):format(pass.name, d.passes[key] and "ON" or "OFF") }
+	end
+	local pr = produktNach("key", key)
+	if pr then
+		gewaehren(p, pr)
+		return { text = "Test purchase: " .. pr.name }
+	end
+	return { fehler = "Unknown item." }
+end
+
+function Shop.starten(c)
+	ctx = c
+	-- real Robux prices from Roblox (so the shop always shows the price you set in the dashboard)
+	task.spawn(function()
+		for _, liste in { { Shop.PASSES, Enum.InfoType.GamePass }, { Shop.PRODUKTE, Enum.InfoType.Product } } do
+			for _, e in liste[1] do
+				if e.id ~= 0 then
+					local ok, info = pcall(function() return MarketplaceService:GetProductInfo(e.id, liste[2]) end)
+					if ok and type(info) == "table" and info.PriceInRobux then preise[e.id] = info.PriceInRobux end
+				end
+			end
+		end
+	end)
+
+	-- developer products: must be safe against double delivery (Roblox may call this again)
+	MarketplaceService.ProcessReceipt = function(info)
+		local p = Players:GetPlayerByUserId(info.PlayerId)
+		local d = p and ctx.daten[p]
+		if not d then return Enum.ProductPurchaseDecision.NotProcessedYet end
+		d.kaeufe = d.kaeufe or {}
+		if table.find(d.kaeufe, info.PurchaseId) then return Enum.ProductPurchaseDecision.PurchaseGranted end
+		local pr = produktNach("id", info.ProductId)
+		if not pr then
+			warn("Shop: unknown product " .. tostring(info.ProductId))
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+		table.insert(d.kaeufe, info.PurchaseId)
+		while #d.kaeufe > 100 do table.remove(d.kaeufe, 1) end
+		gewaehren(p, pr)
+		if not ctx.speichernSofort(p) then
+			-- the coins are in the game already; the next regular save (or leaving) stores them
+			warn("Shop: purchase granted, saving right now failed (will be saved later)")
+		end
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(p, id, gekauft)
+		if not gekauft then return end
+		local pass = passNach("id", id)
+		if not pass then return end
+		besitz[p] = besitz[p] or {}
+		besitz[p][pass.key] = true
+		attribute(p)
+		vipSchild(p)
+		passAutos(p)
+		ctx.fahrEvent:FireClient(p, { typ = "belohnung", text = ("%s %s unlocked – thank you!"):format(pass.icon, pass.name) })
+	end)
+
+	Players.PlayerMembershipChanged:Connect(function(p)
+		if ctx.daten[p] then attribute(p) end
+	end)
+
+	-- boost timer runs out -> update the multipliers shown in the game
+	task.spawn(function()
+		while true do
+			task.wait(15)
+			for _, p in Players:GetPlayers() do
+				if ctx.daten[p] then attribute(p) end
+			end
+		end
+	end)
+
+	Players.PlayerAdded:Connect(function(p) task.spawn(Shop.spielerDa, p) end)
+	for _, p in Players:GetPlayers() do task.spawn(Shop.spielerDa, p) end
+	Players.PlayerRemoving:Connect(function(p) besitz[p] = nil end)
+end
+
+return Shop
+]=====])
+neu("ModuleScript", "Belohnungen", server, [=====[
+-- Reasons to come back (server): daily login streak, playtime gifts, friends / group bonus,
+-- achievements with tiers incl. license classes, optional Roblox badges.
+--
+-- Design notes (what keeps players):
+--  * a reward is always "almost there": every list shows the next tiers, not just the next one
+--  * daily streak bridges sessions (missing a day starts again at day 1)
+--  * the first playtime gift comes after 10 minutes (Roblox pays creators for 10+ min sessions)
+--  * playing with friends gives a bonus (friends bring friends)
+-- All numbers can be changed here.
+local Players = game:GetService("Players")
+local BadgeService = game:GetService("BadgeService")
+
+local Belohnungen = {}
+
+-- 7-day calendar, starts again after day 7 (the streak counter keeps going)
+Belohnungen.TAEGLICH = {
+	{ geld = 150 }, { geld = 250 }, { geld = 350, xp = 50 }, { geld = 500 },
+	{ geld = 650 }, { geld = 800, xp = 100 }, { geld = 2000, xp = 300, gross = true },
+}
+
+-- gifts for playing time on one day (minutes)
+Belohnungen.SPIELZEIT = {
+	{ min = 10, geld = 100 }, { min = 25, geld = 200 }, { min = 45, geld = 350 },
+	{ min = 70, geld = 500, xp = 100 }, { min = 100, geld = 800, xp = 150 },
+}
+
+-- Roblox group: put the group ID here (0 = off). Members get a one-time gift.
+Belohnungen.GRUPPE_ID = 0
+Belohnungen.GRUPPE_GESCHENK = 1000
+
+-- achievements: wert(d) = current value, stufen = goals with rewards, badge = Roblox badge ID for the last tier (0 = none)
+Belohnungen.ERFOLGE = {
+	{ id = "klasseB", kategorie = "license", icon = "🪪", name = "Class B – Car", text = "Pass the driving test",
+		wert = function(d) return d.fuehrerschein and 1 or 0 end, stufen = { { 1, 500, 100 } }, badge = 0 },
+	{ id = "klasseC", kategorie = "license", icon = "🚚", name = "Class C – Truck", text = "Pass the truck test",
+		wert = function(d) return d.lkwFuehrerschein and 1 or 0 end, stufen = { { 1, 1000, 200 } }, badge = 0 },
+	{ id = "klasseCE", kategorie = "license", icon = "🚛", name = "Class CE – Heavy load", text = "Unlock the Mega Truck (15 truck jobs)",
+		wert = function(d) return d.lkwFahrten or 0 end, stufen = { { 5, 500, 100 }, { 15, 2000, 400 } }, badge = 0 },
+	{ id = "taxi", kategorie = "license", icon = "🚕", name = "Taxi license", text = "Drive taxi passengers",
+		wert = function(d) return d.taxiFahrten or 0 end, stufen = { { 10, 400, 80 }, { 50, 1500, 250 }, { 200, 5000, 600 } }, badge = 0 },
+	{ id = "lieferungen", kategorie = "jobs", icon = "📦", name = "Delivery hero", text = "Deliver packages and pizzas",
+		wert = function(d) return d.lieferungen or 0 end, stufen = { { 10, 300, 60 }, { 50, 1000, 200 }, { 200, 4000, 500 }, { 1000, 15000, 1500 } }, badge = 0 },
+	{ id = "km", kategorie = "driving", icon = "🛣", name = "Road trip", text = "Drive kilometers in your own cars",
+		wert = function(d) return math.floor(d.kmGesamt or 0) end, stufen = { { 10, 300, 60 }, { 50, 1200, 200 }, { 250, 5000, 600 }, { 1000, 20000, 2000 } }, badge = 0 },
+	{ id = "perfekt", kategorie = "driving", icon = "🏆", name = "Perfect driver", text = "Lessons or tests without a single mistake",
+		wert = function(d) return d.perfekt or 0 end, stufen = { { 1, 200, 50 }, { 5, 800, 150 }, { 25, 3000, 400 }, { 100, 10000, 1200 } }, badge = 0 },
+	{ id = "autos", kategorie = "collection", icon = "🚗", name = "Car collector", text = "Own different cars",
+		wert = function(d) return #(d.autos or {}) end, stufen = { { 1, 300, 50 }, { 3, 1500, 200 }, { 5, 5000, 500 }, { 8, 15000, 1500 } }, badge = 0 },
+	{ id = "level", kategorie = "collection", icon = "⭐", name = "Experienced", text = "Reach a level",
+		wert = function(d) return math.floor(math.sqrt((d.xp or 0) / 150)) + 1 end, stufen = { { 5, 500, 0 }, { 10, 1500, 0 }, { 20, 5000, 0 }, { 40, 20000, 0 } }, badge = 0 },
+	{ id = "serie", kategorie = "loyal", icon = "🔥", name = "Loyal driver", text = "Daily reward streak (days in a row)",
+		wert = function(d) return d.login and d.login.beste or 0 end, stufen = { { 3, 500, 50 }, { 7, 1500, 150 }, { 14, 4000, 400 }, { 30, 12000, 1000 } }, badge = 0 },
+	{ id = "freunde", kategorie = "loyal", icon = "🤝", name = "Better together", text = "Minutes played with a friend on the server",
+		wert = function(d) return math.floor((d.freundeSek or 0) / 60) end, stufen = { { 10, 500, 100 }, { 60, 2000, 300 }, { 300, 6000, 800 } }, badge = 0 },
+	{ id = "villa", kategorie = "collection", icon = "🏡", name = "Home owner", text = "Buy a villa",
+		wert = function(d) local n = 0 for _ in d.villen or {} do n += 1 end return n end, stufen = { { 1, 2000, 300 } }, badge = 0 },
+}
+
+local ctx
+local freundeCache = {} -- ["a:b"] = true/false
+
+local function heute() return os.date("!%Y-%m-%d") end
+local function gestern() return os.date("!%Y-%m-%d", os.time() - 86400) end
+
+local function login(d)
+	d.login = d.login or { letzte = "", serie = 0, beste = 0 }
+	return d.login
+end
+local function spielzeit(d)
+	if not d.spielzeit or d.spielzeit.tag ~= heute() then
+		d.spielzeit = { tag = heute(), sek = 0, abgeholt = {} }
+	end
+	return d.spielzeit
+end
+
+-- next daily reward: which day of the calendar and is it ready?
+local function taeglichInfo(d)
+	local l = login(d)
+	local bereit = l.letzte ~= heute()
+	local serie = bereit and (l.letzte == gestern() and l.serie + 1 or 1) or l.serie
+	local tagNr = (serie - 1) % #Belohnungen.TAEGLICH + 1
+	return { bereit = bereit, serie = serie, tag = tagNr, verloren = bereit and l.serie > 0 and l.letzte ~= gestern() }
+end
+
+local function erfolgStand(d, e)
+	d.erfolge = d.erfolge or {}
+	local abgeholt = d.erfolge[e.id] or 0      -- how many tiers were claimed
+	return e.wert(d), abgeholt
+end
+
+-- number of rewards that can be claimed right now (red dot on the button)
+function Belohnungen.offen(p)
+	local d = ctx.daten[p]
+	if not d then return 0 end
+	local n = taeglichInfo(d).bereit and 1 or 0
+	local sz = spielzeit(d)
+	for i, s in Belohnungen.SPIELZEIT do
+		if sz.sek >= s.min * 60 and not sz.abgeholt[i] then n += 1 end
+	end
+	if Belohnungen.GRUPPE_ID ~= 0 and not d.gruppeGeschenk and p:GetAttribute("InGruppe") then n += 1 end
+	for _, e in Belohnungen.ERFOLGE do
+		local wert, abgeholt = erfolgStand(d, e)
+		local stufe = e.stufen[abgeholt + 1]
+		if stufe and wert >= stufe[1] then n += 1 end
+	end
+	return n
+end
+
+local function markieren(p)
+	p:SetAttribute("BelohnungenOffen", Belohnungen.offen(p))
+end
+Belohnungen.markieren = markieren
+
+function Belohnungen.status(p)
+	local d = ctx.daten[p]
+	local t = taeglichInfo(d)
+	local sz = spielzeit(d)
+	local geschenke = {}
+	for i, s in Belohnungen.SPIELZEIT do
+		table.insert(geschenke, { nr = i, min = s.min, geld = s.geld, xp = s.xp, abgeholt = sz.abgeholt[i] == true, bereit = sz.sek >= s.min * 60 })
+	end
+	local erfolge = {}
+	for _, e in Belohnungen.ERFOLGE do
+		local wert, abgeholt = erfolgStand(d, e)
+		local stufen = {}
+		for i, s in e.stufen do
+			table.insert(stufen, { ziel = s[1], geld = s[2], xp = s[3], abgeholt = i <= abgeholt })
+		end
+		table.insert(erfolge, { id = e.id, kategorie = e.kategorie, icon = e.icon, name = e.name, text = e.text, wert = wert, stufen = stufen, abgeholt = abgeholt })
+	end
+	return {
+		taeglich = { liste = Belohnungen.TAEGLICH, bereit = t.bereit, serie = t.serie, tag = t.tag, verloren = t.verloren, beste = login(d).beste },
+		spielzeit = { sek = sz.sek, geschenke = geschenke },
+		erfolge = erfolge,
+		gruppe = Belohnungen.GRUPPE_ID ~= 0 and { id = Belohnungen.GRUPPE_ID, geschenk = Belohnungen.GRUPPE_GESCHENK, drin = p:GetAttribute("InGruppe") == true, abgeholt = d.gruppeGeschenk == true } or nil,
+		freunde = p:GetAttribute("FreundeBonus") == true,
+		geld = d.geld,
+	}
+end
+
+local function geben(p, geld, xp, grund)
+	if geld and geld > 0 then ctx.geldGeben(p, geld, grund) end
+	if xp and xp > 0 then ctx.xpGeben(p, xp, grund) end
+end
+
+function Belohnungen.abholen(p, eingabe)
+	local d = ctx.daten[p]
+	if type(eingabe) ~= "table" then return { fehler = "?" } end
+	local text
+	if eingabe.art == "taeglich" then
+		local t = taeglichInfo(d)
+		if not t.bereit then return { fehler = "You already got today's reward. Come back tomorrow!" } end
+		local l = login(d)
+		l.serie, l.letzte = t.serie, heute()
+		l.beste = math.max(l.beste or 0, l.serie)
+		local b = Belohnungen.TAEGLICH[t.tag]
+		geben(p, b.geld, b.xp, ("Daily reward – day %d"):format(t.tag))
+		text = ("🔥 Day %d in a row! Come back tomorrow for day %d."):format(t.serie, t.tag % #Belohnungen.TAEGLICH + 1)
+	elseif eingabe.art == "spielzeit" then
+		local nr = tonumber(eingabe.nr)
+		local s = nr and Belohnungen.SPIELZEIT[nr]
+		local sz = spielzeit(d)
+		if not s then return { fehler = "?" } end
+		if sz.abgeholt[nr] then return { fehler = "Already claimed." } end
+		if sz.sek < s.min * 60 then return { fehler = ("Play %d more minutes for this gift."):format(math.ceil((s.min * 60 - sz.sek) / 60)) } end
+		sz.abgeholt[nr] = true
+		geben(p, s.geld, s.xp, ("Playtime gift (%d min)"):format(s.min))
+		text = "🎁 Playtime gift claimed!"
+	elseif eingabe.art == "erfolg" then
+		local e
+		for _, x in Belohnungen.ERFOLGE do if x.id == eingabe.id then e = x end end
+		if not e then return { fehler = "?" } end
+		local wert, abgeholt = erfolgStand(d, e)
+		local s = e.stufen[abgeholt + 1]
+		if not s then return { fehler = "All tiers done!" } end
+		if wert < s[1] then return { fehler = "Not reached yet." } end
+		d.erfolge[e.id] = abgeholt + 1
+		geben(p, s[2], s[3], e.icon .. " " .. e.name)
+		if abgeholt + 1 == #e.stufen and e.badge ~= 0 then
+			pcall(function() BadgeService:AwardBadge(p.UserId, e.badge) end)
+		end
+		text = ("%s %s – tier %d reached!"):format(e.icon, e.name, abgeholt + 1)
+	elseif eingabe.art == "gruppe" then
+		if Belohnungen.GRUPPE_ID == 0 or d.gruppeGeschenk then return { fehler = "Not available." } end
+		if not p:GetAttribute("InGruppe") then return { fehler = "Join our Roblox group first, then rejoin the game." } end
+		d.gruppeGeschenk = true
+		geben(p, Belohnungen.GRUPPE_GESCHENK, 0, "Group gift")
+		text = "👥 Thanks for joining the group!"
+	else
+		return { fehler = "?" }
+	end
+	ctx.geaendert(p)
+	markieren(p)
+	return { text = text, status = Belohnungen.status(p) }
+end
+
+-- friends on the same server -> bonus for both
+local function freunde(a, b)
+	local k = a.UserId < b.UserId and (a.UserId .. ":" .. b.UserId) or (b.UserId .. ":" .. a.UserId)
+	if freundeCache[k] == nil then
+		local ok, ja = pcall(function() return a:IsFriendsWith(b.UserId) end)
+		freundeCache[k] = ok and ja == true
+	end
+	return freundeCache[k]
+end
+local function freundeNeu()
+	local alle = Players:GetPlayers()
+	for _, p in alle do
+		local hat = false
+		for _, q in alle do
+			if q ~= p and freunde(p, q) then hat = true break end
+		end
+		if (p:GetAttribute("FreundeBonus") == true) ~= hat then
+			p:SetAttribute("FreundeBonus", hat or nil)
+			if hat then ctx.fahrEvent:FireClient(p, { typ = "belohnung", text = "🤝 A friend is here: +10 % coins and XP while you play together!" }) end
+			if ctx.Shop then ctx.Shop.attribute(p) end
+		end
+	end
+end
+Belohnungen.freundeNeu = freundeNeu
+
+function Belohnungen.spielerDa(p)
+	if Belohnungen.GRUPPE_ID ~= 0 then
+		local ok, drin = pcall(function() return p:IsInGroup(Belohnungen.GRUPPE_ID) end)
+		p:SetAttribute("InGruppe", ok and drin or nil)
+	end
+	for _ = 1, 40 do
+		if ctx.daten[p] then break end
+		task.wait(0.25)
+	end
+	if not ctx.daten[p] then return end
+	freundeNeu()
+	markieren(p)
+	-- daily reward waiting -> the client opens the rewards window
+	if taeglichInfo(ctx.daten[p]).bereit then
+		ctx.fahrEvent:FireClient(p, { typ = "taeglich" })
+	end
+end
+
+-- called every few seconds for every player: playtime, friend minutes, "reward ready" messages
+function Belohnungen.takt(p, sekunden)
+	local d = ctx.daten[p]
+	if not d then return end
+	local sz = spielzeit(d)
+	local vorher = sz.sek
+	sz.sek += sekunden
+	if p:GetAttribute("FreundeBonus") then d.freundeSek = (d.freundeSek or 0) + sekunden end
+	for _, s in Belohnungen.SPIELZEIT do
+		if vorher < s.min * 60 and sz.sek >= s.min * 60 then
+			ctx.fahrEvent:FireClient(p, { typ = "belohnung", text = ("🎁 Playtime gift ready (%d min)! Open 🎁 Rewards."):format(s.min) })
+		end
+	end
+	local alt = p:GetAttribute("BelohnungenOffen") or 0
+	local neu = Belohnungen.offen(p)
+	if neu > alt then
+		-- a new achievement tier is ready?
+		for _, e in Belohnungen.ERFOLGE do
+			local wert, abgeholt = erfolgStand(d, e)
+			local s = e.stufen[abgeholt + 1]
+			local gemeldet = d.erfolgGemeldet or {}
+			d.erfolgGemeldet = gemeldet
+			if s and wert >= s[1] and gemeldet[e.id] ~= abgeholt + 1 then
+				gemeldet[e.id] = abgeholt + 1
+				ctx.fahrEvent:FireClient(p, { typ = "belohnung", text = ("%s Achievement ready: %s (tier %d)"):format(e.icon, e.name, abgeholt + 1) })
+			end
+		end
+	end
+	p:SetAttribute("BelohnungenOffen", neu)
+end
+
+function Belohnungen.starten(c)
+	ctx = c
+	Players.PlayerAdded:Connect(function(p) task.spawn(Belohnungen.spielerDa, p) end)
+	for _, p in Players:GetPlayers() do task.spawn(Belohnungen.spielerDa, p) end
+	Players.PlayerRemoving:Connect(function()
+		task.defer(freundeNeu)
+	end)
+	task.spawn(function()
+		while true do
+			task.wait(10)
+			for _, p in Players:GetPlayers() do
+				Belohnungen.takt(p, 10)
+			end
+		end
+	end)
+end
+
+return Belohnungen
+]=====])
 neu("ModuleScript", "Karosserien", server, [=====[
 -- GENERATED by tools/mesh/*.py - do not edit by hand.
 -- Round bodies for the private cars. Import dist/mesh/<vorlage>.obj with the 3D Importer
@@ -6705,7 +7358,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v23 loaded")
+print("[Driving School] client v24 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -7250,6 +7903,14 @@ local function autohausDialog(info)
 		if a.gehoert then
 			k.Text = "OWNED ✓"
 			k.BackgroundColor3 = Color3.fromRGB(50, 90, 60)
+		elseif a.pass then
+			-- exclusive car: comes with a game pass from the shop
+			k.Text = "🌙 EXCLUSIVE"
+			k.BackgroundColor3 = Color3.fromRGB(110, 60, 200)
+			k.MouseButton1Click:Connect(function()
+				if autohausGui then autohausGui:Destroy() autohausGui = nil end
+				if _G.ShopOeffnen then _G.ShopOeffnen() end
+			end)
 		else
 			local leisten = info.geld >= a.preis
 			k.Text = ("🪙 %d"):format(a.preis)
@@ -9478,6 +10139,9 @@ do
 	local FARBEN = {
 		Color3.fromRGB(200, 25, 30), Color3.fromRGB(25, 70, 170), Color3.fromRGB(240, 240, 240), Color3.fromRGB(20, 20, 24),
 		Color3.fromRGB(150, 155, 160), Color3.fromRGB(245, 190, 30), Color3.fromRGB(30, 130, 70), Color3.fromRGB(240, 110, 20),
+		-- exclusive colors (VIP / Paint Studio, same order as Shop.FARBEN on the server)
+		Color3.fromRGB(212, 168, 60), Color3.fromRGB(236, 232, 222), Color3.fromRGB(45, 25, 80),
+		Color3.fromRGB(20, 70, 45), Color3.fromRGB(150, 10, 25), Color3.fromRGB(150, 200, 235),
 	}
 	local gewaehlt = 1
 	local ag2 = Instance.new("ScreenGui")
@@ -9489,7 +10153,7 @@ do
 	local panel = Instance.new("Frame")
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromOffset(380, 370)
+	panel.Size = UDim2.fromOffset(380, 412)
 	panel.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
 	panel.Parent = ag2
 	Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 14)
@@ -9534,15 +10198,19 @@ do
 	farbText.TextSize = 13
 	farbText.TextColor3 = Color3.fromRGB(180, 185, 195)
 	farbText.TextXAlignment = Enum.TextXAlignment.Left
-	farbText.Text = "Paint color"
+	farbText.Text = "Paint color   (✦ = exclusive: VIP / Paint Studio)"
 	farbText.Parent = panel
 	local swatches = {}
 	for i, f in FARBEN do
 		local b = Instance.new("TextButton")
-		b.Position = UDim2.fromOffset(18 + (i - 1) * 42, 280)
+		local exklusiv = i > 8
+		b.Position = UDim2.fromOffset(18 + ((i - 1) % 8) * 42, exklusiv and 320 or 280)
 		b.Size = UDim2.fromOffset(34, 34)
 		b.BackgroundColor3 = f
-		b.Text = ""
+		b.Text = exklusiv and "✦" or ""
+		b.TextColor3 = Color3.fromRGB(255, 215, 90)
+		b.TextSize = 14
+		b.Font = Enum.Font.GothamBlack
 		b.Parent = panel
 		Instance.new("UICorner", b).CornerRadius = UDim.new(1, 0)
 		local rand2 = Instance.new("UIStroke")
@@ -9632,9 +10300,446 @@ do
 	end)
 end
 
+-- ---------------------------------------------------------------
+-- Rewards (daily streak, playtime gifts, achievements, bonuses) and the Robux shop
+-- ---------------------------------------------------------------
+do
+	local MarketplaceService = game:GetService("MarketplaceService")
+	local SocialService = game:GetService("SocialService")
+	local GOLD = Color3.fromRGB(245, 185, 40)
+	local LILA = Color3.fromRGB(130, 70, 230)
+	local KARTE = Color3.fromRGB(34, 38, 48)
+	local HELL = Color3.fromRGB(190, 195, 205)
+
+	local function zahlFormat(n)
+		local t = tostring(math.floor(n or 0))
+		while true do
+			local neu, k = t:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
+			t = neu
+			if k == 0 then break end
+		end
+		return t
+	end
+	local function label(eltern, t, groesse, farbe, x, y, w, h, fett, ausrichtung)
+		local l = Instance.new("TextLabel")
+		l.Position = UDim2.new(x[1], x[2], y[1], y[2])
+		l.Size = UDim2.new(w[1], w[2], h[1], h[2])
+		l.BackgroundTransparency = 1
+		l.Font = fett == 2 and Enum.Font.GothamBlack or (fett and Enum.Font.GothamBold or Enum.Font.Gotham)
+		l.TextSize = groesse
+		l.TextColor3 = farbe or Color3.new(1, 1, 1)
+		l.TextXAlignment = ausrichtung or Enum.TextXAlignment.Left
+		l.TextWrapped = true
+		l.RichText = true
+		l.Text = t
+		l.Parent = eltern
+		return l
+	end
+	local function taste(eltern, t, farbe, x, y, w, h, klick)
+		local k = Instance.new("TextButton")
+		k.Position = UDim2.new(x[1], x[2], y[1], y[2])
+		k.Size = UDim2.new(w[1], w[2], h[1], h[2])
+		k.BackgroundColor3 = farbe
+		k.Font = Enum.Font.GothamBlack
+		k.TextSize = 13
+		k.TextColor3 = Color3.new(1, 1, 1)
+		k.Text = t
+		k.AutoButtonColor = true
+		k.Parent = eltern
+		Instance.new("UICorner", k)
+		if klick then k.MouseButton1Click:Connect(klick) end
+		return k
+	end
+	local function karte(eltern, hoehe, farbe, nr)
+		local f = Instance.new("Frame")
+		f.LayoutOrder = nr or 0
+		f.Size = UDim2.new(1, -8, 0, hoehe)
+		f.BackgroundColor3 = farbe or KARTE
+		f.Parent = eltern
+		Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
+		return f
+	end
+	local function balken(eltern, anteil, farbe, x, y, w)
+		local hinten = Instance.new("Frame")
+		hinten.Position = UDim2.new(x[1], x[2], y[1], y[2])
+		hinten.Size = UDim2.new(w[1], w[2], 0, 8)
+		hinten.BackgroundColor3 = Color3.fromRGB(55, 60, 75)
+		hinten.Parent = eltern
+		Instance.new("UICorner", hinten)
+		local vorn = Instance.new("Frame")
+		vorn.Size = UDim2.fromScale(math.clamp(anteil, 0, 1), 1)
+		vorn.BackgroundColor3 = farbe
+		vorn.Parent = hinten
+		Instance.new("UICorner", vorn)
+	end
+	-- window that fits on phones too
+	local function fenster(name, titel, farbe)
+		local alt = spieler.PlayerGui:FindFirstChild(name)
+		if alt then alt:Destroy() end
+		local g = Instance.new("ScreenGui")
+		g.Name = name
+		g.ResetOnSpawn = false
+		g.DisplayOrder = 14
+		g.Parent = spieler.PlayerGui
+		local panel = Instance.new("Frame")
+		panel.AnchorPoint = Vector2.new(0.5, 0.5)
+		panel.Position = UDim2.fromScale(0.5, 0.5)
+		panel.Size = UDim2.fromScale(0.94, 0.86)
+		panel.BackgroundColor3 = Color3.fromRGB(22, 24, 30)
+		panel.Parent = g
+		Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 14)
+		local grenze = Instance.new("UISizeConstraint")
+		grenze.MaxSize = Vector2.new(580, 560)
+		grenze.Parent = panel
+		local kopf = Instance.new("Frame")
+		kopf.Size = UDim2.new(1, 0, 0, 50)
+		kopf.BackgroundColor3 = farbe
+		kopf.Parent = panel
+		Instance.new("UICorner", kopf).CornerRadius = UDim.new(0, 14)
+		local verlauf = Instance.new("UIGradient")
+		verlauf.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(170, 170, 170))
+		verlauf.Rotation = 90
+		verlauf.Parent = kopf
+		label(kopf, titel, 20, nil, { 0, 16 }, { 0, 0 }, { 1, -70 }, { 1, 0 }, 2)
+		taste(kopf, "X", Color3.fromRGB(40, 20, 20), { 1, -44 }, { 0, 10 }, { 0, 32 }, { 0, 30 }, function() g:Destroy() end)
+		local liste = Instance.new("ScrollingFrame")
+		liste.Position = UDim2.fromOffset(12, 60)
+		liste.Size = UDim2.new(1, -24, 1, -70)
+		liste.BackgroundTransparency = 1
+		liste.BorderSizePixel = 0
+		liste.ScrollBarThickness = 6
+		liste.AutomaticCanvasSize = Enum.AutomaticSize.Y
+		liste.CanvasSize = UDim2.new()
+		liste.Parent = panel
+		local l = Instance.new("UIListLayout")
+		l.Padding = UDim.new(0, 10)
+		l.SortOrder = Enum.SortOrder.LayoutOrder
+		l.Parent = liste
+		return g, liste
+	end
+	local function ueberschrift(liste, t, nr)
+		local f = Instance.new("Frame")
+		f.LayoutOrder = nr
+		f.Size = UDim2.new(1, -8, 0, 24)
+		f.BackgroundTransparency = 1
+		f.Parent = liste
+		label(f, t, 15, GOLD, { 0, 4 }, { 0, 0 }, { 1, -8 }, { 1, 0 }, 2)
+	end
+
+	-- ---------- rewards window ----------
+	local belohnungZeigen
+	local function abholen(eingabe)
+		local r = frage("belohnungAbholen", eingabe)
+		if r.fehler then hinweis(r.fehler) return end
+		warnen(r.text, Color3.fromRGB(190, 130, 20))
+		belohnungZeigen(r.status)
+	end
+	belohnungZeigen = function(info)
+		local _, liste = fenster("Belohnungen", "🎁 REWARDS", Color3.fromRGB(200, 120, 30))
+		local nr = 0
+		local function weiter() nr += 1 return nr end
+		-- daily streak
+		local t = info.taeglich
+		ueberschrift(liste, ("🔥 DAILY STREAK  ·  %d day%s in a row"):format(t.bereit and math.max(t.serie - 1, 0) or t.serie, (t.bereit and t.serie - 1 or t.serie) == 1 and "" or "s"), weiter())
+		local k = karte(liste, 150, nil, weiter())
+		for i, b in t.liste do
+			local feld = Instance.new("Frame")
+			feld.Position = UDim2.new((i - 1) / 7, 4, 0, 8)
+			feld.Size = UDim2.new(1 / 7, -8, 0, 78)
+			local heute = i == t.tag
+			local erledigt = (t.bereit and i < t.tag) or (not t.bereit and i <= t.tag)
+			feld.BackgroundColor3 = heute and (t.bereit and Color3.fromRGB(120, 85, 15) or Color3.fromRGB(35, 80, 50)) or (erledigt and Color3.fromRGB(35, 70, 45) or Color3.fromRGB(45, 50, 62))
+			feld.Parent = k
+			Instance.new("UICorner", feld)
+			if heute and t.bereit then
+				local r = Instance.new("UIStroke")
+				r.Color = GOLD
+				r.Thickness = 2
+				r.Parent = feld
+			end
+			label(feld, "Day " .. i, 11, HELL, { 0, 0 }, { 0, 4 }, { 1, 0 }, { 0, 14 }, true, Enum.TextXAlignment.Center)
+			label(feld, (b.gross and "🎁" or (erledigt and "✅" or "🪙")), 20, nil, { 0, 0 }, { 0, 20 }, { 1, 0 }, { 0, 26 }, nil, Enum.TextXAlignment.Center)
+			label(feld, zahlFormat(b.geld) .. (b.xp and ("\n+" .. b.xp .. " XP") or ""), 11, Color3.new(1, 1, 1), { 0, 0 }, { 0, 46 }, { 1, 0 }, { 0, 30 }, true, Enum.TextXAlignment.Center)
+		end
+		if t.bereit then
+			taste(k, ("CLAIM DAY %d"):format(t.tag), GRUEN, { 0, 12 }, { 0, 96 }, { 1, -24 }, { 0, 40 }, function() abholen({ art = "taeglich" }) end)
+		else
+			label(k, "✅ Claimed today – come back tomorrow to keep your streak! Day 7 is a big chest.", 13, HELL, { 0, 12 }, { 0, 96 }, { 1, -24 }, { 0, 40 }, true, Enum.TextXAlignment.Center)
+		end
+		if t.verloren then
+			label(k, "Streak ended – start again today!", 11, Color3.fromRGB(255, 140, 120), { 0, 12 }, { 0, 84 }, { 1, -24 }, { 0, 12 }, true, Enum.TextXAlignment.Center)
+		end
+		-- playtime gifts
+		local sz = info.spielzeit
+		ueberschrift(liste, ("⏱ PLAYTIME GIFTS TODAY  ·  %d min played"):format(math.floor(sz.sek / 60)), weiter())
+		local k2 = karte(liste, 118, nil, weiter())
+		for i, g in sz.geschenke do
+			local feld = Instance.new("Frame")
+			feld.Position = UDim2.new((i - 1) / #sz.geschenke, 4, 0, 8)
+			feld.Size = UDim2.new(1 / #sz.geschenke, -8, 1, -16)
+			feld.BackgroundColor3 = g.abgeholt and Color3.fromRGB(35, 70, 45) or Color3.fromRGB(45, 50, 62)
+			feld.Parent = k2
+			Instance.new("UICorner", feld)
+			label(feld, g.min .. " min", 12, HELL, { 0, 0 }, { 0, 4 }, { 1, 0 }, { 0, 16 }, true, Enum.TextXAlignment.Center)
+			label(feld, "🪙 " .. zahlFormat(g.geld) .. (g.xp and ("\n+" .. g.xp .. " XP") or ""), 12, nil, { 0, 0 }, { 0, 22 }, { 1, 0 }, { 0, 30 }, true, Enum.TextXAlignment.Center)
+			if g.abgeholt then
+				label(feld, "✅", 18, nil, { 0, 0 }, { 1, -36 }, { 1, 0 }, { 0, 30 }, nil, Enum.TextXAlignment.Center)
+			elseif g.bereit then
+				taste(feld, "CLAIM", GRUEN, { 0, 6 }, { 1, -36 }, { 1, -12 }, { 0, 28 }, function() abholen({ art = "spielzeit", nr = g.nr }) end)
+			else
+				balken(feld, sz.sek / (g.min * 60), Color3.fromRGB(80, 160, 255), { 0, 8 }, { 1, -22 }, { 1, -16 })
+			end
+		end
+		-- bonuses
+		ueberschrift(liste, "🚀 YOUR BONUSES", weiter())
+		local k3 = karte(liste, 96, nil, weiter())
+		local zeilen = {}
+		table.insert(zeilen, (spieler:GetAttribute("VIP") and "👑 VIP: 2x coins ✓" or "👑 VIP: <font color=\"#8a90a0\">not active</font>"))
+		table.insert(zeilen, (spieler:GetAttribute("FreundeBonus") and "🤝 Friend online: +10 % ✓" or "🤝 Play with a friend: +10 %"))
+		table.insert(zeilen, ((spieler:GetAttribute("BoostBis") or 0) > os.time() and ("⚡ 2x boost: %d min left"):format(math.ceil(((spieler:GetAttribute("BoostBis") or 0) - os.time()) / 60)) or "⚡ 2x boost: <font color=\"#8a90a0\">off</font>"))
+		label(k3, table.concat(zeilen, "\n"), 13, nil, { 0, 12 }, { 0, 8 }, { 0.6, -12 }, { 1, -16 }, true)
+		label(k3, ("Coins  <b>x%.1f</b>\nXP  <b>x%.1f</b>"):format(spieler:GetAttribute("GeldFaktor") or 1, spieler:GetAttribute("XpFaktor") or 1), 16, GOLD, { 0.6, 0 }, { 0, 8 }, { 0.4, -12 }, { 0, 44 }, 2, Enum.TextXAlignment.Right)
+		taste(k3, "📨 INVITE FRIENDS", BLAU, { 0.6, 0 }, { 0, 56 }, { 0.4, -12 }, { 0, 32 }, function()
+			pcall(function() SocialService:PromptGameInvite(spieler) end)
+		end)
+		if info.gruppe and not info.gruppe.abgeholt then
+			local kg = karte(liste, 50, Color3.fromRGB(40, 45, 70), weiter())
+			label(kg, ("👥 Join our Roblox group: <b>%s coins</b> gift"):format(zahlFormat(info.gruppe.geschenk)), 14, nil, { 0, 12 }, { 0, 0 }, { 0.65, 0 }, { 1, 0 }, true)
+			taste(kg, info.gruppe.drin and "CLAIM" or "How?", info.gruppe.drin and GRUEN or GRAU, { 0.68, 0 }, { 0, 9 }, { 0.32, -12 }, { 0, 32 }, function()
+				if info.gruppe.drin then abholen({ art = "gruppe" }) else hinweis("Search our group on Roblox (see the game page), join it and rejoin the game.") end
+			end)
+		end
+		-- achievements
+		ueberschrift(liste, "🏆 ACHIEVEMENTS & LICENSE CLASSES", weiter())
+		table.sort(info.erfolge, function(a, b)
+			local function ber(e) local s = e.stufen[e.abgeholt + 1] return s and e.wert >= s.ziel and 0 or (s and 1 or 2) end
+			local ra, rb = ber(a), ber(b)
+			if ra ~= rb then return ra < rb end
+			return false
+		end)
+		for _, e in info.erfolge do
+			local naechste = e.stufen[e.abgeholt + 1]
+			local fertig = naechste == nil
+			local bereit = naechste and e.wert >= naechste.ziel
+			local ke = karte(liste, 78, bereit and Color3.fromRGB(70, 55, 20) or (fertig and Color3.fromRGB(35, 60, 45) or KARTE), weiter())
+			label(ke, e.icon, 28, nil, { 0, 8 }, { 0, 0 }, { 0, 40 }, { 1, 0 }, nil, Enum.TextXAlignment.Center)
+			label(ke, ("<b>%s</b>  <font color=\"#8a90a0\">%s</font>"):format(e.name, #e.stufen > 1 and ("tier %d/%d"):format(e.abgeholt, #e.stufen) or ""), 14, nil, { 0, 54 }, { 0, 6 }, { 1, -190 }, { 0, 18 })
+			label(ke, e.text, 12, HELL, { 0, 54 }, { 0, 24 }, { 1, -190 }, { 0, 16 })
+			if fertig then
+				label(ke, "✅ Completed!", 13, Color3.fromRGB(120, 220, 140), { 0, 54 }, { 0, 46 }, { 1, -190 }, { 0, 18 }, true)
+			else
+				balken(ke, e.wert / naechste.ziel, bereit and GOLD or Color3.fromRGB(80, 160, 255), { 0, 54 }, { 0, 48 }, { 1, -190 })
+				-- show this tier and the next ones (something to look forward to)
+				local vorschau = {}
+				for i = e.abgeholt + 1, math.min(#e.stufen, e.abgeholt + 3) do
+					local s = e.stufen[i]
+					table.insert(vorschau, ("%s: %s🪙%s"):format(zahlFormat(s.ziel), zahlFormat(s.geld), s.xp > 0 and (" +" .. s.xp .. "XP") or ""))
+				end
+				label(ke, ("%s / %s   ·   %s"):format(zahlFormat(math.min(e.wert, naechste.ziel)), zahlFormat(naechste.ziel), table.concat(vorschau, "  →  ")), 11, HELL, { 0, 54 }, { 0, 58 }, { 1, -70 }, { 0, 16 })
+				if bereit then
+					taste(ke, "CLAIM", GRUEN, { 1, -122 }, { 0, 12 }, { 0, 110 }, { 0, 34 }, function() abholen({ art = "erfolg", id = e.id }) end)
+				else
+					label(ke, ("🪙 %s"):format(zahlFormat(naechste.geld)), 14, GOLD, { 1, -130 }, { 0, 14 }, { 0, 118 }, { 0, 30 }, 2, Enum.TextXAlignment.Right)
+				end
+			end
+		end
+	end
+	local function belohnungenOeffnen()
+		local r = frage("belohnungen")
+		if r.fehler then hinweis(r.fehler) return end
+		belohnungZeigen(r)
+	end
+	_G.BelohnungenOeffnen = belohnungenOeffnen
+
+	-- ---------- shop window ----------
+	local shopZeigen
+	local function kaufen(art, eintrag)
+		if eintrag.bereit then
+			if art == "pass" then
+				MarketplaceService:PromptGamePassPurchase(spieler, eintrag.id)
+			else
+				MarketplaceService:PromptProductPurchase(spieler, eintrag.id)
+			end
+		elseif RunService:IsStudio() then
+			-- not set up yet: free test purchase in Studio
+			local r = frage("dev", { befehl = "kauf", key = eintrag.key })
+			warnen(r.fehler or r.text, GRUEN)
+			task.wait(0.3)
+			local s = frage("shop")
+			if not s.fehler then shopZeigen(s) end
+		else
+			hinweis("Coming soon!")
+		end
+	end
+	shopZeigen = function(info)
+		local _, liste = fenster("Shop", "🛒 SHOP", Color3.fromRGB(110, 60, 200))
+		local nr = 0
+		local function weiter() nr += 1 return nr end
+		local kopf = karte(liste, 56, nil, weiter())
+		label(kopf, ("🪙 <b>%s</b> coins"):format(zahlFormat(info.geld)), 18, nil, { 0, 14 }, { 0, 0 }, { 0.5, 0 }, { 1, 0 })
+		label(kopf, ("Coins x%.1f  ·  XP x%.1f%s"):format(info.geldFaktor, info.xpFaktor, info.boost > 0 and ("  ·  ⚡ %d min"):format(math.ceil(info.boost / 60)) or ""), 13, GOLD, { 0.45, 0 }, { 0, 0 }, { 0.55, -14 }, { 1, 0 }, true, Enum.TextXAlignment.Right)
+		local studio = RunService:IsStudio()
+		local function preisText(e)
+			if e.hat then return "OWNED ✓" end
+			if e.bereit then return "R$ " .. e.preis end
+			return studio and ("TEST · R$ " .. e.preis) or "SOON"
+		end
+		-- starter pack first (best offer for new players)
+		for _, pr in info.produkte do
+			if pr.einmal then
+				local k = karte(liste, 96, LILA, weiter())
+				local v = Instance.new("UIGradient")
+				v.Color = ColorSequence.new(Color3.fromRGB(150, 90, 255), Color3.fromRGB(240, 120, 60))
+				v.Parent = k
+				label(k, "⭐ " .. pr.name:upper() .. "  <font size=\"12\">ONLY ONCE</font>", 18, nil, { 0, 14 }, { 0, 8 }, { 1, -170 }, { 0, 24 }, 2)
+				label(k, pr.text, 13, nil, { 0, 14 }, { 0, 36 }, { 1, -170 }, { 0, 50 }, true)
+				taste(k, preisText(pr), GRUEN, { 1, -150 }, { 0.5, -22 }, { 0, 136 }, { 0, 44 }, function() kaufen("produkt", pr) end)
+			end
+		end
+		ueberschrift(liste, "🎟 GAME PASSES – keep forever", weiter())
+		for _, pass in info.passes do
+			local k = karte(liste, 84, pass.hat and Color3.fromRGB(35, 60, 45) or KARTE, weiter())
+			label(k, pass.icon, 34, nil, { 0, 6 }, { 0, 0 }, { 0, 56 }, { 1, 0 }, nil, Enum.TextXAlignment.Center)
+			label(k, pass.name, 16, nil, { 0, 66 }, { 0, 8 }, { 1, -220 }, { 0, 20 }, 2)
+			label(k, pass.text, 12, HELL, { 0, 66 }, { 0, 30 }, { 1, -220 }, { 0, 48 })
+			local b = taste(k, preisText(pass), pass.hat and GRAU or GRUEN, { 1, -146 }, { 0.5, -20 }, { 0, 134 }, { 0, 40 }, function()
+				if not pass.hat then kaufen("pass", pass) end
+			end)
+			b.AutoButtonColor = not pass.hat
+		end
+		ueberschrift(liste, "🪙 COINS & BOOSTS", weiter())
+		for _, pr in info.produkte do
+			if not pr.einmal then
+				local k = karte(liste, 56, nil, weiter())
+				label(k, (pr.geld and "🪙 " or "⚡ ") .. pr.name .. (pr.tag and ("   <font color=\"#ffcf4a\" size=\"12\">" .. pr.tag .. "</font>") or ""), 16, nil, { 0, 14 }, { 0, 0 }, { 1, -170 }, { 1, 0 }, true)
+				taste(k, preisText(pr), GRUEN, { 1, -146 }, { 0.5, -18 }, { 0, 134 }, { 0, 36 }, function() kaufen("produkt", pr) end)
+			end
+		end
+		local fuss = karte(liste, 40, Color3.fromRGB(28, 30, 38), weiter())
+		label(fuss, "Everything in the game can also be earned by playing. Purchases support the developer ❤", 11, HELL, { 0, 12 }, { 0, 0 }, { 1, -24 }, { 1, 0 }, nil, Enum.TextXAlignment.Center)
+	end
+	local function shopOeffnen()
+		local r = frage("shop")
+		if r.fehler then hinweis(r.fehler) return end
+		shopZeigen(r)
+	end
+	_G.ShopOeffnen = shopOeffnen
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(_, _, gekauft)
+		if gekauft then task.wait(1.5) if spieler.PlayerGui:FindFirstChild("Shop") then shopOeffnen() end end
+	end)
+	MarketplaceService.PromptProductPurchaseFinished:Connect(function(_, _, gekauft)
+		if gekauft then task.wait(2) if spieler.PlayerGui:FindFirstChild("Shop") then shopOeffnen() end end
+	end)
+
+	-- ---------- buttons top left ----------
+	local function hudKnopf(text, x, farbe)
+		local k = Instance.new("TextButton")
+		k.Position = UDim2.new(0, x, 0, 100)
+		k.Size = UDim2.fromOffset(110, 32)
+		k.BackgroundColor3 = farbe or Color3.fromRGB(25, 30, 40)
+		k.BackgroundTransparency = 0.15
+		k.Font = Enum.Font.GothamBold
+		k.TextSize = 14
+		k.TextColor3 = Color3.new(1, 1, 1)
+		k.Text = text
+		k.Parent = kameraGui
+		Instance.new("UICorner", k)
+		return k
+	end
+	local bKnopf = hudKnopf("🎁 Rewards", 244)
+	local punkt = Instance.new("TextLabel")
+	punkt.AnchorPoint = Vector2.new(0.5, 0.5)
+	punkt.Position = UDim2.new(1, -2, 0, 2)
+	punkt.Size = UDim2.fromOffset(20, 20)
+	punkt.BackgroundColor3 = Color3.fromRGB(230, 40, 50)
+	punkt.Font = Enum.Font.GothamBlack
+	punkt.TextSize = 12
+	punkt.TextColor3 = Color3.new(1, 1, 1)
+	punkt.Visible = false
+	punkt.Parent = bKnopf
+	Instance.new("UICorner", punkt).CornerRadius = UDim.new(1, 0)
+	local function punktNeu()
+		local n = spieler:GetAttribute("BelohnungenOffen") or 0
+		punkt.Visible = n > 0
+		punkt.Text = tostring(n)
+	end
+	spieler:GetAttributeChangedSignal("BelohnungenOffen"):Connect(punktNeu)
+	punktNeu()
+	bKnopf.MouseButton1Click:Connect(function()
+		local g = spieler.PlayerGui:FindFirstChild("Belohnungen")
+		if g then g:Destroy() return end
+		belohnungenOeffnen()
+	end)
+	local sKnopf = hudKnopf("🛒 Shop", 360, Color3.fromRGB(110, 60, 200))
+	sKnopf.MouseButton1Click:Connect(function()
+		local g = spieler.PlayerGui:FindFirstChild("Shop")
+		if g then g:Destroy() return end
+		shopOeffnen()
+	end)
+
+	-- coin multiplier next to the money display (e.g. "x2.1  ⚡12:30")
+	task.spawn(function()
+		local geldGui = spieler.PlayerGui:WaitForChild("Geld", 10)
+		local pille = geldGui and geldGui:FindFirstChildOfClass("Frame")
+		if not pille then return end
+		local faktor = Instance.new("TextButton")
+		faktor.LayoutOrder = 3
+		faktor.BackgroundColor3 = Color3.fromRGB(110, 60, 200)
+		faktor.Size = UDim2.fromOffset(0, 26)
+		faktor.AutomaticSize = Enum.AutomaticSize.X
+		faktor.Font = Enum.Font.GothamBlack
+		faktor.TextSize = 13
+		faktor.TextColor3 = Color3.new(1, 1, 1)
+		faktor.Text = "+"
+		faktor.Parent = pille
+		Instance.new("UICorner", faktor).CornerRadius = UDim.new(1, 0)
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 9), UDim.new(0, 9)
+		pad.Parent = faktor
+		faktor.MouseButton1Click:Connect(shopOeffnen)
+		while true do
+			local f = spieler:GetAttribute("GeldFaktor") or 1
+			local rest = (spieler:GetAttribute("BoostBis") or 0) - os.time()
+			local t = f > 1.01 and ("x%.1f"):format(f) or "+"
+			if rest > 0 then t ..= ("  ⚡%d:%02d"):format(rest // 60, rest % 60) end
+			faktor.Text = t
+			faktor.BackgroundColor3 = f > 1.01 and Color3.fromRGB(190, 130, 20) or Color3.fromRGB(110, 60, 200)
+			task.wait(1)
+		end
+	end)
+
+	-- VIP tag in the chat
+	pcall(function()
+		local TextChatService = game:GetService("TextChatService")
+		TextChatService.OnIncomingMessage = function(nachricht)
+			local quelle = nachricht.TextSource
+			local p = quelle and Players:GetPlayerByUserId(quelle.UserId)
+			if p and p:GetAttribute("VIP") then
+				local props = Instance.new("TextChatMessageProperties")
+				props.PrefixText = "<font color=\"#FFD24A\">[👑 VIP]</font> " .. nachricht.PrefixText
+				return props
+			end
+		end
+	end)
+
+	-- messages from the server
+	fahrEvent.OnClientEvent:Connect(function(info)
+		if info.typ == "belohnung" then
+			warnen(info.text, Color3.fromRGB(190, 130, 20))
+		elseif info.typ == "taeglich" then
+			-- daily reward waiting: open the rewards window once the player is in the game
+			task.spawn(function()
+				while not _G.ImSpiel do task.wait(0.5) end
+				task.wait(1.5)
+				belohnungenOeffnen()
+			end)
+		end
+	end)
+end
+
 -- Start screen
 do
-	print("[Driving School] start screen v23 loading")
+	print("[Driving School] start screen v24 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -9707,6 +10812,7 @@ do
 	spielen.Activated:Connect(function()
 		if gestartet then return end
 		gestartet = true
+		_G.ImSpiel = true
 		print("[Driving School] PLAY pressed")
 		menue:Destroy()                    -- the menu disappears right away
 		einstellGui.Enabled = false
@@ -9821,4 +10927,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v23 installed. Press F5 to test.")
+print("License system v24 installed. Press F5 to test.")

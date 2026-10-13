@@ -1,5 +1,13 @@
 # Changelog
 
+## v24 – Belohnungen & Shop
+- **Tägliche Belohnung:** 7-Tage-Kalender mit Serie (Tag 7 = große Truhe), öffnet sich beim Spielstart automatisch. Wer einen Tag auslässt, fängt wieder bei Tag 1 an.
+- **Spielzeit-Geschenke:** nach 10/25/45/70/100 Minuten pro Tag (erstes nach 10 min – so lange muss jemand spielen, damit Roblox dir Creator Rewards zahlt).
+- **Erfolge & Führerscheinklassen:** 12 Erfolge mit Stufen (Klasse B, C, CE, Taxischein, Lieferungen, km, perfekte Fahrten, Autosammlung, Level, Treue-Serie, mit Freunden, Villa). Zeigt immer die nächsten Stufen und Belohnungen.
+- **Freunde:** +10 % Coins und XP, solange ein Freund auf dem Server ist; „Freunde einladen“-Knopf.
+- **Shop (Robux):** Game Passes VIP (2x Coins, VIP-Schild, VIP-Chat-Tag, 2 Lacke), 2x XP, Paint Studio (6 exklusive Lacke), exklusives Auto „Vanta GS Night Edition“ (eigenes Podest vor dem Autohaus). Coin-Pakete, 2x-Coins-Boost (30 min), Starterpaket (nur einmal). Premium-Spieler +10 %.
+- IDs der Passes/Produkte in `src/Shop.lua` eintragen (0 = noch nicht eingerichtet; in Studio dann kostenloser Testkauf).
+
 ## v23
 - Vanta GS: untere Frontecken jetzt sauber schwarz (die zackigen Meshy-Lamellen dort sind weg). Neue `dist/mesh/VantaGS.obj` importieren.
 - In Studio getestet (v22-Modell): Licht an/aus, Blinker blinken, Scheinwerfer leuchten nach vorn, Beschleunigung wie gehabt.

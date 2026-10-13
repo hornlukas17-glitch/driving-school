@@ -28,7 +28,7 @@ ART = {"lack": (KFARBE, 0.5), "chrom": ((0.75, 0.75, 0.78), 0.9), "alu": ((0.66,
 FARBEN = {"Karosserie": (KFARBE, 0.5), "Heckpartie": (KFARBE, 0.5), "Dach": (KFARBE, 0.5), "Verkleidung": ((0.06, 0.06, 0.065), 0.1), "Glas": ((0.05, 0.07, 0.1), 0.5)}
 for name, f in objs.items():
     art = INFO["mesh"].get(name, {}).get("a")
-    farbe, glanz = ART[art] if art in ART else FARBEN.get(name, ((0.5, 0.5, 0.5), 0.5))
+    farbe, glanz = ART[art] if art in ART else FARBEN.get(name, (KFARBE, 0.5))   # wie im Spiel: Teile ohne Art bekommen die Lackfarbe
     teile.append((V[np.array(f)], farbe, glanz))
 
 

@@ -111,53 +111,6 @@ Fr=np.concatenate([Fr,Fz+len(Vr)]); Vr=np.concatenate([Vr,Vz]); Lr=np.r_[Lr,np.o
 trimteile=int(np.ceil(Lr.sum()/19000))
 aufteilen(Lr,["Verkleidung","Verkleidung2","Verkleidung3"][:trimteile],{"n":"Verkleidung2","a":"schwarz"})
 Vg,Fg=reduziere(*teil(L==2),7000); meshes["Glas"]=(Vg,Fg); print("Glas",len(Fg))
-# ---- Leuchtleisten: durchgehende Bänder entlang der Lichtlinie des Modells ----
-def bandkurve(p, vorne):
-    xm=np.percentile(np.abs(p[:,0]),99)
-    xs=np.arange(-xm,xm+1e-6,0.08)
-    ys=[];zs=[];ok=[]
-    for x in xs:
-        q=p[np.abs(p[:,0]-x)<0.07]
-        if len(q)<2: ys.append(np.nan); zs.append(np.nan); continue
-        ys.append(np.median(q[:,1])); zs.append(np.percentile(q[:,2],15 if vorne else 85))
-    ys=np.array(ys); zs=np.array(zs)
-    gut=~np.isnan(ys)
-    ys=np.interp(xs,xs[gut],ys[gut]); zs=np.interp(xs,xs[gut],zs[gut])
-    ys=(ys+ys[::-1])/2; zs=(zs+zs[::-1])/2                     # symmetrisch
-    k=np.ones(7)/7
-    for _ in range(3):
-        ys=np.convolve(np.pad(ys,3,mode="edge"),k,"valid"); zs=np.convolve(np.pad(zs,3,mode="edge"),k,"valid")
-    return np.stack([xs,ys,zs],1)
-def band(C, vorne, h, t, von, bis):
-    """Rechteck-Röhre entlang C[von:bis+1]"""
-    C=C[von:bis+1]
-    T=np.gradient(C,axis=0); T/=np.linalg.norm(T,axis=1,keepdims=True)
-    N=np.stack([T[:,2],np.zeros(len(T)),-T[:,0]],1) if vorne else np.stack([-T[:,2],np.zeros(len(T)),T[:,0]],1)
-    N/=np.linalg.norm(N,axis=1,keepdims=True)
-    up=np.array([0,1,0])
-    M=C+N*(t/2+0.01)
-    ecken=[(+1,+1),(+1,-1),(-1,-1),(-1,+1)]
-    Vb=np.concatenate([M+a*up*h/2+b*N*t/2 for a,b in ecken],0)   # Block je Ecke
-    n=len(C); Fb=[]
-    for e in range(4):
-        e2=(e+1)%4
-        for i in range(n-1):
-            a0,a1,b0,b1=e*n+i,e*n+i+1,e2*n+i,e2*n+i+1
-            Fb+=[(a0,b0,a1),(a1,b0,b1)]
-    for i in (0,n-1):
-        q=[e*n+i for e in range(4)]
-        Fb+=[(q[0],q[1],q[2]),(q[0],q[2],q[3])] if i==0 else [(q[0],q[2],q[1]),(q[0],q[3],q[2])]
-    return Vb,np.array(Fb)
-for vorne,pkt,name,nm,a,h,t,grenze in ((True,np.concatenate([LICHT_PUNKTE[3][LICHT_PUNKTE[3][:,1]>2.0],LICHT_PUNKTE[5][LICHT_PUNKTE[5][:,1]>2.0]]),"V","Scheinwerfer","scheinwerfer",0.13,0.12,2.8),
-                                        (False,np.concatenate([LICHT_PUNKTE[4],LICHT_PUNKTE[6]]),"H","Ruecklicht","neon_rot",0.2,0.12,2.45)):
-    C=bandkurve(pkt,vorne)
-    xs=C[:,0]; mitte=np.argmin(np.abs(xs)); li=np.where(xs<=-grenze)[0][-1]; re=np.where(xs>=grenze)[0][0]
-    for teilname,von,bis,meta_ in (("BlinkL",0,li,{"n":"BlinkerL","a":"blinker"}),("LichtL",li,mitte,{"n":nm,"a":a}),
-                                    ("LichtR",mitte,re,{"n":nm,"a":a}),("BlinkR",re,len(C)-1,{"n":"BlinkerR","a":"blinker"})):
-        Vb,Fb=band(C,vorne,h,t,von,bis)
-        nn=teilname[:-1]+name+teilname[-1]          # z. B. LichtVL, BlinkHR
-        meshes[nn]=(Vb,Fb,meta_)
-        print(nn,len(Fb),"x",round(xs[von],2),"..",round(xs[bis],2))
 # ---- Normalen: über alle Teile gemeinsam (gleiche Normale an Teilgrenzen -> keine sichtbaren Nähte) ----
 schluessel={}
 summe=[]
@@ -176,6 +129,64 @@ for k2 in alle:
     Vx=meshes[k2][0]
     Nx=np.array([acc[kk] for kk in key(Vx)])
     NORMALEN[k2]=Nx/(np.linalg.norm(Nx,axis=1,keepdims=True)+1e-12)
+# ---- Leuchtleisten: durchgehende Bänder entlang der Lichtlinie des Modells ----
+def bandkurve(p, vorne):
+    xm=np.percentile(np.abs(p[:,0]),99)
+    xs=np.arange(-xm,xm+1e-6,0.08)
+    ys=[];zs=[];ok=[]
+    for x in xs:
+        q=p[np.abs(p[:,0]-x)<0.07]
+        if len(q)<2: ys.append(np.nan); zs.append(np.nan); continue
+        ys.append(np.median(q[:,1])); zs.append(np.percentile(q[:,2],15 if vorne else 85))
+    ys=np.array(ys); zs=np.array(zs)
+    gut=~np.isnan(ys)
+    ys=np.interp(xs,xs[gut],ys[gut]); zs=np.interp(xs,xs[gut],zs[gut])
+    ys=(ys+ys[::-1])/2; zs=(zs+zs[::-1])/2                     # symmetrisch
+    k=np.ones(7)/7
+    for _ in range(3):
+        ys=np.convolve(np.pad(ys,3,mode="edge"),k,"valid"); zs=np.convolve(np.pad(zs,3,mode="edge"),k,"valid")
+    return np.stack([xs,ys,zs],1)
+KV=np.concatenate([meshes[k][0] for k in alle]); KN=np.concatenate([NORMALEN[k] for k in alle])
+kbaum=cKDTree(KV)
+def anlegen(C):
+    """Kurvenpunkte auf die Karosserie legen: Mittel der nächsten Oberflächenpunkte + deren Normale"""
+    _,nn=kbaum.query(C,k=16)
+    P=KV[nn].mean(1); N=KN[nn].mean(1); N/=np.linalg.norm(N,axis=1,keepdims=True)
+    k=np.ones(5)/5
+    for _ in range(2):
+        P=np.stack([np.convolve(np.pad(P[:,i],2,mode="edge"),k,"valid") for i in range(3)],1)
+        N=np.stack([np.convolve(np.pad(N[:,i],2,mode="edge"),k,"valid") for i in range(3)],1)
+    N/=np.linalg.norm(N,axis=1,keepdims=True)
+    return P,N
+def band(PN, vorne, h, t, von, bis):
+    """flache Leuchtleiste, die auf der Karosserie aufliegt (Tiefe t nach außen, Höhe h)"""
+    P,N=PN[0][von:bis+1],PN[1][von:bis+1]
+    up=np.array([0.,1.,0.])
+    U=up-(N@up)[:,None]*N; U/=np.linalg.norm(U,axis=1,keepdims=True)
+    M=P+N*(t/2-0.02)                                             # leicht eingelassen, damit keine Lücke bleibt
+    ecken=[(+1,+1),(+1,-1),(-1,-1),(-1,+1)]
+    Vb=np.concatenate([M+a*U*h/2+b*N*t/2 for a,b in ecken],0)   # Block je Ecke
+    n=len(P); Fb=[]
+    for e in range(4):
+        e2=(e+1)%4
+        for i in range(n-1):
+            a0,a1,b0,b1=e*n+i,e*n+i+1,e2*n+i,e2*n+i+1
+            Fb+=[(a0,b0,a1),(a1,b0,b1)]
+    for i in (0,n-1):
+        q=[e*n+i for e in range(4)]
+        Fb+=[(q[0],q[1],q[2]),(q[0],q[2],q[3])] if i==0 else [(q[0],q[2],q[1]),(q[0],q[3],q[2])]
+    return Vb,np.array(Fb)
+for vorne,pkt,name,nm,a,h,t,grenze in ((True,np.concatenate([LICHT_PUNKTE[3][LICHT_PUNKTE[3][:,1]>2.0],LICHT_PUNKTE[5][LICHT_PUNKTE[5][:,1]>2.0]]),"V","Scheinwerfer","scheinwerfer",0.13,0.1,2.8),
+                                        (False,np.concatenate([LICHT_PUNKTE[4],LICHT_PUNKTE[6]]),"H","Ruecklicht","neon_rot",0.2,0.1,2.45)):
+    C=bandkurve(pkt,vorne)
+    PN=anlegen(C)
+    xs=C[:,0]; mitte=np.argmin(np.abs(xs)); li=np.where(xs<=-grenze)[0][-1]; re=np.where(xs>=grenze)[0][0]
+    for teilname,von,bis,meta_ in (("BlinkL",0,li,{"n":"BlinkerL","a":"blinker"}),("LichtL",li,mitte,{"n":nm,"a":a}),
+                                    ("LichtR",mitte,re,{"n":nm,"a":a}),("BlinkR",re,len(C)-1,{"n":"BlinkerR","a":"blinker"})):
+        Vb,Fb=band(PN,vorne,h,t,von,bis)
+        nn=teilname[:-1]+name+teilname[-1]          # z. B. LichtVL, BlinkHR
+        meshes[nn]=(Vb,Fb,meta_)
+        print(nn,len(Fb),"x",round(xs[von],2),"..",round(xs[bis],2))
 out={}; meta={}
 for k2,v in meshes.items():
     out[k2+"_V"]=v[0].astype(np.float32); out[k2+"_F"]=v[1].astype(np.int32)

@@ -1,5 +1,9 @@
 # Changelog
 
+## v22
+- Vanta GS: Rücklichtband und Frontleiste liegen jetzt direkt auf der Karosserie und laufen um die Ecken (vorher standen die Enden seitlich ab).
+- Seitendetails: Türfugen (vier Türen), bündige Türgriffe, Chrom-Fensterleiste entlang der Gürtellinie. Neue `dist/mesh/VantaGS.obj` importieren.
+
 ## v21
 - Vanta GS: Lichtleiste vorne und Rücklichtband hinten jetzt durchgehend und sauber (eigene Leuchtleisten entlang der Lichtlinie des Modells, Blinker an den Enden). Neue `dist/mesh/VantaGS.obj` importieren.
 - Glattere Karosserie: stärker geglättet, mehr als doppelt so viele Dreiecke, eigene Normalen für weiche Schattierung, Sprenkel im Lack entfernt.

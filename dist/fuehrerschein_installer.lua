@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v21
+--  DRIVER'S LICENSE SYSTEM v22
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -6406,17 +6406,17 @@ return {
 		armaturenZ = -2,
 		drehung = 180,
 		mesh = {
-			BlinkHL = { groesse = { 0.6036, 0.2091, 0.4538 }, mitte = { -2.7857, 3.1519, 8.0194 }, n = "BlinkerL", a = "blinker" },
-			BlinkHR = { groesse = { 0.5234, 0.2091, 0.3976 }, mitte = { 2.7493, 3.1519, 7.9913 }, n = "BlinkerR", a = "blinker" },
-			BlinkVL = { groesse = { 0.4371, 0.1727, 0.3246 }, mitte = { -3.0999, 2.5005, -7.0249 }, n = "BlinkerL", a = "blinker" },
-			BlinkVR = { groesse = { 0.4371, 0.1727, 0.3246 }, mitte = { 3.0293, 2.5005, -7.0249 }, n = "BlinkerR", a = "blinker" },
+			BlinkHL = { groesse = { 0.5503, 0.2423, 0.4803 }, mitte = { -2.6994, 3.1002, 7.9877 }, n = "BlinkerL", a = "blinker" },
+			BlinkHR = { groesse = { 0.4751, 0.2274, 0.4256 }, mitte = { 2.7032, 3.117, 7.9831 }, n = "BlinkerR", a = "blinker" },
+			BlinkVL = { groesse = { 0.3739, 0.1705, 0.3444 }, mitte = { -2.99, 2.4965, -6.9483 }, n = "BlinkerL", a = "blinker" },
+			BlinkVR = { groesse = { 0.3953, 0.1766, 0.3638 }, mitte = { 2.9437, 2.517, -6.9656 }, n = "BlinkerR", a = "blinker" },
 			Glas = { groesse = { 6.1492, 1.7719, 10.2832 }, mitte = { 0.0027, 4.1297, 1.6394 } },
 			Heckpartie = { groesse = { 7.1411, 3.0209, 5.1285 }, mitte = { 0.0007, 2.0234, -5.2276 } },
 			Karosserie = { groesse = { 6.2131, 2.1651, 0.8334 }, mitte = { -0.0123, 1.6387, -7.9082 } },
-			LichtHL = { groesse = { 2.5479, 0.3173, 0.6244 }, mitte = { -1.2722, 3.2093, 8.4593 }, n = "Ruecklicht", a = "neon_rot" },
-			LichtHR = { groesse = { 2.5526, 0.3198, 0.6787 }, mitte = { 1.2782, 3.2081, 8.4322 }, n = "Ruecklicht", a = "neon_rot" },
-			LichtVL = { groesse = { 2.9609, 0.3214, 1.197 }, mitte = { -1.4757, 2.3834, -7.6902 }, n = "Scheinwerfer", a = "scheinwerfer" },
-			LichtVR = { groesse = { 2.8808, 0.3214, 1.197 }, mitte = { 1.4452, 2.3834, -7.6902 }, n = "Scheinwerfer", a = "scheinwerfer" },
+			LichtHL = { groesse = { 2.5513, 0.4112, 0.6953 }, mitte = { -1.2703, 3.209, 8.4113 }, n = "Ruecklicht", a = "neon_rot" },
+			LichtHR = { groesse = { 2.5594, 0.4106, 0.6923 }, mitte = { 1.2849, 3.2098, 8.4039 }, n = "Ruecklicht", a = "neon_rot" },
+			LichtVL = { groesse = { 2.9005, 0.3449, 1.1877 }, mitte = { -1.4415, 2.4032, -7.5977 }, n = "Scheinwerfer", a = "scheinwerfer" },
+			LichtVR = { groesse = { 2.8252, 0.3511, 1.1593 }, mitte = { 1.4211, 2.4133, -7.6106 }, n = "Scheinwerfer", a = "scheinwerfer" },
 			Mittelteil = { groesse = { 7.4942, 4.3711, 12.3801 }, mitte = { 0.0027, 2.7252, 2.8966 } },
 			Verkleidung = { groesse = { 5.4438, 1.8285, 0.6085 }, mitte = { 0.0028, 1.4535, -8.0244 } },
 			Verkleidung2 = { groesse = { 6.9697, 1.9953, 1.0151 }, mitte = { -0.0061, 1.5407, -7.531 }, n = "Verkleidung2", a = "schwarz" },
@@ -6424,6 +6424,32 @@ return {
 			Radhaus = { groesse = { 6.9, 2.3083, 13.7185 }, mitte = { 0, 1.9659, 0 }, n = "Radhaus", a = "schwarz" },
 		},
 		anbau = {
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.466 }, p = { 3.289, 1.265, -2.7 }, s = true, d = { -0.0583, 0.9983, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.465 }, p = { 3.282, 1.695, -2.7 }, s = true, d = { 0.0255, 0.9997, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.465 }, p = { 3.285, 2.125, -2.7 }, s = true, d = { -0.0125, 0.9999, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.467 }, p = { 3.262, 2.555, -2.7 }, s = true, d = { -0.09, 0.9959, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.513 }, p = { 3.139, 2.985, -2.7 }, s = true, d = { -0.4352, 0.9004, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.491 }, p = { 3.23, 1.278, 0.9 }, s = true, d = { 0.0317, 0.9995, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.491 }, p = { 3.243, 1.734, 0.9 }, s = true, d = { 0.0264, 0.9997, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.492 }, p = { 3.267, 2.19, 0.9 }, s = true, d = { 0.0762, 0.9971, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.492 }, p = { 3.266, 2.646, 0.9 }, s = true, d = { -0.0807, 0.9967, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.561 }, p = { 3.117, 3.102, 0.9 }, s = true, d = { -0.4973, 0.8676, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.559 }, p = { 3.43, 2.73, 4.05 }, s = true, d = { -0.4007, 0.9162, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.658 }, p = { 3.126, 3.21, 4.05 }, s = true, d = { -0.6373, 0.7706, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.885 }, p = { 3.294, 1.05, -2.175 }, s = true, d = { -0.0103, 0, 0.9999 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.885 }, p = { 3.278, 1.05, -1.325 }, s = true, d = { -0.027, 0, 0.9996 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.885 }, p = { 3.256, 1.05, -0.475 }, s = true, d = { -0.0238, 0, 0.9997 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.885 }, p = { 3.236, 1.05, 0.375 }, s = true, d = { -0.0242, 0, 0.9997 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.773 }, p = { 3.221, 1.05, 1.369 }, s = true, d = { -0.0063, 0, 1 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.773 }, p = { 3.218, 1.05, 2.106 }, s = true, d = { -0.0019, 0, 1 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.781 }, p = { 3.273, 1.05, 2.844 }, s = true, d = { 0.1514, 0, 0.9885 } },
+			{ n = "Griff", a = "glanzschwarz", g = { 0.06, 0.12, 0.75 }, p = { 3.221, 2.95, -0.1 }, s = true },
+			{ n = "Griff", a = "glanzschwarz", g = { 0.06, 0.12, 0.75 }, p = { 3.287, 2.95, 3.2 }, s = true },
+			{ n = "Fensterleiste", a = "chrom", g = { 0.05, 0.05, 1.451 }, p = { 2.908, 3.32, -1.7 }, s = true, d = { 0.0181, 0.0286, 0.9994 } },
+			{ n = "Fensterleiste", a = "chrom", g = { 0.05, 0.05, 1.551 }, p = { 2.917, 3.37, -0.25 }, s = true, d = { -0.0051, 0.04, 0.9992 } },
+			{ n = "Fensterleiste", a = "chrom", g = { 0.05, 0.05, 1.551 }, p = { 2.91, 3.43, 1.25 }, s = true, d = { -0.0041, 0.04, 0.9992 } },
+			{ n = "Fensterleiste", a = "chrom", g = { 0.05, 0.05, 1.552 }, p = { 2.885, 3.49, 2.75 }, s = true, d = { -0.029, 0.04, 0.9988 } },
+			{ n = "Fensterleiste", a = "chrom", g = { 0.05, 0.05, 1.158 }, p = { 2.809, 3.56, 4.05 }, s = true, d = { -0.0979, 0.0722, 0.9926 } },
 		},
 		kollision = {
 			{ g = { 6.6, 0.4, 15.6 }, p = { 0, 3.1, 0.3 } },
@@ -6679,7 +6705,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v21 loaded")
+print("[Driving School] client v22 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -9608,7 +9634,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v21 loading")
+	print("[Driving School] start screen v22 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -9795,4 +9821,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v21 installed. Press F5 to test.")
+print("License system v22 installed. Press F5 to test.")

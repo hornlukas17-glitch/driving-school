@@ -3372,13 +3372,15 @@ do
 	fahrEvent.OnClientEvent:Connect(function(info)
 		if info.typ == "belohnung" then
 			warnen(info.text, Color3.fromRGB(190, 130, 20))
-		elseif info.typ == "taeglich" then
-			-- daily reward waiting: open the rewards window once the player is in the game
-			task.spawn(function()
-				while not _G.ImSpiel do task.wait(0.5) end
-				task.wait(1.5)
-				belohnungenOeffnen()
-			end)
+		end
+	end)
+	-- daily reward waiting: open the rewards window once the player is in the game (after PLAY)
+	task.spawn(function()
+		while not _G.ImSpiel do task.wait(0.5) end
+		task.wait(2)
+		local r = frage("belohnungen")
+		if r.taeglich and r.taeglich.bereit and not spieler.PlayerGui:FindFirstChild("Belohnungen") then
+			belohnungZeigen(r)
 		end
 	end)
 end

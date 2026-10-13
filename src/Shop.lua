@@ -70,7 +70,7 @@ function Shop.premium(p)
 end
 
 function Shop.boostRest(p)
-	local d = ctx.daten[p]
+	local d = ctx and ctx.daten[p]
 	return d and math.max(0, (d.boostBis or 0) - os.time()) or 0
 end
 
@@ -185,6 +185,7 @@ end
 
 -- shop window data for the client
 function Shop.status(p)
+	if not ctx then return { fehler = "The shop is still loading – try again in a moment." } end
 	local d = ctx.daten[p]
 	local passes, produkte = {}, {}
 	for _, pass in Shop.PASSES do

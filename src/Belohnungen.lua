@@ -112,6 +112,7 @@ end
 Belohnungen.markieren = markieren
 
 function Belohnungen.status(p)
+	if not ctx then return { fehler = "Still loading – try again in a moment." } end
 	local d = ctx.daten[p]
 	local t = taeglichInfo(d)
 	local sz = spielzeit(d)
@@ -144,6 +145,7 @@ local function geben(p, geld, xp, grund)
 end
 
 function Belohnungen.abholen(p, eingabe)
+	if not ctx then return { fehler = "Still loading – try again in a moment." } end
 	local d = ctx.daten[p]
 	if type(eingabe) ~= "table" then return { fehler = "?" } end
 	local text

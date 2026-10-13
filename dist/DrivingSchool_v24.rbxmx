@@ -6465,7 +6465,7 @@ function Shop.premium(p)
 end
 
 function Shop.boostRest(p)
-	local d = ctx.daten[p]
+	local d = ctx and ctx.daten[p]
 	return d and math.max(0, (d.boostBis or 0) - os.time()) or 0
 end
 
@@ -6580,6 +6580,7 @@ end
 
 -- shop window data for the client
 function Shop.status(p)
+	if not ctx then return { fehler = "The shop is still loading – try again in a moment." } end
 	local d = ctx.daten[p]
 	local passes, produkte = {}, {}
 	for _, pass in Shop.PASSES do
@@ -6816,6 +6817,7 @@ end
 Belohnungen.markieren = markieren
 
 function Belohnungen.status(p)
+	if not ctx then return { fehler = "Still loading – try again in a moment." } end
 	local d = ctx.daten[p]
 	local t = taeglichInfo(d)
 	local sz = spielzeit(d)
@@ -6848,6 +6850,7 @@ local function geben(p, geld, xp, grund)
 end
 
 function Belohnungen.abholen(p, eingabe)
+	if not ctx then return { fehler = "Still loading – try again in a moment." } end
 	local d = ctx.daten[p]
 	if type(eingabe) ~= "table" then return { fehler = "?" } end
 	local text
@@ -10664,13 +10667,15 @@ do
 	fahrEvent.OnClientEvent:Connect(function(info)
 		if info.typ == "belohnung" then
 			warnen(info.text, Color3.fromRGB(190, 130, 20))
-		elseif info.typ == "taeglich" then
-			-- daily reward waiting: open the rewards window once the player is in the game
-			task.spawn(function()
-				while not _G.ImSpiel do task.wait(0.5) end
-				task.wait(1.5)
-				belohnungenOeffnen()
-			end)
+		end
+	end)
+	-- daily reward waiting: open the rewards window once the player is in the game (after PLAY)
+	task.spawn(function()
+		while not _G.ImSpiel do task.wait(0.5) end
+		task.wait(2)
+		local r = frage("belohnungen")
+		if r.taeglich and r.taeglich.bereit and not spieler.PlayerGui:FindFirstChild("Belohnungen") then
+			belohnungZeigen(r)
 		end
 	end)
 end

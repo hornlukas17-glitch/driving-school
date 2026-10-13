@@ -46,7 +46,7 @@ local function fahreRoute(modell, maxSchritte)
 	return false
 end
 
-for _, nr in { 1, 2, 3, 4, 5 } do
+for nr = 1, 6 do
 	letzteZiel = nil
 	local r = frage("dev", { befehl = "lektion", nr = nr })
 	print("== lesson", nr, r.text or r.fehler)

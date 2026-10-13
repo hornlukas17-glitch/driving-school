@@ -55,6 +55,8 @@ local function standard()
 		-- shop and rewards (v24)
 		passes = {}, kaeufe = {}, boostBis = 0, starterGekauft = false, login = { letzte = "", serie = 0, beste = 0 },
 		erfolge = {}, erfolgGemeldet = {}, taxiFahrten = 0, freundeSek = 0, gruppeGeschenk = false,
+		-- v31: best stars per lesson (key = lesson number as text), onboarding steps already reported
+		sterne = {}, funnel = {},
 	}
 end
 
@@ -137,6 +139,25 @@ local function geaendert(p)
 	task.spawn(speichern, p)
 end
 
+-- Onboarding funnel for the Roblox creator dashboard (Analytics -> Funnels): shows where new players stop.
+-- Every step is reported once per player; only works in the published game (in Studio it is just skipped).
+local AnalyticsService = game:GetService("AnalyticsService")
+local FUNNEL = {
+	"Joined", "Sat in the first lesson car", "First lesson done", "Third lesson done", "All lessons done",
+	"Theory test passed", "Driver's license", "First own car", "First job done",
+}
+local function funnel(p, schritt)
+	local d = daten[p]
+	if not d or not FUNNEL[schritt] then return end
+	d.funnel = d.funnel or {}
+	local key = tostring(schritt)
+	if d.funnel[key] then return end
+	d.funnel[key] = true
+	pcall(function()
+		AnalyticsService:LogOnboardingFunnelStepEvent(p, schritt, FUNNEL[schritt])
+	end)
+end
+
 -- XP and level: level = floor(sqrt(xp / 150)) + 1  (level 2 at 150 XP, level 5 at 2400 XP, ...)
 local function levelVon(xp) return math.floor(math.sqrt(xp / 150)) + 1 end
 local function xpGeben(p, menge, grund, ohneBonus)
@@ -174,6 +195,7 @@ end
 local function spielerDa(p)
 	p:SetAttribute("Admin", istAdmin(p) or nil)
 	daten[p] = laden(p)
+	funnel(p, 1)
 	anzeigen(p)
 	if fuehrerscheinGeben then task.spawn(fuehrerscheinGeben, p) end
 end
@@ -524,6 +546,7 @@ local function lektionBeenden(p, erfolg, text)
 			end
 		end
 		xpGeben(p, st.fehler == 0 and 350 or 250, st.fehler == 0 and "Perfect driving test!" or "Driving test passed")
+		if not st.lkw then funnel(p, 7) end
 		if st.fehler == 0 then
 			d.perfekt = (d.perfekt or 0) + 1
 			Missionen.fortschritt(p, "perfekt", 1)
@@ -539,16 +562,45 @@ local function lektionBeenden(p, erfolg, text)
 			})
 		end
 		task.delay(12, geldGeben, p, 250, st.lkw and "Truck license" or "Driver's license")
-	elseif erfolg and d then
+	end
+	local sterne, besser, bisher
+	if erfolg and d and not st.pruefung then
 		local neu = st.nr > d.fahrstunden
 		d.fahrstunden = math.max(d.fahrstunden, st.nr)
+		-- 1-3 stars: 0 mistakes = 3, up to 2 mistakes = 2, otherwise 1. Better than before = bonus coins.
+		sterne = st.fehler == 0 and 3 or (st.fehler <= 2 and 2 or 1)
+		d.sterne = d.sterne or {}
+		local key = tostring(st.nr)
+		bisher = d.sterne[key] or 0
+		besser = sterne > bisher
+		if besser then d.sterne[key] = sterne end
 		geaendert(p)
 		if neu then geldGeben(p, 25, "Lesson complete") end
-		xpGeben(p, st.fehler == 0 and 80 or 50, st.fehler == 0 and "Perfect lesson!" or "Lesson complete")
+		if besser and bisher > 0 then geldGeben(p, (sterne - bisher) * 30, "More stars") end
+		if neu or besser then
+			xpGeben(p, st.fehler == 0 and 80 or 50, st.fehler == 0 and "Perfect lesson!" or "Lesson complete")
+		else
+			xpGeben(p, 20, "Lesson repeated")
+		end
 		if st.fehler == 0 then Missionen.fortschritt(p, "perfekt", 1) end
+		if st.nr == 1 then funnel(p, 3) end
+		if st.nr == 3 then funnel(p, 4) end
+		if d.fahrstunden >= #LEKTIONEN then funnel(p, 5) end
 	end
 	if p.Parent and not (st.pruefung and erfolg) then
-		fahrEvent:FireClient(p, { typ = "ende", erfolg = erfolg, text = text, fehler = st.fehler, nr = st.nr, gesamt = #LEKTIONEN, pruefung = st.pruefung })
+		-- what to do next (shown in the result window)
+		local weiter
+		if d and erfolg and not st.pruefung then
+			if d.fahrstunden < #LEKTIONEN then
+				weiter = d.theorie and "Talk to Anna for your next lesson." or "Next: your next lesson with Anna – or the theory lesson at the whiteboard in the classroom."
+			elseif not d.theorie then
+				weiter = "All lessons done! Now the theory: whiteboard in the classroom, then the test at an exam desk."
+			elseif not d.fuehrerschein then
+				weiter = "You're ready for the driving test – talk to Anna!"
+			end
+		end
+		fahrEvent:FireClient(p, { typ = "ende", erfolg = erfolg, text = text, fehler = st.fehler, nr = st.nr, gesamt = #LEKTIONEN, pruefung = st.pruefung,
+			sterne = sterne, besser = besser and bisher and bisher > 0, weiter = weiter })
 	end
 	local warten = 1
 	if erfolg then warten = st.pruefung and 13 or 4 end
@@ -686,7 +738,7 @@ local function blinkTeileSuchen(modell)
 	return teile
 end
 
-local function lektionStarten(p, art)
+local function lektionStarten(p, art, wiederholNr)
 	local d = daten[p]
 	local pruefung = art == "pruefung" or art == "lkw"
 	local lkw = art == "lkw"
@@ -696,11 +748,23 @@ local function lektionStarten(p, art)
 	if jobs[p] then
 		return { fehler = "Finish or cancel your delivery job first." }
 	end
-	if not d.theorie then
-		return { fehler = "You need to pass the theory test first." }
+	-- v31: drive first, theory later. Lessons are open right away; the theory test is needed for the driving test.
+	if pruefung and not d.theorie then
+		return { fehler = "You need to pass the theory test first: theory lesson at the whiteboard, then the test at an exam desk (classroom)." }
+	end
+	if not d.angemeldet then
+		d.angemeldet = true
+		geaendert(p)
 	end
 	local nr, lektion
-	if lkw then
+	if art == "wiederholen" then
+		-- replay a finished lesson to get more stars
+		nr = math.floor(tonumber(wiederholNr) or 0)
+		lektion = LEKTIONEN[nr]
+		if not lektion or nr > d.fahrstunden then
+			return { fehler = "You can only repeat lessons you have already finished." }
+		end
+	elseif lkw then
 		if not d.fuehrerschein then
 			return { fehler = "You need a car driver's license (class B) first." }
 		end
@@ -752,7 +816,7 @@ local function lektionStarten(p, art)
 		startPos = cf.Position, blinker = "aus", blinkZeit = { links = -math.huge, rechts = -math.huge },
 		drehSumme = 0, letzteRichtung = nil, geradeSeit = nil, abgebogen = nil,
 		blinkTeile = blinkTeileSuchen(modell), letzterUnfall = 0,
-		pruefung = pruefung, lkw = lkw, erlaubt = pruefung and 3 or (MAX_FEHLER - 1),
+		pruefung = pruefung, lkw = lkw, erlaubt = pruefung and 3 or (MAX_FEHLER - 1), wiederholung = art == "wiederholen",
 	}
 	lektionen[p] = st
 
@@ -775,6 +839,7 @@ local function lektionStarten(p, art)
 			pcall(function() chassis:SetNetworkOwner(p) end)
 			if not st.gestartet then
 				st.gestartet = true
+				if st.nr == 1 and not pruefung then funnel(p, 2) end
 				fahrEvent:FireClient(p, { typ = "start", titel = lektion.titel, text = lektion.intro, sprecher = pruefung and "Examiner" or "Instructor", grenze = st.erlaubt })
 				task.delay(6, function()
 					if lektionen[p] == st then zielSenden(p, st) end
@@ -1527,6 +1592,7 @@ local function jobBeenden(p, erfolg, text)
 	if erfolg and d then
 		geldGeben(p, job.cfg.bonus, "Job bonus")
 		xpGeben(p, 40, "Job complete")
+		funnel(p, 9)
 		Missionen.fortschritt(p, "jobs", 1)
 		job.verdient += job.cfg.bonus
 		if job.art == "lkw" then
@@ -2515,6 +2581,7 @@ local function autoKaufen(p, typ)
 	end
 	table.insert(d.autos, typ)
 	geldGeben(p, -modell.preis, "Bought the " .. modell.name)
+	funnel(p, 8)
 	return { text = ("The %s is yours! 🔑\n\nGet it anytime with the <b>🚗 My Cars</b> button (top left). It appears on the nearest free parking spot."):format(modell.name) }
 end
 
@@ -2927,6 +2994,7 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 			xpGeben(p, 80, "Theory test passed")
 			d.theorie = true
 			geaendert(p)
+			funnel(p, 6)
 		else
 			sperre[p] = os.clock() + WARTEZEIT
 		end
@@ -3020,6 +3088,18 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 	elseif was == "fahrstundeStarten" then
 		return lektionStarten(p)
 
+	elseif was == "fahrstundeWiederholen" then
+		return lektionStarten(p, "wiederholen", eingabe)
+
+	elseif was == "ersteFahrt" then
+		-- brand-new player pressed PLAY: sign up and go straight into the first (short) lesson
+		if d.angemeldet or d.fahrstunden > 0 or d.fuehrerschein or lektionen[p] then
+			return { fehler = "not new" }
+		end
+		d.angemeldet = true
+		geaendert(p)
+		return lektionStarten(p)
+
 	elseif was == "adminGeld" then
 		-- checked on the server: nobody else can use this, even with a hacked client
 		if not istAdmin(p) then return { fehler = "Only the owner of the game can do this." } end
@@ -3053,6 +3133,7 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 			geaendert(p)
 			return lektionStarten(p, "pruefung")
 		elseif befehl == "lizenz" then
+			if lektionen[p] then lektionBeenden(p, false, "Lesson cancelled (test menu).") end
 			d.angemeldet, d.unterricht, d.theorie = true, true, true
 			d.fahrstunden = #LEKTIONEN
 			d.fuehrerschein = true

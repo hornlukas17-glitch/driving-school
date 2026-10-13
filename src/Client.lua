@@ -157,9 +157,9 @@ local function fortschritt(r)
 	end
 	return table.concat({
 		zeile(s.angemeldet, "Signed up"),
+		zeile(s.fahrstunden >= r.anzahlLektionen, ("Driving lessons (%d/%d)"):format(s.fahrstunden, r.anzahlLektionen)),
 		zeile(s.unterricht, "Theory lesson"),
 		zeile(s.theorie, "Theory test"),
-		zeile(s.fahrstunden >= r.anzahlLektionen, ("Driving lessons (%d/%d)"):format(s.fahrstunden, r.anzahlLektionen)),
 		zeile(s.fuehrerschein, "Practical driving test"),
 		zeile(s.lkwFuehrerschein, "Truck license (optional)"),
 	}, "\n")
@@ -238,54 +238,69 @@ function pkwMenue(r)
 	local s = r.status
 	local name = "Anna – Car license (B)"
 	local zurueck = { text = "Back", farbe = GRAU, klick = dialog }
+	local n = r.anzahlLektionen
+	-- stars collected in the lessons (max. 3 per lesson)
+	local summe = 0
+	for i = 1, n do summe += (s.sterne and s.sterne[tostring(i)]) or 0 end
 	local liste = "Here is everything you need to do:\n\n" .. schritte({
-		{ s.angemeldet, "Sign up here at the reception" },
+		{ s.fahrstunden >= n, ("Driving lessons with Mike (%d/%d)  ⭐ %d/%d"):format(math.min(s.fahrstunden, n), n, summe, n * 3) },
 		{ s.unterricht, "Theory lesson at the <b>whiteboard</b> (classroom)" },
 		{ s.theorie, "Theory test at an <b>exam desk</b> (17 of 20 correct)" },
-		{ s.fahrstunden >= r.anzahlLektionen, ("Driving lessons with Mike (%d/%d)"):format(math.min(s.fahrstunden, r.anzahlLektionen), r.anzahlLektionen) },
 		{ s.fuehrerschein, "Practical driving test (max 3 mistakes)" },
 	}) .. "\n\n"
-	if not s.angemeldet then
-		zeige(name, liste .. "Shall I sign you up?", {
-			{ text = "Yes, sign me up!", farbe = GRUEN, klick = function()
-				local a = frage("anmelden")
-				if a.fehler then hinweis(a.fehler) return end
-				local neu = frage("status")
-				if not neu.fehler then pkwMenue(neu) end
-			end },
-			zurueck,
-		}, "dialog")
-	elseif not s.unterricht then
-		zeige(name, liste .. "Next: go into the classroom on the left and press E at the <b>whiteboard</b>.", { zurueck, { text = "Okay!", farbe = GRUEN, klick = schliessen } }, "dialog")
-	elseif not s.theorie then
-		zeige(name, liste .. "Next: sit down at one of the <b>exam desks</b> in the classroom to start your theory test.", { zurueck, { text = "Okay!", farbe = GRUEN, klick = schliessen } }, "dialog")
-	elseif r.naechste then
-		zeige(name, liste .. ("Your next lesson: <b>%s</b>\nMike is waiting in the car on the parking lot."):format(r.naechste), {
-			{ text = "Start the lesson", farbe = GRUEN, klick = function()
-				local a = frage("fahrstundeStarten")
-				if a.fehler then
-					hinweis(a.fehler)
-				else
-					zeige(name, a.text, { { text = "Okay!", farbe = GRUEN, klick = schliessen } }, "dialog")
-				end
-			end },
-			zurueck,
-		}, "dialog")
-	elseif not s.fuehrerschein then
-		zeige(name, liste .. "Your examiner Mr. Becker rides in the back, Mike sits next to you. The route is random – hitting a pedestrian counts as 3 mistakes!", {
-			{ text = "Start the driving test", farbe = GRUEN, klick = function()
-				local a = frage("pruefungStarten")
-				if a.fehler then
-					hinweis(a.fehler)
-				else
-					zeige(name, a.text, { { text = "Let's go!", farbe = GRUEN, klick = schliessen } }, "dialog")
-				end
-			end },
-			zurueck,
-		}, "dialog")
-	else
-		zeige(name, liste .. "You have your car license! 🎉 Buy a car at the dealership or earn coins with taxi and pizza jobs.", { zurueck, { text = "Thanks!", farbe = GRUEN, klick = schliessen } }, "dialog")
+	local knoepfe = {}
+	local function lektionKnopf()
+		table.insert(knoepfe, { text = ("Start lesson %d"):format(s.fahrstunden + 1), farbe = GRUEN, klick = function()
+			local a = frage("fahrstundeStarten")
+			if a.fehler then
+				hinweis(a.fehler)
+			else
+				zeige(name, a.text, { { text = "Okay!", farbe = GRUEN, klick = schliessen } }, "dialog")
+			end
+		end })
 	end
+	local text
+	if s.fahrstunden < n then
+		text = r.naechste and ("Next lesson: <b>%s</b>\nMike is waiting in the car on the parking lot."):format(r.naechste) or ""
+		if not s.unterricht then text ..= "\n<font size=\"15\" color=\"#9aa4b5\">You can do the theory (classroom) any time in between.</font>" end
+		lektionKnopf()
+	elseif not s.unterricht then
+		text = "All lessons done – great! Now the theory: go into the classroom on the left and press E at the <b>whiteboard</b>."
+	elseif not s.theorie then
+		text = "Next: sit down at one of the <b>exam desks</b> in the classroom to start your theory test."
+	elseif not s.fuehrerschein then
+		text = "Your examiner Mr. Becker rides in the back, Mike sits next to you. The route is random – hitting a pedestrian counts as 3 mistakes!"
+		table.insert(knoepfe, { text = "Start the driving test", farbe = GRUEN, klick = function()
+			local a = frage("pruefungStarten")
+			if a.fehler then
+				hinweis(a.fehler)
+			else
+				zeige(name, a.text, { { text = "Let's go!", farbe = GRUEN, klick = schliessen } }, "dialog")
+			end
+		end })
+	else
+		text = "You have your car license! 🎉 Buy a car at the dealership or earn coins with taxi and pizza jobs."
+	end
+	-- replay finished lessons for more stars
+	if s.fahrstunden > 0 and summe < s.fahrstunden * 3 then
+		table.insert(knoepfe, { text = "⭐ Improve a lesson", farbe = BLAU, klick = function()
+			local auswahl = {}
+			for i = 1, math.min(s.fahrstunden, n) do
+				local st = (s.sterne and s.sterne[tostring(i)]) or 0
+				if st < 3 then
+					table.insert(auswahl, { text = ("Lesson %d   %s%s"):format(i, string.rep("★", st), string.rep("☆", 3 - st)), farbe = GRAU, klick = function()
+						local a = frage("fahrstundeWiederholen", i)
+						if a.fehler then hinweis(a.fehler) else zeige(name, a.text, { { text = "Okay!", farbe = GRUEN, klick = schliessen } }, "dialog") end
+					end })
+				end
+				if #auswahl >= 2 then break end -- the window has room for 3 buttons
+			end
+			table.insert(auswahl, { text = "Back", farbe = GRAU, klick = function() pkwMenue(r) end })
+			zeige(name, "Repeat a lesson with 0 mistakes for 3 stars. Every extra star gives bonus coins!", auswahl, "dialog")
+		end })
+	end
+	table.insert(knoepfe, zurueck)
+	zeige(name, liste .. text, knoepfe, "dialog")
 end
 
 function lkwMenue(r)
@@ -1063,7 +1078,14 @@ fahrEvent.OnClientEvent:Connect(function(info)
 	elseif info.typ == "ende" then
 		hudAus()
 		local titelText = info.erfolg and ("Lesson %d/%d complete! 🎉"):format(info.nr, info.gesamt) or (info.pruefung and "Driving test failed" or "Lesson ended")
-		zeige(titelText, info.text .. ("\n\nMistakes: %d"):format(info.fehler or 0) .. (info.erfolg and "\n\nTalk to Anna at the reception for your next lesson." or ""), {
+		-- stars: 0 mistakes = 3, up to 2 = 2, otherwise 1 (replay the lesson at Anna's for more)
+		local sterneText = ""
+		if info.sterne then
+			sterneText = "\n\n<font size=\"30\" color=\"#ffd23c\">" .. string.rep("★", info.sterne) .. "</font><font size=\"30\" color=\"#5a6070\">" .. string.rep("★", 3 - info.sterne) .. "</font>"
+			if info.besser then sterneText ..= "\n<b>New best!</b> Bonus coins for the extra stars." end
+			if info.sterne < 3 then sterneText ..= "\n<font size=\"14\" color=\"#9aa4b5\">0 mistakes = 3 stars. You can repeat lessons with Anna.</font>" end
+		end
+		zeige(titelText, info.text .. ("\n\nMistakes: %d"):format(info.fehler or 0) .. sterneText .. (info.erfolg and ("\n\n" .. (info.weiter or "Talk to Anna at the reception for your next lesson.")) or ""), {
 			{ text = "Close", farbe = info.erfolg and GRUEN or GRAU, klick = schliessen },
 		}, "hinweis")
 	end
@@ -1168,6 +1190,9 @@ local function fahrenStarten(sitz, hum)
 		local maxTempo = wert("MaxTempo", 130)
 		local bremse = wert("Bremse", 14000)
 		local gas, lenk = sitz.ThrottleFloat, sitz.SteerFloat
+		-- touch pedals (phones/tablets) only replace the input, the car drives exactly the same
+		if _G.TouchGas and _G.TouchGas ~= 0 then gas = _G.TouchGas end
+		if _G.TouchLenk and _G.TouchLenk ~= 0 then lenk = _G.TouchLenk end
 		lenkGlatt += (lenk - lenkGlatt) * math.min(1, dt * 14)
 
 		local cf = chassis.CFrame
@@ -1222,6 +1247,77 @@ local function fahrenStarten(sitz, hum)
 		local rollen = w:Dot(cf.LookVector)
 		local nicken = w:Dot(cf.RightVector)
 		chassis:ApplyAngularImpulse((-cf.LookVector * rollen - cf.RightVector * nicken) * masse * 8 * math.min(1, 6 * dt))
+	end)
+end
+
+-- ---------------------------------------------------------------
+-- Phones and tablets: gas / brake pedals and steering buttons while driving
+-- ---------------------------------------------------------------
+do
+	local UISP = game:GetService("UserInputService")
+	local pedale = Instance.new("ScreenGui")
+	pedale.Name = "Pedale"
+	pedale.ResetOnSpawn = false
+	pedale.Enabled = false
+	pedale.DisplayOrder = 4
+	pedale.Parent = spieler:WaitForChild("PlayerGui")
+	_G.TouchGas, _G.TouchLenk = 0, 0
+	local gedrueckt, knoepfe = {}, {}
+	local function neu()
+		_G.TouchGas = (gedrueckt.gas and 1 or 0) - (gedrueckt.bremse and 1 or 0)
+		_G.TouchLenk = (gedrueckt.rechts and 1 or 0) - (gedrueckt.links and 1 or 0)
+		for name, k in knoepfe do
+			k.BackgroundTransparency = gedrueckt[name] and 0.05 or 0.35
+		end
+	end
+	local function taste(name, text, anker, pos, groesse, farbe)
+		local k = Instance.new("TextButton")
+		k.Name = name
+		k.AnchorPoint = anker
+		k.Position = pos
+		k.Size = groesse
+		k.BackgroundColor3 = farbe
+		k.BackgroundTransparency = 0.35
+		k.AutoButtonColor = false
+		k.Font = Enum.Font.GothamBlack
+		k.TextScaled = true
+		k.TextColor3 = Color3.new(1, 1, 1)
+		k.Text = text
+		k.Parent = pedale
+		Instance.new("UICorner", k).CornerRadius = UDim.new(0, 16)
+		local pad = Instance.new("UIPadding")
+		pad.PaddingTop, pad.PaddingBottom, pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 14), UDim.new(0, 14), UDim.new(0, 10), UDim.new(0, 10)
+		pad.Parent = k
+		k.InputBegan:Connect(function(e)
+			if e.UserInputType == Enum.UserInputType.Touch or e.UserInputType == Enum.UserInputType.MouseButton1 then gedrueckt[name] = true neu() end
+		end)
+		k.InputEnded:Connect(function(e)
+			if e.UserInputType == Enum.UserInputType.Touch or e.UserInputType == Enum.UserInputType.MouseButton1 then gedrueckt[name] = nil neu() end
+		end)
+		knoepfe[name] = k
+	end
+	local DUNKEL = Color3.fromRGB(25, 30, 40)
+	taste("links", "◀", Vector2.new(0, 1), UDim2.new(0, 16, 1, -16), UDim2.fromOffset(96, 96), DUNKEL)
+	taste("rechts", "▶", Vector2.new(0, 1), UDim2.new(0, 122, 1, -16), UDim2.fromOffset(96, 96), DUNKEL)
+	-- right side, left of the speedometer column
+	taste("gas", "GAS", Vector2.new(1, 1), UDim2.new(1, -200, 1, -16), UDim2.fromOffset(88, 128), Color3.fromRGB(40, 150, 70))
+	taste("bremse", "BRAKE", Vector2.new(1, 1), UDim2.new(1, -296, 1, -16), UDim2.fromOffset(88, 88), Color3.fromRGB(190, 45, 45))
+	-- only on touch screens and only while driving
+	local naechstePruefung = 0
+	RunService.Heartbeat:Connect(function()
+		if os.clock() < naechstePruefung then return end
+		naechstePruefung = os.clock() + 0.25
+		local hum = spieler.Character and spieler.Character:FindFirstChildOfClass("Humanoid")
+		local sitz = hum and hum.SeatPart
+		local faehrt = sitz ~= nil and sitz:IsA("VehicleSeat") and sitz.Parent ~= nil and sitz.Parent:GetAttribute("MaxTempo") ~= nil
+		local an = UISP.TouchEnabled == true and faehrt
+		if pedale.Enabled ~= an then
+			pedale.Enabled = an
+			if not an then
+				gedrueckt = {}
+				neu()
+			end
+		end
 	end)
 end
 
@@ -3690,6 +3786,9 @@ do
 	task.spawn(function()
 		while not _G.ImSpiel do task.wait(0.5) end
 		task.wait(2)
+		-- brand-new players first drive (the rewards wait in the menu, red dot)
+		local st = frage("status")
+		if st.status and (not st.status.angemeldet or st.lektionLaeuft) then return end
 		local r = frage("belohnungen")
 		if r.taeglich and r.taeglich.bereit and not spieler.PlayerGui:FindFirstChild("Belohnungen") then
 			belohnungZeigen(r)
@@ -3812,6 +3911,17 @@ do
 		if steuerung then pcall(function() steuerung:Enable() end) end
 		andereZeigen(true)
 		if _G.Einstellungen.ersteP then pcall(perspektive, true) end
+
+		-- brand-new player: no reading first – the first (short) lesson starts right away
+		task.spawn(function()
+			local r = frage("status")
+			if r.fehler or not r.status or r.status.angemeldet or r.status.fahrstunden > 0 or r.lektionLaeuft then return end
+			local a = frage("ersteFahrt")
+			if a.fehler then return end
+			zeige("Welcome to Driving School! 🚗", "Let's drive right away!\n\nYour instructor <b>Mike</b> is waiting in the car on the parking lot right in front of you. Walk to the <b>driver's door</b> and press <b>E</b> (on a phone: tap the button) to get in.\n\n<font size=\"15\" color=\"#9aa4b5\">The theory comes later – Anna at the reception shows you every step.</font>", {
+				{ text = "Let's go!", farbe = GRUEN, klick = schliessen },
+			}, "dialog")
+		end)
 	end)
 
 	-- hide the other buttons while the menu is open

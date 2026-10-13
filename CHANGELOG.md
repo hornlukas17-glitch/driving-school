@@ -1,5 +1,13 @@
 # Changelog
 
+## v31 – Sofort fahren, Sterne, Auswertung, Handy-Pedale
+- **Neuer Einstieg:** Neue Spieler sitzen nach PLAY direkt in der ersten Fahrstunde („Lesson 1: First Drive“, eine kurze Runde um den Block) – ohne Anmelden und ohne Theorie vorher. Die Theorie (Tafel + Prüfungsplatz) ist erst vor der praktischen Prüfung nötig. Jetzt 6 Fahrstunden.
+- **Sterne pro Fahrstunde:** 0 Fehler = ★★★, bis 2 Fehler = ★★, sonst ★. Bei Anna „⭐ Improve a lesson“ zum Wiederholen; jeder neue Stern bringt Bonus-Coins. Das Ergebnisfenster zeigt die Sterne und den nächsten Schritt.
+- **Anna:** Checkliste in der neuen Reihenfolge (Fahrstunden → Theorie → Prüfung) mit Sternezahl.
+- **Auswertung:** Onboarding-Schritte für das Creator Dashboard (beigetreten, im ersten Auto, 1./3./alle Fahrstunden, Theorie, Führerschein, erstes Auto, erster Job) – zeigt, wo neue Spieler aufhören.
+- **Handy/Tablet:** Gas-, Brems- und Lenkknöpfe beim Fahren (nur Eingabe, das Fahrverhalten ist unverändert).
+- Die Tagesbelohnung springt bei ganz neuen Spielern nicht mehr über die erste Fahrt (roter Punkt im Menü bleibt).
+
 ## v30 – Flüssiger auf allen Geräten, Night-Edition-Heck, Menü-Symbol
 - **Server schneller:** Der NPC-Verkehr liest Ampeln und Schilder nur noch einmal ein statt tausende Male pro Sekunde – der Server hat mehr Luft, alles ruckelt weniger.
 - **Detailstufen + Streaming (Karte):** Weit entfernte Gebäude zeichnet Roblox als vereinfachte Form, Geräte laden nur noch ~640 Studs Umgebung voll.

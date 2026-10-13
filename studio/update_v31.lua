@@ -1,5 +1,5 @@
--- Driving School: Update auf v30 (Studio-Befehlszeile: alles einfuegen, Enter druecken)
--- Spielt Client, Verkehr, Auto und Karosserien (Night-Edition-Heck) ein und stellt Streaming/Detailstufen ein.
+-- Driving School: Update auf v31 (vom Stand v28) (Studio-Befehlszeile: alles einfuegen, Enter druecken)
+-- Spielt Client, Server, Fahrstunden, Verkehr, Auto und Karosserien (Night-Edition-Heck) ein und stellt Streaming/Detailstufen ein.
 local function ersetze(src, alt, neu)
 	local a, b = string.find(src, alt, 1, true)
 	assert(a, "nicht gefunden: " .. alt:sub(1, 60))
@@ -16,6 +16,175 @@ local s = game.StarterPlayer.StarterPlayerScripts.FuehrerscheinClient
 local src = s.Source
 assert(#src == 145568, "Ausgangsstand passt nicht: " .. #src)
 src = ersetze(src, [===[
+		zeile(s.angemeldet, "Signed up"),
+		zeile(s.unterricht, "Theory lesson"),
+]===], [===[
+		zeile(s.angemeldet, "Signed up"),
+		zeile(s.fahrstunden >= r.anzahlLektionen, ("Driving lessons (%d/%d)"):format(s.fahrstunden, r.anzahlLektionen)),
+		zeile(s.unterricht, "Theory lesson"),
+]===])
+src = ersetze(src, [===[
+		zeile(s.theorie, "Theory test"),
+		zeile(s.fahrstunden >= r.anzahlLektionen, ("Driving lessons (%d/%d)"):format(s.fahrstunden, r.anzahlLektionen)),
+		zeile(s.fuehrerschein, "Practical driving test"),
+]===], [===[
+		zeile(s.theorie, "Theory test"),
+		zeile(s.fuehrerschein, "Practical driving test"),
+]===])
+src = ersetze(src, [===[
+	local zurueck = { text = "Back", farbe = GRAU, klick = dialog }
+	local liste = "Here is everything you need to do:\n\n" .. schritte({
+]===], [===[
+	local zurueck = { text = "Back", farbe = GRAU, klick = dialog }
+	local n = r.anzahlLektionen
+	-- stars collected in the lessons (max. 3 per lesson)
+	local summe = 0
+	for i = 1, n do summe += (s.sterne and s.sterne[tostring(i)]) or 0 end
+	local liste = "Here is everything you need to do:\n\n" .. schritte({
+]===])
+src = ersetze(src, [===[
+	local liste = "Here is everything you need to do:\n\n" .. schritte({
+		{ s.angemeldet, "Sign up here at the reception" },
+		{ s.unterricht, "Theory lesson at the <b>whiteboard</b> (classroom)" },
+]===], [===[
+	local liste = "Here is everything you need to do:\n\n" .. schritte({
+		{ s.fahrstunden >= n, ("Driving lessons with Mike (%d/%d)  ⭐ %d/%d"):format(math.min(s.fahrstunden, n), n, summe, n * 3) },
+		{ s.unterricht, "Theory lesson at the <b>whiteboard</b> (classroom)" },
+]===])
+src = ersetze(src, [===[
+		{ s.theorie, "Theory test at an <b>exam desk</b> (17 of 20 correct)" },
+		{ s.fahrstunden >= r.anzahlLektionen, ("Driving lessons with Mike (%d/%d)"):format(math.min(s.fahrstunden, r.anzahlLektionen), r.anzahlLektionen) },
+		{ s.fuehrerschein, "Practical driving test (max 3 mistakes)" },
+]===], [===[
+		{ s.theorie, "Theory test at an <b>exam desk</b> (17 of 20 correct)" },
+		{ s.fuehrerschein, "Practical driving test (max 3 mistakes)" },
+]===])
+src = ersetze(src, [===[
+	}) .. "\n\n"
+	if not s.angemeldet then
+		zeige(name, liste .. "Shall I sign you up?", {
+			{ text = "Yes, sign me up!", farbe = GRUEN, klick = function()
+				local a = frage("anmelden")
+				if a.fehler then hinweis(a.fehler) return end
+				local neu = frage("status")
+				if not neu.fehler then pkwMenue(neu) end
+			end },
+			zurueck,
+		}, "dialog")
+	elseif not s.unterricht then
+]===], [===[
+	}) .. "\n\n"
+	local knoepfe = {}
+	local function lektionKnopf()
+		table.insert(knoepfe, { text = ("Start lesson %d"):format(s.fahrstunden + 1), farbe = GRUEN, klick = function()
+			local a = frage("fahrstundeStarten")
+			if a.fehler then
+				hinweis(a.fehler)
+			else
+				zeige(name, a.text, { { text = "Okay!", farbe = GRUEN, klick = schliessen } }, "dialog")
+			end
+		end })
+	end
+	local text
+	if s.fahrstunden < n then
+		text = r.naechste and ("Next lesson: <b>%s</b>\nMike is waiting in the car on the parking lot."):format(r.naechste) or ""
+		if not s.unterricht then text ..= "\n<font size=\"15\" color=\"#9aa4b5\">You can do the theory (classroom) any time in between.</font>" end
+		lektionKnopf()
+	elseif not s.unterricht then
+]===])
+src = ersetze(src, [===[
+	elseif not s.unterricht then
+		zeige(name, liste .. "Next: go into the classroom on the left and press E at the <b>whiteboard</b>.", { zurueck, { text = "Okay!", farbe = GRUEN, klick = schliessen } }, "dialog")
+	elseif not s.theorie then
+]===], [===[
+	elseif not s.unterricht then
+		text = "All lessons done – great! Now the theory: go into the classroom on the left and press E at the <b>whiteboard</b>."
+	elseif not s.theorie then
+]===])
+src = ersetze(src, [===[
+	elseif not s.theorie then
+		zeige(name, liste .. "Next: sit down at one of the <b>exam desks</b> in the classroom to start your theory test.", { zurueck, { text = "Okay!", farbe = GRUEN, klick = schliessen } }, "dialog")
+	elseif r.naechste then
+		zeige(name, liste .. ("Your next lesson: <b>%s</b>\nMike is waiting in the car on the parking lot."):format(r.naechste), {
+			{ text = "Start the lesson", farbe = GRUEN, klick = function()
+				local a = frage("fahrstundeStarten")
+				if a.fehler then
+					hinweis(a.fehler)
+				else
+					zeige(name, a.text, { { text = "Okay!", farbe = GRUEN, klick = schliessen } }, "dialog")
+				end
+]===], [===[
+	elseif not s.theorie then
+		text = "Next: sit down at one of the <b>exam desks</b> in the classroom to start your theory test."
+	elseif not s.fuehrerschein then
+		text = "Your examiner Mr. Becker rides in the back, Mike sits next to you. The route is random – hitting a pedestrian counts as 3 mistakes!"
+		table.insert(knoepfe, { text = "Start the driving test", farbe = GRUEN, klick = function()
+			local a = frage("pruefungStarten")
+			if a.fehler then
+				hinweis(a.fehler)
+			else
+				zeige(name, a.text, { { text = "Let's go!", farbe = GRUEN, klick = schliessen } }, "dialog")
+			end
+		end })
+	else
+		text = "You have your car license! 🎉 Buy a car at the dealership or earn coins with taxi and pizza jobs."
+	end
+	-- replay finished lessons for more stars
+	if s.fahrstunden > 0 and summe < s.fahrstunden * 3 then
+		table.insert(knoepfe, { text = "⭐ Improve a lesson", farbe = BLAU, klick = function()
+			local auswahl = {}
+			for i = 1, math.min(s.fahrstunden, n) do
+				local st = (s.sterne and s.sterne[tostring(i)]) or 0
+				if st < 3 then
+					table.insert(auswahl, { text = ("Lesson %d   %s%s"):format(i, string.rep("★", st), string.rep("☆", 3 - st)), farbe = GRAU, klick = function()
+						local a = frage("fahrstundeWiederholen", i)
+						if a.fehler then hinweis(a.fehler) else zeige(name, a.text, { { text = "Okay!", farbe = GRUEN, klick = schliessen } }, "dialog") end
+					end })
+				end
+]===])
+src = ersetze(src, [===[
+				end
+			end },
+			zurueck,
+		}, "dialog")
+	elseif not s.fuehrerschein then
+		zeige(name, liste .. "Your examiner Mr. Becker rides in the back, Mike sits next to you. The route is random – hitting a pedestrian counts as 3 mistakes!", {
+			{ text = "Start the driving test", farbe = GRUEN, klick = function()
+				local a = frage("pruefungStarten")
+				if a.fehler then
+					hinweis(a.fehler)
+				else
+					zeige(name, a.text, { { text = "Let's go!", farbe = GRUEN, klick = schliessen } }, "dialog")
+				end
+			end },
+			zurueck,
+		}, "dialog")
+	else
+		zeige(name, liste .. "You have your car license! 🎉 Buy a car at the dealership or earn coins with taxi and pizza jobs.", { zurueck, { text = "Thanks!", farbe = GRUEN, klick = schliessen } }, "dialog")
+	end
+]===], [===[
+				end
+				if #auswahl >= 2 then break end -- the window has room for 3 buttons
+			end
+			table.insert(auswahl, { text = "Back", farbe = GRAU, klick = function() pkwMenue(r) end })
+			zeige(name, "Repeat a lesson with 0 mistakes for 3 stars. Every extra star gives bonus coins!", auswahl, "dialog")
+		end })
+	end
+]===])
+src = ersetze(src, [===[
+		end })
+	end
+end
+
+]===], [===[
+		end })
+	end
+	table.insert(knoepfe, zurueck)
+	zeige(name, liste .. text, knoepfe, "dialog")
+end
+
+]===])
+src = ersetze(src, [===[
 	end)
 	RunService.RenderStepped:Connect(function()
 ]===], [===[
@@ -31,6 +200,22 @@ src = ersetze(src, [===[
 		if _G.Handbremse == hbVorher then return end
 		hbVorher = _G.Handbremse
 		hb.BackgroundColor3 = _G.Handbremse and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(25, 30, 40)
+]===])
+src = ersetze(src, [===[
+		local titelText = info.erfolg and ("Lesson %d/%d complete! 🎉"):format(info.nr, info.gesamt) or (info.pruefung and "Driving test failed" or "Lesson ended")
+		zeige(titelText, info.text .. ("\n\nMistakes: %d"):format(info.fehler or 0) .. (info.erfolg and "\n\nTalk to Anna at the reception for your next lesson." or ""), {
+			{ text = "Close", farbe = info.erfolg and GRUEN or GRAU, klick = schliessen },
+]===], [===[
+		local titelText = info.erfolg and ("Lesson %d/%d complete! 🎉"):format(info.nr, info.gesamt) or (info.pruefung and "Driving test failed" or "Lesson ended")
+		-- stars: 0 mistakes = 3, up to 2 = 2, otherwise 1 (replay the lesson at Anna's for more)
+		local sterneText = ""
+		if info.sterne then
+			sterneText = "\n\n<font size=\"30\" color=\"#ffd23c\">" .. string.rep("★", info.sterne) .. "</font><font size=\"30\" color=\"#5a6070\">" .. string.rep("★", 3 - info.sterne) .. "</font>"
+			if info.besser then sterneText ..= "\n<b>New best!</b> Bonus coins for the extra stars." end
+			if info.sterne < 3 then sterneText ..= "\n<font size=\"14\" color=\"#9aa4b5\">0 mistakes = 3 stars. You can repeat lessons with Anna.</font>" end
+		end
+		zeige(titelText, info.text .. ("\n\nMistakes: %d"):format(info.fehler or 0) .. sterneText .. (info.erfolg and ("\n\n" .. (info.weiter or "Talk to Anna at the reception for your next lesson.")) or ""), {
+			{ text = "Close", farbe = info.erfolg and GRUEN or GRAU, klick = schliessen },
 ]===])
 src = ersetze(src, [===[
 
@@ -50,6 +235,94 @@ RunService.RenderStepped:Connect(function()
 	if jetztHud < naechsteHud then return end
 	naechsteHud = jetztHud + 0.05
 	if warnText.Visible and os.clock() > warnBis then
+]===])
+src = ersetze(src, [===[
+		local gas, lenk = sitz.ThrottleFloat, sitz.SteerFloat
+		lenkGlatt += (lenk - lenkGlatt) * math.min(1, dt * 14)
+]===], [===[
+		local gas, lenk = sitz.ThrottleFloat, sitz.SteerFloat
+		-- touch pedals (phones/tablets) only replace the input, the car drives exactly the same
+		if _G.TouchGas and _G.TouchGas ~= 0 then gas = _G.TouchGas end
+		if _G.TouchLenk and _G.TouchLenk ~= 0 then lenk = _G.TouchLenk end
+		lenkGlatt += (lenk - lenkGlatt) * math.min(1, dt * 14)
+]===])
+src = ersetze(src, [===[
+
+local function figurEinrichten(figur)
+]===], [===[
+
+-- ---------------------------------------------------------------
+-- Phones and tablets: gas / brake pedals and steering buttons while driving
+-- ---------------------------------------------------------------
+do
+	local UISP = game:GetService("UserInputService")
+	local pedale = Instance.new("ScreenGui")
+	pedale.Name = "Pedale"
+	pedale.ResetOnSpawn = false
+	pedale.Enabled = false
+	pedale.DisplayOrder = 4
+	pedale.Parent = spieler:WaitForChild("PlayerGui")
+	_G.TouchGas, _G.TouchLenk = 0, 0
+	local gedrueckt, knoepfe = {}, {}
+	local function neu()
+		_G.TouchGas = (gedrueckt.gas and 1 or 0) - (gedrueckt.bremse and 1 or 0)
+		_G.TouchLenk = (gedrueckt.rechts and 1 or 0) - (gedrueckt.links and 1 or 0)
+		for name, k in knoepfe do
+			k.BackgroundTransparency = gedrueckt[name] and 0.05 or 0.35
+		end
+	end
+	local function taste(name, text, anker, pos, groesse, farbe)
+		local k = Instance.new("TextButton")
+		k.Name = name
+		k.AnchorPoint = anker
+		k.Position = pos
+		k.Size = groesse
+		k.BackgroundColor3 = farbe
+		k.BackgroundTransparency = 0.35
+		k.AutoButtonColor = false
+		k.Font = Enum.Font.GothamBlack
+		k.TextScaled = true
+		k.TextColor3 = Color3.new(1, 1, 1)
+		k.Text = text
+		k.Parent = pedale
+		Instance.new("UICorner", k).CornerRadius = UDim.new(0, 16)
+		local pad = Instance.new("UIPadding")
+		pad.PaddingTop, pad.PaddingBottom, pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 14), UDim.new(0, 14), UDim.new(0, 10), UDim.new(0, 10)
+		pad.Parent = k
+		k.InputBegan:Connect(function(e)
+			if e.UserInputType == Enum.UserInputType.Touch or e.UserInputType == Enum.UserInputType.MouseButton1 then gedrueckt[name] = true neu() end
+		end)
+		k.InputEnded:Connect(function(e)
+			if e.UserInputType == Enum.UserInputType.Touch or e.UserInputType == Enum.UserInputType.MouseButton1 then gedrueckt[name] = nil neu() end
+		end)
+		knoepfe[name] = k
+	end
+	local DUNKEL = Color3.fromRGB(25, 30, 40)
+	taste("links", "◀", Vector2.new(0, 1), UDim2.new(0, 16, 1, -16), UDim2.fromOffset(96, 96), DUNKEL)
+	taste("rechts", "▶", Vector2.new(0, 1), UDim2.new(0, 122, 1, -16), UDim2.fromOffset(96, 96), DUNKEL)
+	-- right side, left of the speedometer column
+	taste("gas", "GAS", Vector2.new(1, 1), UDim2.new(1, -200, 1, -16), UDim2.fromOffset(88, 128), Color3.fromRGB(40, 150, 70))
+	taste("bremse", "BRAKE", Vector2.new(1, 1), UDim2.new(1, -296, 1, -16), UDim2.fromOffset(88, 88), Color3.fromRGB(190, 45, 45))
+	-- only on touch screens and only while driving
+	local naechstePruefung = 0
+	RunService.Heartbeat:Connect(function()
+		if os.clock() < naechstePruefung then return end
+		naechstePruefung = os.clock() + 0.25
+		local hum = spieler.Character and spieler.Character:FindFirstChildOfClass("Humanoid")
+		local sitz = hum and hum.SeatPart
+		local faehrt = sitz ~= nil and sitz:IsA("VehicleSeat") and sitz.Parent ~= nil and sitz.Parent:GetAttribute("MaxTempo") ~= nil
+		local an = UISP.TouchEnabled == true and faehrt
+		if pedale.Enabled ~= an then
+			pedale.Enabled = an
+			if not an then
+				gedrueckt = {}
+				neu()
+			end
+		end
+	end)
+end
+
+local function figurEinrichten(figur)
 ]===])
 src = ersetze(src, [===[
 	k.BackgroundColor3 = farbe or Color3.fromRGB(25, 30, 40)
@@ -422,6 +695,34 @@ local zahnrad = leistenKnopf("⚙️", "Settings", 7)
 zahnrad.MouseButton1Click:Connect(function()
 ]===])
 src = ersetze(src, [===[
+		task.wait(2)
+		local r = frage("belohnungen")
+]===], [===[
+		task.wait(2)
+		-- brand-new players first drive (the rewards wait in the menu, red dot)
+		local st = frage("status")
+		if st.status and (not st.status.angemeldet or st.lektionLaeuft) then return end
+		local r = frage("belohnungen")
+]===])
+src = ersetze(src, [===[
+		if _G.Einstellungen.ersteP then pcall(perspektive, true) end
+	end)
+]===], [===[
+		if _G.Einstellungen.ersteP then pcall(perspektive, true) end
+
+		-- brand-new player: no reading first – the first (short) lesson starts right away
+		task.spawn(function()
+			local r = frage("status")
+			if r.fehler or not r.status or r.status.angemeldet or r.status.fahrstunden > 0 or r.lektionLaeuft then return end
+			local a = frage("ersteFahrt")
+			if a.fehler then return end
+			zeige("Welcome to Driving School! 🚗", "Let's drive right away!\n\nYour instructor <b>Mike</b> is waiting in the car on the parking lot right in front of you. Walk to the <b>driver's door</b> and press <b>E</b> (on a phone: tap the button) to get in.\n\n<font size=\"15\" color=\"#9aa4b5\">The theory comes later – Anna at the reception shows you every step.</font>", {
+				{ text = "Let's go!", farbe = GRUEN, klick = schliessen },
+			}, "dialog")
+		end)
+	end)
+]===])
+src = ersetze(src, [===[
 		end
 		knoepfeAktualisieren()
 ]===], [===[
@@ -429,7 +730,321 @@ src = ersetze(src, [===[
 		if _G.SparmodusAuto then _G.SparmodusAuto() end
 		knoepfeAktualisieren()
 ]===])
-assert(#src == 154345, "Ergebnis-Länge falsch: " .. #src)
+assert(#src == 160005, "Ergebnis-Länge falsch: " .. #src)
+s.Source = src
+end)
+
+schritt("Server", function()
+local s = game.ServerScriptService.FuehrerscheinServer
+local src = s.Source
+assert(#src == 127674, "Ausgangsstand passt nicht: " .. #src)
+src = ersetze(src, [===[
+		erfolge = {}, erfolgGemeldet = {}, taxiFahrten = 0, freundeSek = 0, gruppeGeschenk = false,
+	}
+]===], [===[
+		erfolge = {}, erfolgGemeldet = {}, taxiFahrten = 0, freundeSek = 0, gruppeGeschenk = false,
+		-- v31: best stars per lesson (key = lesson number as text), onboarding steps already reported
+		sterne = {}, funnel = {},
+	}
+]===])
+src = ersetze(src, [===[
+
+-- XP and level: level = floor(sqrt(xp / 150)) + 1  (level 2 at 150 XP, level 5 at 2400 XP, ...)
+]===], [===[
+
+-- Onboarding funnel for the Roblox creator dashboard (Analytics -> Funnels): shows where new players stop.
+-- Every step is reported once per player; only works in the published game (in Studio it is just skipped).
+local AnalyticsService = game:GetService("AnalyticsService")
+local FUNNEL = {
+	"Joined", "Sat in the first lesson car", "First lesson done", "Third lesson done", "All lessons done",
+	"Theory test passed", "Driver's license", "First own car", "First job done",
+}
+local function funnel(p, schritt)
+	local d = daten[p]
+	if not d or not FUNNEL[schritt] then return end
+	d.funnel = d.funnel or {}
+	local key = tostring(schritt)
+	if d.funnel[key] then return end
+	d.funnel[key] = true
+	pcall(function()
+		AnalyticsService:LogOnboardingFunnelStepEvent(p, schritt, FUNNEL[schritt])
+	end)
+end
+
+-- XP and level: level = floor(sqrt(xp / 150)) + 1  (level 2 at 150 XP, level 5 at 2400 XP, ...)
+]===])
+src = ersetze(src, [===[
+	daten[p] = laden(p)
+	anzeigen(p)
+]===], [===[
+	daten[p] = laden(p)
+	funnel(p, 1)
+	anzeigen(p)
+]===])
+src = ersetze(src, [===[
+		xpGeben(p, st.fehler == 0 and 350 or 250, st.fehler == 0 and "Perfect driving test!" or "Driving test passed")
+		if st.fehler == 0 then
+]===], [===[
+		xpGeben(p, st.fehler == 0 and 350 or 250, st.fehler == 0 and "Perfect driving test!" or "Driving test passed")
+		if not st.lkw then funnel(p, 7) end
+		if st.fehler == 0 then
+]===])
+src = ersetze(src, [===[
+		task.delay(12, geldGeben, p, 250, st.lkw and "Truck license" or "Driver's license")
+	elseif erfolg and d then
+		local neu = st.nr > d.fahrstunden
+]===], [===[
+		task.delay(12, geldGeben, p, 250, st.lkw and "Truck license" or "Driver's license")
+	end
+	local sterne, besser, bisher
+	if erfolg and d and not st.pruefung then
+		local neu = st.nr > d.fahrstunden
+]===])
+src = ersetze(src, [===[
+		d.fahrstunden = math.max(d.fahrstunden, st.nr)
+		geaendert(p)
+]===], [===[
+		d.fahrstunden = math.max(d.fahrstunden, st.nr)
+		-- 1-3 stars: 0 mistakes = 3, up to 2 mistakes = 2, otherwise 1. Better than before = bonus coins.
+		sterne = st.fehler == 0 and 3 or (st.fehler <= 2 and 2 or 1)
+		d.sterne = d.sterne or {}
+		local key = tostring(st.nr)
+		bisher = d.sterne[key] or 0
+		besser = sterne > bisher
+		if besser then d.sterne[key] = sterne end
+		geaendert(p)
+]===])
+src = ersetze(src, [===[
+		if neu then geldGeben(p, 25, "Lesson complete") end
+		xpGeben(p, st.fehler == 0 and 80 or 50, st.fehler == 0 and "Perfect lesson!" or "Lesson complete")
+		if st.fehler == 0 then Missionen.fortschritt(p, "perfekt", 1) end
+]===], [===[
+		if neu then geldGeben(p, 25, "Lesson complete") end
+		if besser and bisher > 0 then geldGeben(p, (sterne - bisher) * 30, "More stars") end
+		if neu or besser then
+			xpGeben(p, st.fehler == 0 and 80 or 50, st.fehler == 0 and "Perfect lesson!" or "Lesson complete")
+		else
+			xpGeben(p, 20, "Lesson repeated")
+		end
+		if st.fehler == 0 then Missionen.fortschritt(p, "perfekt", 1) end
+]===])
+src = ersetze(src, [===[
+		if st.fehler == 0 then Missionen.fortschritt(p, "perfekt", 1) end
+	end
+]===], [===[
+		if st.fehler == 0 then Missionen.fortschritt(p, "perfekt", 1) end
+		if st.nr == 1 then funnel(p, 3) end
+		if st.nr == 3 then funnel(p, 4) end
+		if d.fahrstunden >= #LEKTIONEN then funnel(p, 5) end
+	end
+]===])
+src = ersetze(src, [===[
+	if p.Parent and not (st.pruefung and erfolg) then
+		fahrEvent:FireClient(p, { typ = "ende", erfolg = erfolg, text = text, fehler = st.fehler, nr = st.nr, gesamt = #LEKTIONEN, pruefung = st.pruefung })
+	end
+]===], [===[
+	if p.Parent and not (st.pruefung and erfolg) then
+		-- what to do next (shown in the result window)
+		local weiter
+		if d and erfolg and not st.pruefung then
+			if d.fahrstunden < #LEKTIONEN then
+				weiter = d.theorie and "Talk to Anna for your next lesson." or "Next: your next lesson with Anna – or the theory lesson at the whiteboard in the classroom."
+			elseif not d.theorie then
+				weiter = "All lessons done! Now the theory: whiteboard in the classroom, then the test at an exam desk."
+			elseif not d.fuehrerschein then
+				weiter = "You're ready for the driving test – talk to Anna!"
+			end
+		end
+		fahrEvent:FireClient(p, { typ = "ende", erfolg = erfolg, text = text, fehler = st.fehler, nr = st.nr, gesamt = #LEKTIONEN, pruefung = st.pruefung,
+			sterne = sterne, besser = besser and bisher and bisher > 0, weiter = weiter })
+	end
+]===])
+src = ersetze(src, [===[
+
+local function lektionStarten(p, art)
+	local d = daten[p]
+]===], [===[
+
+local function lektionStarten(p, art, wiederholNr)
+	local d = daten[p]
+]===])
+src = ersetze(src, [===[
+	end
+	if not d.theorie then
+		return { fehler = "You need to pass the theory test first." }
+	end
+]===], [===[
+	end
+	-- v31: drive first, theory later. Lessons are open right away; the theory test is needed for the driving test.
+	if pruefung and not d.theorie then
+		return { fehler = "You need to pass the theory test first: theory lesson at the whiteboard, then the test at an exam desk (classroom)." }
+	end
+	if not d.angemeldet then
+		d.angemeldet = true
+		geaendert(p)
+	end
+]===])
+src = ersetze(src, [===[
+	local nr, lektion
+	if lkw then
+		if not d.fuehrerschein then
+]===], [===[
+	local nr, lektion
+	if art == "wiederholen" then
+		-- replay a finished lesson to get more stars
+		nr = math.floor(tonumber(wiederholNr) or 0)
+		lektion = LEKTIONEN[nr]
+		if not lektion or nr > d.fahrstunden then
+			return { fehler = "You can only repeat lessons you have already finished." }
+		end
+	elseif lkw then
+		if not d.fuehrerschein then
+]===])
+src = ersetze(src, [===[
+		blinkTeile = blinkTeileSuchen(modell), letzterUnfall = 0,
+		pruefung = pruefung, lkw = lkw, erlaubt = pruefung and 3 or (MAX_FEHLER - 1),
+	}
+]===], [===[
+		blinkTeile = blinkTeileSuchen(modell), letzterUnfall = 0,
+		pruefung = pruefung, lkw = lkw, erlaubt = pruefung and 3 or (MAX_FEHLER - 1), wiederholung = art == "wiederholen",
+	}
+]===])
+src = ersetze(src, [===[
+				st.gestartet = true
+				fahrEvent:FireClient(p, { typ = "start", titel = lektion.titel, text = lektion.intro, sprecher = pruefung and "Examiner" or "Instructor", grenze = st.erlaubt })
+]===], [===[
+				st.gestartet = true
+				if st.nr == 1 and not pruefung then funnel(p, 2) end
+				fahrEvent:FireClient(p, { typ = "start", titel = lektion.titel, text = lektion.intro, sprecher = pruefung and "Examiner" or "Instructor", grenze = st.erlaubt })
+]===])
+src = ersetze(src, [===[
+		xpGeben(p, 40, "Job complete")
+		Missionen.fortschritt(p, "jobs", 1)
+]===], [===[
+		xpGeben(p, 40, "Job complete")
+		funnel(p, 9)
+		Missionen.fortschritt(p, "jobs", 1)
+]===])
+src = ersetze(src, [===[
+	geldGeben(p, -modell.preis, "Bought the " .. modell.name)
+	return { text = ("The %s is yours! 🔑\n\nGet it anytime with the <b>🚗 My Cars</b> button (top left). It appears on the nearest free parking spot."):format(modell.name) }
+]===], [===[
+	geldGeben(p, -modell.preis, "Bought the " .. modell.name)
+	funnel(p, 8)
+	return { text = ("The %s is yours! 🔑\n\nGet it anytime with the <b>🚗 My Cars</b> button (top left). It appears on the nearest free parking spot."):format(modell.name) }
+]===])
+src = ersetze(src, [===[
+			geaendert(p)
+		else
+]===], [===[
+			geaendert(p)
+			funnel(p, 6)
+		else
+]===])
+src = ersetze(src, [===[
+
+	elseif was == "adminGeld" then
+]===], [===[
+
+	elseif was == "fahrstundeWiederholen" then
+		return lektionStarten(p, "wiederholen", eingabe)
+
+	elseif was == "ersteFahrt" then
+		-- brand-new player pressed PLAY: sign up and go straight into the first (short) lesson
+		if d.angemeldet or d.fahrstunden > 0 or d.fuehrerschein or lektionen[p] then
+			return { fehler = "not new" }
+		end
+		d.angemeldet = true
+		geaendert(p)
+		return lektionStarten(p)
+
+	elseif was == "adminGeld" then
+]===])
+src = ersetze(src, [===[
+		elseif befehl == "lizenz" then
+			d.angemeldet, d.unterricht, d.theorie = true, true, true
+]===], [===[
+		elseif befehl == "lizenz" then
+			if lektionen[p] then lektionBeenden(p, false, "Lesson cancelled (test menu).") end
+			d.angemeldet, d.unterricht, d.theorie = true, true, true
+]===])
+assert(#src == 131155, "Ergebnis-Länge falsch: " .. #src)
+s.Source = src
+end)
+
+schritt("Fahrstunden", function()
+local s = game.ServerScriptService.FuehrerscheinServer.Fahrstunden
+local src = s.Source
+local start = #src
+src = ersetze(src, [===[
+local LEKTIONEN = {
+	{
+]===], [===[
+local LEKTIONEN = {
+	-- v31: short first drive (about 1-2 minutes) so new players are driving right after PLAY
+	{
+]===])
+src = ersetze(src, [===[
+	{
+		titel = "Lesson 1: Basics & Turning",
+		intro = "Hi, I'm Mike! W/S = gas and brake, A/D = steering. Indicators: Y = left, C = right, X = hazard lights. Drive through the green gates. 10 mistakes and the lesson does not count!",
+		punkte = route(START, {
+]===], [===[
+	{
+		titel = "Lesson 1: First Drive",
+		intro = "Hi, I'm Mike! A short first drive around the block. W/S = gas and brake, A/D = steering (on a phone: the pedals on the screen). Just drive through the green gates!",
+		punkte = {
+			{ x = 550, z = 40, t = "Drive out of the parking bay onto the street, then turn right." },
+			{ x = 600, z = 40, t = "Residential area: 30 km/h. Turn right at the next intersection." },
+			{ x = 600, z = 152, t = "Nice! Turn right." },
+			{ x = 500, z = 152, t = "Turn right again." },
+			{ x = 500, z = 40, t = "Turn right towards the driving school." },
+			{ x = 550, z = 40, t = "Signal right (C) and turn into the driving school parking lot." },
+			{ x = 550, z = 48, r = 16, t = "Park the car in any free parking bay and stop completely.", parken = true },
+		},
+	},
+	{
+		titel = "Lesson 2: City & Turning",
+		intro = "Today we drive into the city. Indicators: Y = left, C = right, X = hazard lights. Signal before every turn! 10 mistakes and the lesson does not count.",
+		punkte = route(START, {
+]===])
+src = ersetze(src, [===[
+	{
+		titel = "Lesson 2: Traffic Lights & Right of Way",
+		intro = "Today we drive through the city centre. Watch the traffic lights: stop at red before the white stop line!",
+]===], [===[
+	{
+		titel = "Lesson 3: Traffic Lights & Right of Way",
+		intro = "Today we drive through the city centre. Watch the traffic lights: stop at red before the white stop line!",
+]===])
+src = ersetze(src, [===[
+	{
+		titel = "Lesson 3: Country Road & Highway",
+		intro = "Today we go on the highway. Merge carefully, keep right and only overtake on the left.",
+]===], [===[
+	{
+		titel = "Lesson 4: Country Road & Highway",
+		intro = "Today we go on the highway. Merge carefully, keep right and only overtake on the left.",
+]===])
+src = ersetze(src, [===[
+	{
+		titel = "Lesson 4: Roundabout",
+		intro = "Today we drive through a roundabout. Traffic inside has priority, and you signal when you leave.",
+]===], [===[
+	{
+		titel = "Lesson 5: Roundabout",
+		intro = "Today we drive through a roundabout. Traffic inside has priority, and you signal when you leave.",
+]===])
+src = ersetze(src, [===[
+	{
+		titel = "Lesson 5: Parking",
+		intro = "Last lesson: we drive one round through the neighbourhood, then you park in the marked bay.",
+]===], [===[
+	{
+		titel = "Lesson 6: Parking",
+		intro = "Last lesson: we drive one round through the neighbourhood, then you park in the marked bay.",
+]===])
+assert(#src - start == 865, "Delta falsch: " .. (#src - start))
 s.Source = src
 end)
 

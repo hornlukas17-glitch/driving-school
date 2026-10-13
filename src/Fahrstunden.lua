@@ -23,9 +23,23 @@ local function route(...)
 end
 
 local LEKTIONEN = {
+	-- v31: short first drive (about 1-2 minutes) so new players are driving right after PLAY
 	{
-		titel = "Lesson 1: Basics & Turning",
-		intro = "Hi, I'm Mike! W/S = gas and brake, A/D = steering. Indicators: Y = left, C = right, X = hazard lights. Drive through the green gates. 10 mistakes and the lesson does not count!",
+		titel = "Lesson 1: First Drive",
+		intro = "Hi, I'm Mike! A short first drive around the block. W/S = gas and brake, A/D = steering (on a phone: the pedals on the screen). Just drive through the green gates!",
+		punkte = {
+			{ x = 550, z = 40, t = "Drive out of the parking bay onto the street, then turn right." },
+			{ x = 600, z = 40, t = "Residential area: 30 km/h. Turn right at the next intersection." },
+			{ x = 600, z = 152, t = "Nice! Turn right." },
+			{ x = 500, z = 152, t = "Turn right again." },
+			{ x = 500, z = 40, t = "Turn right towards the driving school." },
+			{ x = 550, z = 40, t = "Signal right (C) and turn into the driving school parking lot." },
+			{ x = 550, z = 48, r = 16, t = "Park the car in any free parking bay and stop completely.", parken = true },
+		},
+	},
+	{
+		titel = "Lesson 2: City & Turning",
+		intro = "Today we drive into the city. Indicators: Y = left, C = right, X = hazard lights. Signal before every turn! 10 mistakes and the lesson does not count.",
 		punkte = route(START, {
 			{ x = 330, z = 0, t = "Country road: 100 km/h. Drive towards the city." },
 			{ x = 208, z = 0, t = "City limit: 50 km/h! Turn right at the next intersection." },
@@ -36,7 +50,7 @@ local LEKTIONEN = {
 		}, HEIMWEG),
 	},
 	{
-		titel = "Lesson 2: Traffic Lights & Right of Way",
+		titel = "Lesson 3: Traffic Lights & Right of Way",
 		intro = "Today we drive through the city centre. Watch the traffic lights: stop at red before the white stop line!",
 		punkte = route(START, {
 			{ x = 330, z = 0, t = "Drive into the city." },
@@ -51,7 +65,7 @@ local LEKTIONEN = {
 		}, HEIMWEG),
 	},
 	{
-		titel = "Lesson 3: Country Road & Highway",
+		titel = "Lesson 4: Country Road & Highway",
 		intro = "Today we go on the highway. Merge carefully, keep right and only overtake on the left.",
 		punkte = route({
 			{ x = 550, z = 40, t = "Drive out of the parking bay. Signal right (C) and turn right." },
@@ -69,7 +83,7 @@ local LEKTIONEN = {
 		}, HEIMWEG),
 	},
 	{
-		titel = "Lesson 4: Roundabout",
+		titel = "Lesson 5: Roundabout",
 		intro = "Today we drive through a roundabout. Traffic inside has priority, and you signal when you leave.",
 		punkte = route(START, {
 			{ x = 330, z = 0, t = "Drive into the city." },
@@ -92,7 +106,7 @@ local LEKTIONEN = {
 		}),
 	},
 	{
-		titel = "Lesson 5: Parking",
+		titel = "Lesson 6: Parking",
 		intro = "Last lesson: we drive one round through the neighbourhood, then you park in the marked bay.",
 		punkte = {
 			{ x = 550, z = 40, t = "Drive out of the parking bay. Signal right (C) and turn right." },

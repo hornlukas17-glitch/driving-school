@@ -25,7 +25,7 @@ Stadt |x|,|z| ≤ 324 (50 km/h) · Autobahn z = -520 (130) · Siedlungen x 405�
 Tempolimits zentral in `src/Verkehrsregeln.lua` (WOHNSTRASSEN muss zum Generator passen).
 
 ## Offene Punkte
-- **Stand 12.10. (morgen weiter):** v15 ist in Lukas' Studio (Place1.rbxl) per Patch eingespielt, aber nur im offenen Studio – er muss speichern. Nächster Schritt: Lukas importiert die neuen `RangerX.obj`, `VelocityGT.obj` (Säulen-Fix) und `StrikerTR.obj` (+ .mtl) und entfernt die alten aus dem ServerStorage; dann Modelle in den ServerStorage schieben, Vorschau bauen, Bilder prüfen (Fugen, Felgen, Track-Coupé). Studio-Verbindung läuft über den MCP-Server von Roblox Studio + Claude Desktop.
+- **Stand 13.10.:** Lukas' Studio (Place1.rbxl) läuft auf v15 + getöntem Glas, Karosserien (Stand v15) liegen im ServerStorage. Offen: die v16-OBJs (nur Dach geändert) importieren lassen, dann Modelle tauschen und in Studio `Karosserien.Source` auf v16 setzen (nur die drei `Dach =`-Zeilen ändern sich). Studio-Verbindung: MCP-Server von Roblox Studio + Claude Desktop; Änderungen in Studio per Ersetzungs-Patch (`execute_luau`), danach Längen gegen das Repo prüfen.
 - Etappe 2 Rest: Busfahrer-Job, Abschlepp-Job.
 - Etappe 3: Spieler-Polizei, Gebrauchtwagenmarkt, echte Spieler als Fahrlehrer, Rettungsdienst/Feuerwehr, Schaltgetriebe, Hupe (Sound-ID von Lukas nötig).
 - Noch nie in echtem Studio getestet – Fehlermeldungen von Lukas haben Vorrang.

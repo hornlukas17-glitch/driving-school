@@ -146,7 +146,7 @@ if __name__ == "__main__":
         "Karosserie": sauber(loft(form.querschnitt_unten, -LH, LH, 112)),
         "Verkleidung": sauber(verkleidung_teil(form, kante, skala=1.02)),
         "Glas": doppelseitig(*sauber(loft(form.querschnitt_glas, G_VON, G_BIS, 56))),
-        "Dach": sauber(zusammen(dach_teil(form, 0.6, 2.75, dicke=0.3, n=24), saeulen_teil(form, ((2.6, 5.0, 12),)))),
+        "Dach": sauber(zusammen(dach_teil(form, 0.95, 2.75, dicke=0.3, n=22), saeulen_teil(form, ((2.6, 5.0, 12),)))),
     }
     anbau, kennz, spoiler = anbauteile()
     kollision = [{"g": [7.6, 0.35, 15.5], "p": [0, 2 * RAD_R + 0.25, 0]}, {"g": [5.6, 1.4, 5.0], "p": [0, 3.9, 1.0]}]

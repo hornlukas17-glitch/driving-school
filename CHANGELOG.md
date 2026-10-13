@@ -1,5 +1,10 @@
 # Changelog
 
+## v16
+- Getönte Scheiben (dunkler, weniger durchsichtig): Kabinen wirken geschlossen statt hohl.
+- Dachhaut beginnt erst hinter der Frontscheibe: keine zackige Kante mehr im vorderen Seitenfenster (neue OBJ-Dateien importieren).
+- In echtem Studio geprüft: alle 7 Ausstellungsautos, Speichenfelgen, Fugen, Striker TR auf eigenem Podest.
+
 ## v15
 - Neues Auto „Striker TR“ (Track-Coupé, eigenes Design, 22.000 Coins, 190 km/h) mit eigenem Podest vor dem Autohaus. Runde Karosserie: `dist/mesh/StrikerTR.obj` importieren, Modell `StrikerTR` in den ServerStorage.
 - Alle Privatautos: Speichenfelgen, Bremsscheiben und farbige Bremssättel (nur Optik, Fahrgefühl unverändert), Kopfstützen, Mittelkonsole, leuchtender Tacho.

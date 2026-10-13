@@ -10,7 +10,7 @@ return {
 			Karosserie = { groesse = { 8.0741, 2.5, 15.5 }, mitte = { 0, 1.8, 0 } },
 			Verkleidung = { groesse = { 8.2357, 2.39, 15.562 }, mitte = { 0, 1.745, 0 } },
 			Glas = { groesse = { 6.0368, 2.1035, 9 }, mitte = { 0, 3.5781, 2.2 } },
-			Dach = { groesse = { 6.1209, 1.8064, 6.5 }, mitte = { -0, 3.7568, 3.25 } },
+			Dach = { groesse = { 6.1209, 1.8064, 6 }, mitte = { -0, 3.7568, 3.5 } },
 		},
 		anbau = {
 			{ n = "Scheinwerfer", a = "scheinwerfer", g = { 1.35, 0.16, 0.25 }, p = { 2.35, 1.62, -7.3 }, s = true, r = { 0, -14, 0 } },
@@ -55,7 +55,7 @@ return {
 			Karosserie = { groesse = { 7.797, 3.77, 17.5 }, mitte = { 0, 3.035, 0 } },
 			Verkleidung = { groesse = { 7.9685, 2.7691, 17.57 }, mitte = { 0, 2.5346, 0 } },
 			Glas = { groesse = { 7.1621, 2.6275, 11.75 }, mitte = { 0, 6.0438, 2.575 } },
-			Dach = { groesse = { 7.2609, 2.7094, 9 }, mitte = { 0, 6.0328, 3.4 } },
+			Dach = { groesse = { 7.2609, 2.7094, 8.65 }, mitte = { 0, 6.0329, 3.575 } },
 		},
 		anbau = {
 			{ n = "Kuehlergrill", a = "grill", g = { 3.6, 0.95, 0.15 }, p = { 0, 3.65, -8.785 }, s = false },
@@ -108,7 +108,7 @@ return {
 			Karosserie = { groesse = { 8.0532, 2.4997, 16.5 }, mitte = { 0, 1.8499, 0 } },
 			Verkleidung = { groesse = { 8.2156, 2.4396, 16.566 }, mitte = { 0, 1.8198, 0 } },
 			Glas = { groesse = { 6.2607, 2.2446, 6.75 }, mitte = { 0, 3.6475, 1.925 } },
-			Dach = { groesse = { 6.3482, 2.1939, 4.4 }, mitte = { 0, 3.7029, 2.8 } },
+			Dach = { groesse = { 6.3482, 2.1939, 4.05 }, mitte = { 0, 3.7029, 2.975 } },
 		},
 		anbau = {
 			{ n = "Scheinwerfer", a = "scheinwerfer", g = { 1.4, 0.14, 0.22 }, p = { 2.55, 1.78, -7.935 }, s = true, r = { 0, -16, -5 } },

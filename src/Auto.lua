@@ -982,10 +982,10 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 				end
 				pcall(function() mp.TextureID = "" end)
 				if name == "Glas" then
-					mp.Color = Color3.fromRGB(30, 38, 48)
+					mp.Color = Color3.fromRGB(14, 17, 22) -- dark tinted glass, the cabin looks solid
 					mp.Material = Enum.Material.Glass
-					mp.Transparency = 0.3
-					mp.Reflectance = 0.25
+					mp.Transparency = 0.12
+					mp.Reflectance = 0.3
 					mp.CastShadow = false
 				elseif name == "Verkleidung" then
 					mp.Color = Color3.fromRGB(28, 28, 31)

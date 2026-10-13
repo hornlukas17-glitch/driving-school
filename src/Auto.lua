@@ -866,7 +866,7 @@ Auto.MODELLE = {
 	gs_night = {
 		name = "Vanta GS Night Edition", art = "Exclusive", preis = 0, wert = 20000, pass = "nacht", basis = "gs",
 		beschreibung = "Exclusive: midnight black, gold rims, purple underglow. 195 km/h.",
-		festeFarbe = Color3.fromRGB(18, 16, 24), tuning = { felgen = 3, neon = 4 },
+		festeFarbe = Color3.fromRGB(18, 16, 24), tuning = { felgen = 3, neon = 4 }, nachtDetails = true,
 		R = 1.4, spur = 3.0, achse = 5.14, laenge = 17.4, breite = 7.0,
 		werte = { MaxTempo = 195, Antrieb = 8400, Bremse = 20000, Lenkwinkel = 32, Grip = 16, Lenkdirekt = 15, Anpressdruck = 82 },
 	},
@@ -897,6 +897,8 @@ local ANBAU_ART = {
 	blinker = { farbe = Color3.fromRGB(150, 95, 35), mat = Enum.Material.SmoothPlastic },
 	fuge = { farbe = Color3.fromRGB(8, 8, 10), mat = Enum.Material.SmoothPlastic },
 	glanzschwarz = { farbe = Color3.fromRGB(10, 10, 12), mat = Enum.Material.SmoothPlastic, glanz = 0.35 },
+	neon_lila = { farbe = Color3.fromRGB(150, 70, 255), mat = Enum.Material.Neon },
+	rueckglas = { farbe = Color3.fromRGB(110, 8, 12), mat = Enum.Material.SmoothPlastic, glanz = 0.3 },
 }
 
 local function meshTeil(vorlage, name)
@@ -1051,8 +1053,14 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 				w.Parent = mp
 			end
 		end
-		-- lights, grille, mirrors ... (positions come from the generator)
-		for _, t in rundDef.anbau do
+		-- lights, grille, mirrors ... (positions come from the generator);
+		-- special editions also get their extra parts (Night Edition: detailed rear light)
+		local zusatz = rundDef.anbau
+		if D.nachtDetails and rundDef.nacht then
+			zusatz = table.clone(rundDef.anbau)
+			for _, t in rundDef.nacht do table.insert(zusatz, t) end
+		end
+		for _, t in zusatz do
 			local art = ANBAU_ART[t.a] or ANBAU_ART.schwarz
 			for _, s in (t.s and { -1, 1 } or { 1 }) do
 				local name = t.n

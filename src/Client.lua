@@ -884,7 +884,10 @@ do
 	hb.InputEnded:Connect(function(e)
 		if e.UserInputType == Enum.UserInputType.Touch or e.UserInputType == Enum.UserInputType.MouseButton1 then _G.Handbremse = false end
 	end)
+	local hbVorher
 	RunService.RenderStepped:Connect(function()
+		if _G.Handbremse == hbVorher then return end
+		hbVorher = _G.Handbremse
 		hb.BackgroundColor3 = _G.Handbremse and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(25, 30, 40)
 	end)
 end
@@ -1066,7 +1069,12 @@ fahrEvent.OnClientEvent:Connect(function(info)
 	end
 end)
 
+local naechsteHud = 0
 RunService.RenderStepped:Connect(function()
+	-- 20 updates per second are plenty for text and buttons (saves time on phones)
+	local jetztHud = os.clock()
+	if jetztHud < naechsteHud then return end
+	naechsteHud = jetztHud + 0.05
 	if warnText.Visible and os.clock() > warnBis then
 		warnText.Visible = false
 	end
@@ -1263,17 +1271,31 @@ local function leistenKnopf(icon, text, reihenfolge, farbe)
 	k.LayoutOrder = reihenfolge
 	k.Size = UDim2.fromOffset(52, 48)
 	k.BackgroundColor3 = farbe or Color3.fromRGB(25, 30, 40)
-	k.BackgroundTransparency = 0.15
+	k.BackgroundTransparency = 0.12
+	k.AutoButtonColor = false
 	k.Text = ""
 	k.Parent = leiste
-	Instance.new("UICorner", k).CornerRadius = UDim.new(0, 10)
+	Instance.new("UICorner", k).CornerRadius = UDim.new(0, 12)
+	-- thin light edge and a soft top-to-bottom shade: looks like a real app button
+	local rand = Instance.new("UIStroke")
+	rand.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	rand.Color = Color3.new(1, 1, 1)
+	rand.Transparency = 0.82
+	rand.Thickness = 1
+	rand.Parent = k
+	local verlauf = Instance.new("UIGradient")
+	verlauf.Rotation = 90
+	verlauf.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(175, 180, 195))
+	verlauf.Parent = k
+	k.MouseEnter:Connect(function() rand.Transparency = 0.45 end)
+	k.MouseLeave:Connect(function() rand.Transparency = 0.82 end)
 	local bild = Instance.new("TextLabel")
 	bild.Name = "Icon"
 	bild.BackgroundTransparency = 1
 	bild.Position = UDim2.fromOffset(0, 3)
 	bild.Size = UDim2.new(1, 0, 0, 26)
 	bild.Font = Enum.Font.GothamBold
-	bild.TextSize = 21
+	bild.TextSize = 22
 	bild.TextColor3 = Color3.new(1, 1, 1)
 	bild.Text = icon
 	bild.Parent = k
@@ -1289,10 +1311,40 @@ local function leistenKnopf(icon, text, reihenfolge, farbe)
 	name.Parent = k
 	return k
 end
-local menueKnopf = leistenKnopf("☰", "Menu", 0)
+local menueKnopf = leistenKnopf("", "Menu", 0, Color3.fromRGB(30, 95, 190))
 menueKnopf.Name = "Menue"
 menueKnopf.Position = UDim2.new(0, 12, 0, 60)
 menueKnopf.Parent = kameraGui
+-- drawn menu symbol (three rounded bars) instead of the "☰" character, which some phones can't show;
+-- it turns into an X when the menu is open
+local symbol = Instance.new("Frame")
+symbol.Name = "Symbol"
+symbol.AnchorPoint = Vector2.new(0.5, 0)
+symbol.Position = UDim2.new(0.5, 0, 0, 8)
+symbol.Size = UDim2.fromOffset(22, 17)
+symbol.BackgroundTransparency = 1
+symbol.Parent = menueKnopf
+local SYMBOL_Y = { 1.5, 8.5, 15.5 }
+local striche = {}
+for i, y in SYMBOL_Y do
+	local b = Instance.new("Frame")
+	b.Name = "Strich" .. i
+	b.AnchorPoint = Vector2.new(0.5, 0.5)
+	b.Position = UDim2.new(0.5, 0, 0, y)
+	b.Size = UDim2.fromOffset(22, 3)
+	b.BackgroundColor3 = Color3.new(1, 1, 1)
+	b.BorderSizePixel = 0
+	b.Parent = symbol
+	Instance.new("UICorner", b).CornerRadius = UDim.new(1, 0)
+	striche[i] = b
+end
+local function symbolSetzen(offen)
+	local TS = game:GetService("TweenService")
+	local info = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	TS:Create(striche[1], info, { Position = UDim2.new(0.5, 0, 0, offen and 8.5 or SYMBOL_Y[1]), Rotation = offen and 45 or 0 }):Play()
+	TS:Create(striche[3], info, { Position = UDim2.new(0.5, 0, 0, offen and 8.5 or SYMBOL_Y[3]), Rotation = offen and -45 or 0 }):Play()
+	TS:Create(striche[2], info, { BackgroundTransparency = offen and 1 or 0, Size = UDim2.fromOffset(offen and 4 or 22, 3) }):Play()
+end
 -- red dot on the menu button while rewards are waiting and the menu is closed
 local menuePunkt = Instance.new("TextLabel")
 menuePunkt.Name = "Punkt"
@@ -1320,7 +1372,7 @@ local function menueSetzen(offen)
 	end
 	local breite = offen and (n * 52 + math.max(0, n - 1) * 5) or 0
 	game:GetService("TweenService"):Create(klappe, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(breite, 48) }):Play()
-	menueKnopf.Icon.Text = offen and "✕" or "☰"
+	symbolSetzen(offen)
 	menueKnopf.Beschriftung.Text = offen and "Close" or "Menu"
 	menuePunktNeu()
 end
@@ -2247,7 +2299,10 @@ do
 	-- clock and weather
 	local _, uhrText = pille(88, 130)
 	local SYMBOL = { Clear = "☀", Rain = "🌧", Fog = "🌫" }
+	local naechsteUhr = 0
 	RunService.RenderStepped:Connect(function()
+		if os.clock() < naechsteUhr then return end
+		naechsteUhr = os.clock() + 0.5
 		local zeit = ordner:GetAttribute("Uhrzeit") or 12
 		local wetter = ordner:GetAttribute("Wetter") or "Clear"
 		local symbol = (wetter == "Clear" and (zeit < 6 or zeit > 20)) and "🌙" or SYMBOL[wetter] or "☀"
@@ -2715,7 +2770,10 @@ do
 	badge.Text = "🚨 WANTED"
 	badge.Parent = gesuchtGui
 	Instance.new("UICorner", badge).CornerRadius = UDim.new(1, 0)
+	local naechsterBlick = 0
 	RunService.RenderStepped:Connect(function()
+		if os.clock() < naechsterBlick then return end
+		naechsterBlick = os.clock() + 0.1
 		gesuchtGui.Enabled = spieler:GetAttribute("Gesucht") == true
 		if gesuchtGui.Enabled then
 			badge.BackgroundColor3 = math.floor(os.clock() * 3) % 2 == 0 and Color3.fromRGB(200, 30, 40) or Color3.fromRGB(30, 60, 190)
@@ -2778,7 +2836,13 @@ do
 	local GuiService = game:GetService("GuiService")
 	local UIS = game:GetService("UserInputService")
 
+	-- thousands of building windows use the Glass material; in Fast mode they become plain shiny plastic
+	local fenster = {}
+	local function fensterSetzen(x)
+		x.Material = _G.Sparmodus and Enum.Material.SmoothPlastic or Enum.Material.Glass
+	end
 	_G.SparmodusSetzen = function(an)
+		local vorher = _G.Sparmodus
 		_G.Sparmodus = an == true
 		Verkehr.sparmodus = _G.Sparmodus
 		for _, e in Lighting:GetChildren() do
@@ -2786,7 +2850,25 @@ do
 				e.Enabled = not _G.Sparmodus
 			end
 		end
+		if vorher ~= _G.Sparmodus then
+			for x in fenster do fensterSetzen(x) end
+		end
 	end
+	task.spawn(function()
+		local karte = workspace:WaitForChild("Karte")
+		local function merken(x)
+			if x:IsA("BasePart") and (x.Name == "Fenster" or x.Name == "Scheiben") and x.Material == Enum.Material.Glass then
+				fenster[x] = true
+				if _G.Sparmodus then fensterSetzen(x) end
+			end
+		end
+		for i, x in karte:GetDescendants() do
+			merken(x)
+			if i % 4000 == 0 then task.wait() end
+		end
+		karte.DescendantAdded:Connect(merken)
+		karte.DescendantRemoving:Connect(function(x) fenster[x] = nil end)
+	end)
 	local function nurTouch()
 		return UIS.TouchEnabled == true and UIS.KeyboardEnabled ~= true
 	end
@@ -3016,7 +3098,7 @@ eZurueck.MouseButton1Click:Connect(function()
 end)
 
 -- small gear button to open the settings at any time
-local zahnrad = leistenKnopf("⚙", "Settings", 7)
+local zahnrad = leistenKnopf("⚙️", "Settings", 7)
 zahnrad.MouseButton1Click:Connect(function()
 	knoepfeAktualisieren()
 	einstellGui.Enabled = true

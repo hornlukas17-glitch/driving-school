@@ -38,6 +38,7 @@ pruefe("settings: Graphics option", gefunden)
 
 -- 3) street lamps: off during the day
 L.ClockTime = 12
+game.ReplicatedStorage.Fuehrerschein:SetAttribute("Wetter", "Clear") -- fog would switch the lamps on
 M.laufen(M.zeit() + 3)
 local an, gesamt = 0, 0
 for _, x in workspace.Karte:GetDescendants() do

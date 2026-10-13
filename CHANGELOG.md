@@ -1,5 +1,12 @@
 # Changelog
 
+## v30 – Flüssiger auf allen Geräten, Night-Edition-Heck, Menü-Symbol
+- **Server schneller:** Der NPC-Verkehr liest Ampeln und Schilder nur noch einmal ein statt tausende Male pro Sekunde – der Server hat mehr Luft, alles ruckelt weniger.
+- **Detailstufen + Streaming (Karte):** Weit entfernte Gebäude zeichnet Roblox als vereinfachte Form, Geräte laden nur noch ~640 Studs Umgebung voll.
+- **Fast-Modus:** zusätzlich Fenster ohne teuren Glas-Effekt. Tacho/HUD, Uhr und Anzeigen aktualisieren sich seltener (unsichtbar, spart Zeit auf Handys).
+- **Vanta GS Night Edition:** neues Heck – LED-Segmente im Leuchtband, Rauchglas-Rahmen, lila Nachtlinie, senkrechte Lichthaken, Rückstrahler, Diffusor und Endrohre. Der normale Vanta GS bleibt wie er ist.
+- **Menü-Knopf:** gezeichnetes Symbol (drei Striche) statt Zeichen, wird beim Öffnen zum X; Knöpfe mit feinem Rand und Verlauf.
+
 ## v29 – Performance für Handy, Tablet und schwache PCs
 - **Grafik-Schalter** in den Settings: „⚡ Fast“ / „Best“. Handys und Tablets starten automatisch in „Fast“; am PC schaltet es sich ein, wenn das Spiel 10 Sekunden unter 30 FPS läuft (nur solange man nicht selbst gewählt hat).
 - „Fast“: keine Sonnenstrahlen/Tiefenunschärfe/Bloom, weniger Regen, Minimap seltener neu gezeichnet, ferne NPC-Autos seltener bewegt.

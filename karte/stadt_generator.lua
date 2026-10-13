@@ -2004,4 +2004,21 @@ wolken.Cover = 0.55
 wolken.Density = 0.7
 wolken.Parent = gelaende
 
+-- Streaming und Detailstufen: weit entfernte Gebaeude zeigt Roblox als vereinfachte Form
+-- (Handys und schwache PCs muessen dann nur die Umgebung voll zeichnen)
+pcall(function()
+	workspace.StreamingEnabled = true
+	workspace.StreamingTargetRadius = 640
+	workspace.StreamingMinRadius = 160
+end)
+local mitDetailstufe = 0
+for _, m in karte:GetDescendants() do
+	if m:IsA("Model") and #m:GetDescendants() >= 12 then
+		if pcall(function() m.LevelOfDetail = Enum.ModelLevelOfDetail.StreamingMesh end) then
+			mitDetailstufe += 1
+		end
+	end
+end
+print("Modelle mit Detailstufe: " .. mitDetailstufe)
+
 print("Karte fertig! Teile: " .. anzahl)

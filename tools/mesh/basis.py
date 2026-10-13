@@ -379,7 +379,7 @@ def linie(name, punkte, art="fuge", dicke=0.035, spiegeln=False):
     return teile
 
 
-def erzeugen(typ, vorlage, titel, rad, meshes, anbau, kollision, kennzeichen, spoiler, sitz_y=None, armaturen_z=None, drehung=None, sitz_x=None, normalen=None):
+def erzeugen(typ, vorlage, titel, rad, meshes, anbau, kollision, kennzeichen, spoiler, sitz_y=None, armaturen_z=None, drehung=None, sitz_x=None, normalen=None, nacht=None):
     """meshes: {"Karosserie": (verts, faces), ...}; rad = (R, spur, achse)"""
     for name, m in meshes.items():
         assert len(m[1]) <= 20000, f"{name} hat {len(m[1])} Dreiecke (Roblox-Limit 20000)"
@@ -394,6 +394,8 @@ def erzeugen(typ, vorlage, titel, rad, meshes, anbau, kollision, kennzeichen, sp
         info["sitzX"] = sitz_x
     if drehung is not None:                     # Grad um die Hochachse, falls der Importer das Modell verkehrt herum einliest
         info["drehung"] = drehung
+    if nacht:                                   # Zusatzteile nur für die Sonderedition (Auto.MODELLE[...].nachtDetails)
+        info["nacht"] = nacht
     for name, m in meshes.items():
         verts, faces = m[0], m[1]
         v = np.array(verts)
@@ -447,6 +449,11 @@ def exportieren():
         for t in d["anbau"]:
             zeilen.append(f"\t\t\t{lua_wert(t)},")
         zeilen.append("\t\t},")
+        if d.get("nacht"):
+            zeilen.append("\t\tnacht = {")
+            for t in d["nacht"]:
+                zeilen.append(f"\t\t\t{lua_wert(t)},")
+            zeilen.append("\t\t},")
         zeilen.append("\t\tkollision = {")
         for k in d["kollision"]:
             zeilen.append(f"\t\t\t{lua_wert(k)},")

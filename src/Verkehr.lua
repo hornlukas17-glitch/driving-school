@@ -580,6 +580,27 @@ function Verkehr.starten(optionen)
 		return grenze
 	end
 
+	-- traffic lights and signs never move: read their positions once (saves thousands of
+	-- attribute reads per second on the server); only the light phase is read every step
+	local ampelDaten, schildDaten = {}, {}
+	local function zeichenLesen()
+		ampelDaten, schildDaten = {}, {}
+		for _, ampel in ampeln:GetChildren() do
+			local L, d = ampel:GetAttribute("Haltelinie"), ampel:GetAttribute("Anfahrt")
+			if L and d then table.insert(ampelDaten, { inst = ampel, L = L, d = d }) end
+		end
+		if stopps then
+			for _, schild in stopps:GetChildren() do
+				local L, d = schild:GetAttribute("Haltelinie"), schild:GetAttribute("Anfahrt")
+				if L and d then
+					table.insert(schildDaten, { inst = schild, L = L, d = d, gewaehren = schild:GetAttribute("Typ") == "Vorfahrt gewaehren" })
+				end
+			end
+		end
+	end
+	zeichenLesen()
+	ampeln.ChildAdded:Connect(function() task.defer(zeichenLesen) end)
+
 	local takt = 0
 	local liste = {}
 	local function schritt(dt)
@@ -588,6 +609,9 @@ function Verkehr.starten(optionen)
 		if takt > 0.2 then
 			takt = 0
 			liste = hindernisse()
+		end
+		for _, a in ampelDaten do
+			a.phase = a.inst:GetAttribute("Phase")
 		end
 		for _, f in fahrzeuge do
 			probenBerechnen(f)
@@ -622,29 +646,27 @@ function Verkehr.starten(optionen)
 			end
 
 			-- traffic lights: stop before the line when it is not green
-			for _, ampel in ampeln:GetChildren() do
-				local L = ampel:GetAttribute("Haltelinie")
-				local d = ampel:GetAttribute("Anfahrt")
-				if L and d and ampel:GetAttribute("Phase") ~= "Gruen" and d:Dot(f.dir) < -0.7 then
+			for _, a in ampelDaten do
+				local L, d = a.L, a.d
+				if a.phase ~= "Gruen" and d:Dot(f.dir) < -0.7 then
 					local rel = L - f.pos
 					local vor = rel:Dot(f.dir) - f.laenge / 2
 					if vor > -1 and vor < f.weit and math.abs(rel:Dot(rechtsVon(f.dir))) < 5 then
 						-- yellow and already very close: drive on
-						if not (ampel:GetAttribute("Phase") == "Gelb" and vor < f.v * f.v / 60) then
+						if not (a.phase == "Gelb" and vor < f.v * f.v / 60) then
 							ziel = math.min(ziel, bremsTempo(vor - 1.5))
 						end
 					end
 				end
 			end
 			-- STOP signs: stand still for a moment, then go
-			if stopps then
-				for _, schild in stopps:GetChildren() do
-					local L = schild:GetAttribute("Haltelinie")
-					local d = schild:GetAttribute("Anfahrt")
-					if L and d and d:Dot(f.dir) < -0.7 and not f.gehaltenAn[schild] then
+			do
+				for _, sd in schildDaten do
+					local schild, L, d = sd.inst, sd.L, sd.d
+					if d:Dot(f.dir) < -0.7 and not f.gehaltenAn[schild] then
 						local rel = L - f.pos
 						local vor = rel:Dot(f.dir) - f.laenge / 2
-						local vorfahrtGewaehren = schild:GetAttribute("Typ") == "Vorfahrt gewaehren"
+						local vorfahrtGewaehren = sd.gewaehren
 						if vorfahrtGewaehren and vor > -1 and vor < f.weit and math.abs(rel:Dot(rechtsVon(f.dir))) < 5 then
 							ziel = math.min(ziel, math.sqrt(12 * 12 + 44 * math.max(0, vor - 1))) -- slow down, no full stop
 						elseif vor > -1 and vor < f.weit and math.abs(rel:Dot(rechtsVon(f.dir))) < 5 then

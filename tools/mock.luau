@@ -283,7 +283,7 @@ Inst.__index = function(o, k)
 		if kind.Name == k then return kind end
 	end
 	-- known signals
-	if k:match("^%u") and (k:match("ed$") or k:match("Added$") or k:match("Removing$") or k == "Heartbeat" or k == "RenderStepped" or k == "Stepped" or k == "Activated" or k == "Triggered" or k == "MouseButton1Click" or k == "OnClientEvent" or k == "OnServerEvent" or k == "InputBegan" or k == "InputEnded" or k == "Seated" or k == "MoveToFinished" or k == "Equipped" or k == "Unequipped" or k == "Touched" or k == "PromptTriggered") then
+	if k:match("^%u") and (k:match("ed$") or k:match("Added$") or k:match("Removing$") or k == "Heartbeat" or k == "RenderStepped" or k == "Stepped" or k == "Activated" or k == "Triggered" or k == "MouseButton1Click" or k == "MouseEnter" or k == "MouseLeave" or k == "OnClientEvent" or k == "OnServerEvent" or k == "InputBegan" or k == "InputEnded" or k == "Seated" or k == "MoveToFinished" or k == "Equipped" or k == "Unequipped" or k == "Touched" or k == "PromptTriggered") then
 		local s = signal()
 		props[k] = s
 		return s

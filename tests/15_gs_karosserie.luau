@@ -99,4 +99,18 @@ if sp then
 	local n = 0 for _, x in auto:GetChildren() do if x.Name == "Tuning_Spoilerstuetze" then n += 1 end end
 	pruefe("wing supports", n == 2)
 end
+-- Night Edition (Robux car): same body plus the detailed rear light; the normal GS stays as it is
+local Auto = require(game.ServerScriptService.FuehrerscheinServer.Auto)
+local nachtAuto = Auto.bauenPrivat(CFrame.new(0, 0.2, -700), "gs_night")
+local normal = Auto.bauenPrivat(CFrame.new(20, 0.2, -700), "gs")
+local function anzahl(m, name) local n = 0 for _, x in m:GetChildren() do if x.Name == name then n += 1 end end return n end
+pruefe("night: LED segments in the light bar", anzahl(nachtAuto, "Segment") >= 12)
+pruefe("night: purple line, frame, hooks", anzahl(nachtAuto, "Nachtlinie") > 0 and anzahl(nachtAuto, "Lichtrahmen") > 0 and anzahl(nachtAuto, "Ruecklicht") > 2)
+pruefe("night: exhausts, diffuser, reflectors", anzahl(nachtAuto, "Endrohr") == 2 and anzahl(nachtAuto, "Diffusor") >= 3 and anzahl(nachtAuto, "Rueckstrahler") == 2)
+pruefe("normal GS without night parts", anzahl(normal, "Segment") == 0 and anzahl(normal, "Nachtlinie") == 0)
+local seg = nachtAuto:FindFirstChild("Segment")
+local relS = nachtAuto.Chassis.CFrame:PointToObjectSpace(seg.Position)
+pruefe("segments sit at the rear", relS.Z > 6)
+nachtAuto:Destroy()
+normal:Destroy()
 print("done")

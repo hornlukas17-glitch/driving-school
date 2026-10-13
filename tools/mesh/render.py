@@ -3,7 +3,7 @@
 python3 render.py <obj> <info.json> <png> [farbe=r,g,b]
 Räder, Lichter und Anbauteile werden wie im Spiel als einfache Formen dazugezeichnet.
 """
-import sys, json
+import sys, json, os
 import numpy as np
 from PIL import Image
 
@@ -24,7 +24,7 @@ ART = {"lack": (KFARBE, 0.5), "chrom": ((0.75, 0.75, 0.78), 0.9), "alu": ((0.66,
        "schwarz": ((0.03, 0.03, 0.035), 0.2), "carbon": ((0.09, 0.09, 0.1), 0.4), "grill": ((0.07, 0.07, 0.08), 0.3),
        "scheinwerfer": ((0.95, 0.97, 1.0), 1), "neon_weiss": ((0.95, 0.95, 0.95), 1), "neon_rot": ((0.75, 0.04, 0.04), 0.8),
        "blinker": ((0.6, 0.38, 0.14), 0.5), "fuge": ((0.02, 0.02, 0.025), 0.1), "glanzschwarz": ((0.02, 0.02, 0.025), 0.9),
-       "rueckglas": ((0.35, 0.02, 0.03), 0.9)}
+       "rueckglas": ((0.35, 0.02, 0.03), 0.9), "neon_lila": ((0.6, 0.27, 1.0), 1)}
 FARBEN = {"Karosserie": (KFARBE, 0.5), "Heckpartie": (KFARBE, 0.5), "Dach": (KFARBE, 0.5), "Verkleidung": ((0.06, 0.06, 0.065), 0.1), "Glas": ((0.05, 0.07, 0.1), 0.5)}
 for name, f in objs.items():
     art = INFO["mesh"].get(name, {}).get("a")
@@ -71,7 +71,7 @@ for s in (-1, 1):
         zylinder((s * SPUR, R, rz), R, 1.3, (0.04, 0.04, 0.04), 0.05)
         zylinder((s * (SPUR + 0.03), R, rz), R * 0.66, 1.32, (0.72, 0.73, 0.76), 0.9)
         zylinder((s * (SPUR + 0.04), R, rz), R * 0.2, 1.34, (0.2, 0.2, 0.22), 0.5)
-for t in INFO["anbau"]:
+for t in INFO["anbau"] + (INFO.get("nacht", []) if os.environ.get("NACHT") else []):
     farbe, glanz = ART.get(t["a"], ART["schwarz"])
     for s in ((-1, 1) if t["s"] else (1,)):
         r = t.get("r")
@@ -88,7 +88,7 @@ for ende in ("vorne", "hinten"):
 
 
 # ---------- Renderer ----------
-def rendern(azim, elev, B=900, H=520, abstand=34.0, fov=34):
+def rendern(azim, elev, B=900, H=520, abstand=float(os.environ.get("ABSTAND", 34)), fov=34):
     a, e = np.radians(azim), np.radians(elev)
     ziel = np.array([0, 3.4, 0])
     auge = ziel + abstand * np.array([np.sin(a) * np.cos(e), np.sin(e), -np.cos(a) * np.cos(e)])
@@ -139,7 +139,10 @@ def rendern(azim, elev, B=900, H=520, abstand=34.0, fov=34):
     return (bild * 255).astype(np.uint8)
 
 
+
 ansichten = [(-35, 12), (-90, 3), (145, 14), (0, 6)]
+if os.environ.get("ANSICHTEN"):   # z. B. ANSICHTEN="180,8;150,15;210,15;180,30"
+    ansichten = [tuple(float(x) for x in a.split(",")) for a in os.environ["ANSICHTEN"].split(";")]
 bilder = [rendern(a, e) for a, e in ansichten]
 oben = np.concatenate(bilder[:2], axis=1); unten = np.concatenate(bilder[2:], axis=1)
 Image.fromarray(np.concatenate([oben, unten], axis=0)).save(png)

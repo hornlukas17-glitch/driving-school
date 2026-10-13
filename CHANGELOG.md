@@ -1,5 +1,9 @@
 # Changelog
 
+## v28 – Aufklappmenü
+- **Menü oben links:** Nur noch ein „☰ Menu“-Knopf; ein Klick klappt Shop, Rewards, Daily, My Cars, Record, Kamera und Settings aus. Nach der Auswahl klappt es wieder zu. Roter Punkt am Menü-Knopf, wenn Belohnungen warten.
+- **Autohaus:** Statt der beschrifteten Fläche ein runder, transparenter grüner Kreis (wie die Tore in den Fahrstunden) mit leichter Lichtsäule – reinlaufen öffnet den Katalog.
+
 ## v27 – Autohaus & Grafik
 - **Autohaus neu:** Nur noch 2 Plattformen im Showroom (exklusiver Vanta GS Night Edition + Top-Auto), mit Spot und Namensschild. Alle anderen Autos kauft man in der **grünen „BUY CARS“-Zone** vor der Rezeption – reinlaufen öffnet den Katalog.
 - **Sophie (Sales):** neue Verkäuferin hinter der Rezeption, grauer Anzug mit Weste und blondem Zopf; Marco steht daneben.

@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v27
+--  DRIVER'S LICENSE SYSTEM v28
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -3639,35 +3639,31 @@ task.spawn(function()
 		end
 	end
 
-	-- green buy zone in front of the reception: step in = the car catalogue opens
+	-- green buy circle in front of the reception (same look as the lesson gates, just round):
+	-- step in = the car catalogue opens
 	local tresen = autohaus:FindFirstChild("Tresen")
-	local zPos = tresen and Vector3.new(tresen.Position.X - tresen.Size.X / 2 - 4.5, bodenY, tresen.Position.Z) or Vector3.new(134, bodenY, -392)
-	local zone = neu("Kaufzone", Vector3.new(7, 0.12, 12), CFrame.new(zPos.X, bodenY + 0.06, zPos.Z), Color3.fromRGB(40, 220, 90), Enum.Material.Neon)
+	local zPos = tresen and Vector3.new(tresen.Position.X - tresen.Size.X / 2 - 5, bodenY, tresen.Position.Z) or Vector3.new(134, bodenY, -392)
+	local RADIUS = 4.5
+	local zone = neu("Kaufzone", Vector3.new(0.1, RADIUS * 2, RADIUS * 2), CFrame.new(zPos.X, bodenY + 0.06, zPos.Z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(60, 255, 120), Enum.Material.Neon, Enum.PartType.Cylinder)
 	zone.CanCollide = false
 	zone.CanQuery = false
-	zone.Transparency = 0.35
-	local zg = Instance.new("SurfaceGui")
-	zg.Face = Enum.NormalId.Top
-	zg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	zg.PixelsPerStud = 40
-	zg.LightInfluence = 0
-	zg.Parent = zone
-	local zl = Instance.new("TextLabel")
-	zl.Size = UDim2.fromScale(1, 1)
-	zl.BackgroundTransparency = 1
-	zl.Font = Enum.Font.GothamBlack
-	zl.TextScaled = true
-	zl.TextColor3 = Color3.new(1, 1, 1)
-	zl.Text = "🚗 BUY CARS"
-	zl.Parent = zg
+	zone.CanTouch = false
+	zone.CastShadow = false
+	zone.Transparency = 0.5
+	local saeule = neu("Kaufzone_Licht", Vector3.new(7, RADIUS * 2, RADIUS * 2), CFrame.new(zPos.X, bodenY + 3.5, zPos.Z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(60, 255, 120), Enum.Material.Neon, Enum.PartType.Cylinder)
+	saeule.CanCollide = false
+	saeule.CanQuery = false
+	saeule.CanTouch = false
+	saeule.CastShadow = false
+	saeule.Transparency = 0.85
 	local imBereich = {}
 	task.spawn(function()
 		while zone.Parent do
 			task.wait(0.25)
 			for _, p in Players:GetPlayers() do
 				local w = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-				local rel = w and zone.CFrame:PointToObjectSpace(w.Position)
-				local drin = rel ~= nil and math.abs(rel.X) < zone.Size.X / 2 + 0.5 and math.abs(rel.Z) < zone.Size.Z / 2 + 0.5 and rel.Y < 8 and rel.Y > -2
+				local abstand = w and Vector3.new(w.Position.X - zPos.X, 0, w.Position.Z - zPos.Z).Magnitude
+				local drin = abstand ~= nil and abstand < RADIUS + 0.5 and w.Position.Y - bodenY < 8
 				if drin and not imBereich[p] then
 					local d = daten[p]
 					if d then oeffnen:FireClient(p, "autohaus", { katalog = katalog(d), geld = d.geld }) end
@@ -7528,7 +7524,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v27 loaded")
+print("[Driving School] client v28 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -8762,14 +8758,20 @@ local kameraGui = Instance.new("ScreenGui")
 kameraGui.Name = "CameraToggle"
 kameraGui.ResetOnSpawn = false
 kameraGui.Parent = spieler.PlayerGui
--- compact button bar top left: one row of small icon buttons with a short caption
+-- fold-out menu top left: only the "Menu" button is visible, the other buttons slide out next to it
+local klappe = Instance.new("Frame")
+klappe.Name = "Klappe"
+klappe.BackgroundTransparency = 1
+klappe.ClipsDescendants = true
+klappe.Position = UDim2.new(0, 12 + 52 + 6, 0, 60)
+klappe.Size = UDim2.fromOffset(0, 48)
+klappe.Parent = kameraGui
 local leiste = Instance.new("Frame")
 leiste.Name = "Leiste"
 leiste.BackgroundTransparency = 1
-leiste.Position = UDim2.new(0, 12, 0, 60)
 leiste.Size = UDim2.fromOffset(0, 48)
 leiste.AutomaticSize = Enum.AutomaticSize.X
-leiste.Parent = kameraGui
+leiste.Parent = klappe
 local leistenLayout = Instance.new("UIListLayout")
 leistenLayout.FillDirection = Enum.FillDirection.Horizontal
 leistenLayout.Padding = UDim.new(0, 5)
@@ -8807,6 +8809,50 @@ local function leistenKnopf(icon, text, reihenfolge, farbe)
 	name.Parent = k
 	return k
 end
+local menueKnopf = leistenKnopf("☰", "Menu", 0)
+menueKnopf.Name = "Menue"
+menueKnopf.Position = UDim2.new(0, 12, 0, 60)
+menueKnopf.Parent = kameraGui
+-- red dot on the menu button while rewards are waiting and the menu is closed
+local menuePunkt = Instance.new("TextLabel")
+menuePunkt.Name = "Punkt"
+menuePunkt.AnchorPoint = Vector2.new(0.5, 0.5)
+menuePunkt.Position = UDim2.new(1, -2, 0, 2)
+menuePunkt.Size = UDim2.fromOffset(20, 20)
+menuePunkt.BackgroundColor3 = Color3.fromRGB(230, 40, 50)
+menuePunkt.Font = Enum.Font.GothamBlack
+menuePunkt.TextSize = 12
+menuePunkt.TextColor3 = Color3.new(1, 1, 1)
+menuePunkt.Visible = false
+menuePunkt.Parent = menueKnopf
+Instance.new("UICorner", menuePunkt).CornerRadius = UDim.new(1, 0)
+local menueOffen = false
+local function menuePunktNeu()
+	local n = spieler:GetAttribute("BelohnungenOffen") or 0
+	menuePunkt.Visible = n > 0 and not menueOffen
+	menuePunkt.Text = tostring(n)
+end
+local function menueSetzen(offen)
+	menueOffen = offen
+	local n = 0
+	for _, k in leiste:GetChildren() do
+		if k:IsA("TextButton") then n += 1 end
+	end
+	local breite = offen and (n * 52 + math.max(0, n - 1) * 5) or 0
+	game:GetService("TweenService"):Create(klappe, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(breite, 48) }):Play()
+	menueKnopf.Icon.Text = offen and "✕" or "☰"
+	menueKnopf.Beschriftung.Text = offen and "Close" or "Menu"
+	menuePunktNeu()
+end
+_G.MenueSetzen = menueSetzen
+menueKnopf.MouseButton1Click:Connect(function() menueSetzen(not menueOffen) end)
+spieler:GetAttributeChangedSignal("BelohnungenOffen"):Connect(menuePunktNeu)
+-- after choosing something the menu folds up again (not for the camera button)
+leiste.ChildAdded:Connect(function(k)
+	if k:IsA("TextButton") and k.Name ~= "1st (V)" then
+		k.MouseButton1Click:Connect(function() menueSetzen(false) end)
+	end
+end)
 local kameraKnopf = leistenKnopf("🎥", "1st (V)", 6)
 
 local ersteP = false
@@ -10957,7 +11003,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v27 loading")
+	print("[Driving School] start screen v28 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -11145,4 +11191,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v27 installed. Press F5 to test.")
+print("License system v28 installed. Press F5 to test.")

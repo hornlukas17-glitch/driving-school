@@ -2705,35 +2705,31 @@ task.spawn(function()
 		end
 	end
 
-	-- green buy zone in front of the reception: step in = the car catalogue opens
+	-- green buy circle in front of the reception (same look as the lesson gates, just round):
+	-- step in = the car catalogue opens
 	local tresen = autohaus:FindFirstChild("Tresen")
-	local zPos = tresen and Vector3.new(tresen.Position.X - tresen.Size.X / 2 - 4.5, bodenY, tresen.Position.Z) or Vector3.new(134, bodenY, -392)
-	local zone = neu("Kaufzone", Vector3.new(7, 0.12, 12), CFrame.new(zPos.X, bodenY + 0.06, zPos.Z), Color3.fromRGB(40, 220, 90), Enum.Material.Neon)
+	local zPos = tresen and Vector3.new(tresen.Position.X - tresen.Size.X / 2 - 5, bodenY, tresen.Position.Z) or Vector3.new(134, bodenY, -392)
+	local RADIUS = 4.5
+	local zone = neu("Kaufzone", Vector3.new(0.1, RADIUS * 2, RADIUS * 2), CFrame.new(zPos.X, bodenY + 0.06, zPos.Z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(60, 255, 120), Enum.Material.Neon, Enum.PartType.Cylinder)
 	zone.CanCollide = false
 	zone.CanQuery = false
-	zone.Transparency = 0.35
-	local zg = Instance.new("SurfaceGui")
-	zg.Face = Enum.NormalId.Top
-	zg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	zg.PixelsPerStud = 40
-	zg.LightInfluence = 0
-	zg.Parent = zone
-	local zl = Instance.new("TextLabel")
-	zl.Size = UDim2.fromScale(1, 1)
-	zl.BackgroundTransparency = 1
-	zl.Font = Enum.Font.GothamBlack
-	zl.TextScaled = true
-	zl.TextColor3 = Color3.new(1, 1, 1)
-	zl.Text = "🚗 BUY CARS"
-	zl.Parent = zg
+	zone.CanTouch = false
+	zone.CastShadow = false
+	zone.Transparency = 0.5
+	local saeule = neu("Kaufzone_Licht", Vector3.new(7, RADIUS * 2, RADIUS * 2), CFrame.new(zPos.X, bodenY + 3.5, zPos.Z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(60, 255, 120), Enum.Material.Neon, Enum.PartType.Cylinder)
+	saeule.CanCollide = false
+	saeule.CanQuery = false
+	saeule.CanTouch = false
+	saeule.CastShadow = false
+	saeule.Transparency = 0.85
 	local imBereich = {}
 	task.spawn(function()
 		while zone.Parent do
 			task.wait(0.25)
 			for _, p in Players:GetPlayers() do
 				local w = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-				local rel = w and zone.CFrame:PointToObjectSpace(w.Position)
-				local drin = rel ~= nil and math.abs(rel.X) < zone.Size.X / 2 + 0.5 and math.abs(rel.Z) < zone.Size.Z / 2 + 0.5 and rel.Y < 8 and rel.Y > -2
+				local abstand = w and Vector3.new(w.Position.X - zPos.X, 0, w.Position.Z - zPos.Z).Magnitude
+				local drin = abstand ~= nil and abstand < RADIUS + 0.5 and w.Position.Y - bodenY < 8
 				if drin and not imBereich[p] then
 					local d = daten[p]
 					if d then oeffnen:FireClient(p, "autohaus", { katalog = katalog(d), geld = d.geld }) end

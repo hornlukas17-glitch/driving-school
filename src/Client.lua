@@ -1238,14 +1238,20 @@ local kameraGui = Instance.new("ScreenGui")
 kameraGui.Name = "CameraToggle"
 kameraGui.ResetOnSpawn = false
 kameraGui.Parent = spieler.PlayerGui
--- compact button bar top left: one row of small icon buttons with a short caption
+-- fold-out menu top left: only the "Menu" button is visible, the other buttons slide out next to it
+local klappe = Instance.new("Frame")
+klappe.Name = "Klappe"
+klappe.BackgroundTransparency = 1
+klappe.ClipsDescendants = true
+klappe.Position = UDim2.new(0, 12 + 52 + 6, 0, 60)
+klappe.Size = UDim2.fromOffset(0, 48)
+klappe.Parent = kameraGui
 local leiste = Instance.new("Frame")
 leiste.Name = "Leiste"
 leiste.BackgroundTransparency = 1
-leiste.Position = UDim2.new(0, 12, 0, 60)
 leiste.Size = UDim2.fromOffset(0, 48)
 leiste.AutomaticSize = Enum.AutomaticSize.X
-leiste.Parent = kameraGui
+leiste.Parent = klappe
 local leistenLayout = Instance.new("UIListLayout")
 leistenLayout.FillDirection = Enum.FillDirection.Horizontal
 leistenLayout.Padding = UDim.new(0, 5)
@@ -1283,6 +1289,50 @@ local function leistenKnopf(icon, text, reihenfolge, farbe)
 	name.Parent = k
 	return k
 end
+local menueKnopf = leistenKnopf("☰", "Menu", 0)
+menueKnopf.Name = "Menue"
+menueKnopf.Position = UDim2.new(0, 12, 0, 60)
+menueKnopf.Parent = kameraGui
+-- red dot on the menu button while rewards are waiting and the menu is closed
+local menuePunkt = Instance.new("TextLabel")
+menuePunkt.Name = "Punkt"
+menuePunkt.AnchorPoint = Vector2.new(0.5, 0.5)
+menuePunkt.Position = UDim2.new(1, -2, 0, 2)
+menuePunkt.Size = UDim2.fromOffset(20, 20)
+menuePunkt.BackgroundColor3 = Color3.fromRGB(230, 40, 50)
+menuePunkt.Font = Enum.Font.GothamBlack
+menuePunkt.TextSize = 12
+menuePunkt.TextColor3 = Color3.new(1, 1, 1)
+menuePunkt.Visible = false
+menuePunkt.Parent = menueKnopf
+Instance.new("UICorner", menuePunkt).CornerRadius = UDim.new(1, 0)
+local menueOffen = false
+local function menuePunktNeu()
+	local n = spieler:GetAttribute("BelohnungenOffen") or 0
+	menuePunkt.Visible = n > 0 and not menueOffen
+	menuePunkt.Text = tostring(n)
+end
+local function menueSetzen(offen)
+	menueOffen = offen
+	local n = 0
+	for _, k in leiste:GetChildren() do
+		if k:IsA("TextButton") then n += 1 end
+	end
+	local breite = offen and (n * 52 + math.max(0, n - 1) * 5) or 0
+	game:GetService("TweenService"):Create(klappe, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(breite, 48) }):Play()
+	menueKnopf.Icon.Text = offen and "✕" or "☰"
+	menueKnopf.Beschriftung.Text = offen and "Close" or "Menu"
+	menuePunktNeu()
+end
+_G.MenueSetzen = menueSetzen
+menueKnopf.MouseButton1Click:Connect(function() menueSetzen(not menueOffen) end)
+spieler:GetAttributeChangedSignal("BelohnungenOffen"):Connect(menuePunktNeu)
+-- after choosing something the menu folds up again (not for the camera button)
+leiste.ChildAdded:Connect(function(k)
+	if k:IsA("TextButton") and k.Name ~= "1st (V)" then
+		k.MouseButton1Click:Connect(function() menueSetzen(false) end)
+	end
+end)
 local kameraKnopf = leistenKnopf("🎥", "1st (V)", 6)
 
 local ersteP = false

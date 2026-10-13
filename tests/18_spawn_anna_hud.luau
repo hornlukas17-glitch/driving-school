@@ -31,7 +31,15 @@ local p = M.spielerErzeugen("Lukas")
 local cl = game:GetService("StarterPlayer").StarterPlayerScripts.FuehrerscheinClient
 task.spawn(lade("client", cl.Source, { script = cl }))
 M.laufen(M.zeit() + 3)
-local leiste = p.PlayerGui.CameraToggle.Leiste
+local kg = p.PlayerGui.CameraToggle
+local leiste = kg.Klappe.Leiste
+pruefe("menu button", kg:FindFirstChild("Menue") ~= nil)
+pruefe("menu closed at the start", kg.Klappe.Size.X.Offset == 0)
+kg.Menue.MouseButton1Click:Fire()
+pruefe("menu opens", kg.Klappe.Size.X.Offset > 300)
+leiste.Daily.MouseButton1Click:Fire()
+M.laufen(M.zeit() + 1)
+pruefe("menu folds up after choosing", kg.Klappe.Size.X.Offset == 0)
 local namen = {}
 for _, k in leiste:GetChildren() do if k.ClassName == "TextButton" then namen[k.Name] = k end end
 for _, n in { "Shop", "Rewards", "Daily", "My Cars", "Record", "1st (V)", "Settings" } do

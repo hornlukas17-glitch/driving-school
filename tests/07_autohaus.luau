@@ -23,11 +23,12 @@ for _, x in ah:GetChildren() do
 end
 pruefe("2 podiums, 2 showroom cars", podeste == 2 and autos == 2)
 pruefe("exclusive car on a podium", ah:FindFirstChild("Ausstellung_gs_night") ~= nil)
-pruefe("green buy zone", ah:FindFirstChild("Kaufzone") ~= nil)
+pruefe("green buy circle", ah:FindFirstChild("Kaufzone") ~= nil and ah.Kaufzone.Size.Y == ah.Kaufzone.Size.Z)
+pruefe("circle is transparent and has no text", ah.Kaufzone.Transparency > 0.3 and ah.Kaufzone:FindFirstChildOfClass("SurfaceGui") == nil)
 pruefe("Marco and Sophie", ah:FindFirstChild("Verkaeufer") ~= nil and ah:FindFirstChild("Verkaeuferin") ~= nil)
 -- walking into the green zone opens the catalogue
 pruefe("catalogue closed at the start", p.PlayerGui:FindFirstChild("Autohaus") == nil)
-p.Character:PivotTo(ah.Kaufzone.CFrame + Vector3.new(0, 3, 0))
+p.Character:PivotTo(CFrame.new(ah.Kaufzone.Position + Vector3.new(1, 3, 1)))
 M.laufen(M.zeit() + 1)
 pruefe("green zone opens the catalogue", p.PlayerGui:FindFirstChild("Autohaus") ~= nil)
 p.PlayerGui.Autohaus:Destroy()

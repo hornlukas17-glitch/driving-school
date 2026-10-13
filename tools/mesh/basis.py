@@ -174,12 +174,15 @@ def dach_teil(form, z0, z1, dicke=0.42, n=36):
     """Dachhaut: oberer Teil der Fensterform, minimal größer, sitzt auf dem Glas"""
     def qs(z):
         t = form.gh_oben(z)
+        # an den Enden flach auslaufen lassen, sonst sieht man die Stirnkante als Zacke im Seitenfenster
+        f = glatt((z - z0) / 0.7) * glatt((z1 - z) / 0.7)
+        d = 0.06 + (dicke - 0.06) * f
         aus = []
         for x, y, zz in form.querschnitt_glas(z):
-            yy = max(y, t - dicke)
+            yy = max(y, t - d)
             alt = form.gh_breite(z, y)
             xx = x / alt * form.gh_breite(z, yy) if alt > 1e-6 else 0.0
-            aus.append((xx * 1.02, yy + 0.03, zz))
+            aus.append((xx * (1 + 0.02 * f), yy + 0.005 + 0.025 * f, zz))
         return aus
     return loft(qs, z0, z1, n)
 

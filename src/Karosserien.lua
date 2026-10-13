@@ -10,7 +10,7 @@ return {
 			Karosserie = { groesse = { 8.0741, 2.5, 15.5 }, mitte = { 0, 1.8, 0 } },
 			Verkleidung = { groesse = { 8.2357, 2.39, 15.562 }, mitte = { 0, 1.745, 0 } },
 			Glas = { groesse = { 6.0368, 2.1035, 9 }, mitte = { 0, 3.5781, 2.2 } },
-			Dach = { groesse = { 6.1209, 1.8064, 6 }, mitte = { -0, 3.7568, 3.5 } },
+			Dach = { groesse = { 6.1209, 1.8062, 6 }, mitte = { -0, 3.7567, 3.5 } },
 		},
 		anbau = {
 			{ n = "Scheinwerfer", a = "scheinwerfer", g = { 1.35, 0.16, 0.25 }, p = { 2.35, 1.62, -7.3 }, s = true, r = { 0, -14, 0 } },

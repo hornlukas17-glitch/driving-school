@@ -1,5 +1,6 @@
-"""v2: Teile getrennt reduzieren (Ränder bleiben gleich -> keine Risse, saubere Kanten Glas/Lack),
-Beschriftung stärker geglättet, Fransen unten abgeschnitten, Lichter direkt Teil der Oberfläche."""
+"""v3: Teile getrennt reduzieren (Ränder bleiben gleich -> keine Risse, saubere Kanten Glas/Lack),
+Beschriftung stärker geglättet, Fransen unten abgeschnitten, mehr Dreiecke + Normalen (glatte Flächen),
+Lichtbänder vorne/hinten als durchgehende, saubere Leuchtleisten (Verlauf aus den Lichtflächen des Modells)."""
 import numpy as np, fast_simplification as fs, sys, json, os
 from scipy import sparse
 from scipy.sparse.csgraph import connected_components
@@ -32,7 +33,8 @@ for _ in range(4):                                                  # Zone glät
     vorne=((A@vorne.astype(float)+1.2*vorne)/(np.asarray(A.sum(1)).ravel()+1.2)>0.5)&(cg[:,2]<-6.8)&(L<=1)
 zone=vorne|((cg[:,2]>8.3)&(cg[:,1]<1.35)&(L<=1))|((np.abs(cg[:,0])>2.9)&(cg[:,1]<0.95)&(np.abs(cg[:,2])<3.2)&(L<=1))
 print("schwarze Zonen",zone.sum())
-# Beschriftung glätten (Lichter schützen: dürfen nur schrumpfen/wachsen unter sich)
+LICHT_PUNKTE={lab:cg[L==lab] for lab in (3,4,5,6)}
+# Beschriftung glätten
 for _ in range(15):
     M=np.zeros((len(F),7))
     for k in range(7): M[:,k]=A@(L==k).astype(float)
@@ -52,6 +54,7 @@ for k,grenze in ((0,150),(1,25),(2,150)):
         L[idx]=M.argmax(1)
     print("Label",k,"Inseln",nc,"angeglichen",len(idx))
 L[zone]=7
+L[(L>=3)&(L<=6)]=1          # unter den Leuchtleisten: schwarzes Gehäuse
 # Taubin-Glättung (offene Ränder fest)
 u,inv=np.unique(F,return_inverse=True); V=V[u]; F=inv.reshape(-1,3)
 E=np.sort(np.concatenate([F[:,[0,1]],F[:,[1,2]],F[:,[2,0]]]),1)
@@ -59,7 +62,7 @@ k_=E[:,0]*len(V)+E[:,1]; uk,cnt=np.unique(k_,return_counts=True)
 rand=np.zeros(len(V),bool); be=uk[cnt==1]; rand[be//len(V)]=True; rand[be%len(V)]=True
 Av=sparse.coo_matrix((np.ones(len(E)*2),(np.r_[E[:,0],E[:,1]],np.r_[E[:,1],E[:,0]])),shape=(len(V),len(V))).tocsr(); Av.data[:]=1
 deg=np.asarray(Av.sum(1)).ravel(); frei=(~rand)[:,None]
-for it in range(12):
+for it in range(30):
     for lam in (0.5,-0.53):
         V=np.where(frei,V+lam*((Av@V)/deg[:,None]-V),V)
 cen=V[F].mean(1)
@@ -74,7 +77,7 @@ from scipy.spatial import cKDTree
 # Lack + Verkleidung zusammen reduzieren (nur Glas-/Licht-/offene Ränder bleiben fest), dann neu beschriften
 rest=(L==0)|(L==1)
 Vr,Fr=teil(rest)
-Vr,Fr=fs.simplify(Vr,Fr,target_count=44000,agg=5,preserve_border=True)
+Vr,Fr=fs.simplify(Vr,Fr,target_count=72000,agg=4,preserve_border=True)
 print("Lack+Verkleidung",len(Fr))
 baum=cKDTree(cen[rest]); Lr_alt=L[rest]
 _,nn=baum.query(Vr[Fr].mean(1),k=9)
@@ -83,6 +86,12 @@ Ar=adj_faces(Fr,len(Vr))
 for _ in range(6):
     anteil=(Ar@Lr.astype(float)+1.5*Lr)/(np.asarray(Ar.sum(1)).ravel()+1.5)
     Lr=anteil>0.5
+# Sprenkel weg: kleine Inseln in Lack bzw. Schwarz umdrehen
+for wert,grenze in ((True,40),(False,40)):
+    m=Lr==wert
+    nc,cc=connected_components(Ar[m][:,m],directed=False)
+    klein=np.bincount(cc)[cc]<grenze
+    Lr[np.where(m)[0][klein]]=not wert
 cr=Vr[Fr].mean(1)
 def stueck(Vx,Fx,m):
     Fm=Fx[m]; uu,ii=np.unique(Fm,return_inverse=True); return Vx[uu],ii.reshape(-1,3)
@@ -95,23 +104,82 @@ def aufteilen(maske, namen, meta=None):
         meshes[name]=(Vx,Fx,meta) if meta and i>0 else (Vx,Fx)
         print(name,len(Fx))
 lackteile=int(np.ceil((~Lr).sum()/19000)); trimteile=int(np.ceil(Lr.sum()/19000))
-aufteilen(~Lr,["Karosserie","Heckpartie","Mittelteil"][:lackteile])
+aufteilen(~Lr,["Karosserie","Heckpartie","Mittelteil","Lack4","Lack5"][:lackteile])
 # schwarze Zonen getrennt reduziert und an die Verkleidung gehängt
 Vz,Fz=reduziere(*teil(L==7),9000); print("Zonen",len(Fz))
 Fr=np.concatenate([Fr,Fz+len(Vr)]); Vr=np.concatenate([Vr,Vz]); Lr=np.r_[Lr,np.ones(len(Fz),bool)]; cr=Vr[Fr].mean(1)
 trimteile=int(np.ceil(Lr.sum()/19000))
-aufteilen(Lr,["Verkleidung","Verkleidung2"][:trimteile],{"n":"Verkleidung2","a":"schwarz"})
+aufteilen(Lr,["Verkleidung","Verkleidung2","Verkleidung3"][:trimteile],{"n":"Verkleidung2","a":"schwarz"})
 Vg,Fg=reduziere(*teil(L==2),7000); meshes["Glas"]=(Vg,Fg); print("Glas",len(Fg))
-for lab,name,nm,a in ((3,"LichtV","Scheinwerfer","scheinwerfer"),(5,"BlinkV","Blinker#","blinker"),(4,"LichtH","Ruecklicht","neon_rot"),(6,"BlinkH","Blinker#","blinker")):
-    for s,seite in ((1,"R"),(-1,"L")):
-        m=(L==lab)&((np.sign(cen[:,0])==s)|((cen[:,0]==0)&(s>0)))
-        if not m.any(): continue
-        Vx,Fx=reduziere(*teil(m),3000)
-        meshes[name+seite]=(Vx,Fx,{"n":nm.replace("#",seite),"a":a})
-        print(name+seite,len(Fx))
+# ---- Leuchtleisten: durchgehende Bänder entlang der Lichtlinie des Modells ----
+def bandkurve(p, vorne):
+    xm=np.percentile(np.abs(p[:,0]),99)
+    xs=np.arange(-xm,xm+1e-6,0.08)
+    ys=[];zs=[];ok=[]
+    for x in xs:
+        q=p[np.abs(p[:,0]-x)<0.07]
+        if len(q)<2: ys.append(np.nan); zs.append(np.nan); continue
+        ys.append(np.median(q[:,1])); zs.append(np.percentile(q[:,2],15 if vorne else 85))
+    ys=np.array(ys); zs=np.array(zs)
+    gut=~np.isnan(ys)
+    ys=np.interp(xs,xs[gut],ys[gut]); zs=np.interp(xs,xs[gut],zs[gut])
+    ys=(ys+ys[::-1])/2; zs=(zs+zs[::-1])/2                     # symmetrisch
+    k=np.ones(7)/7
+    for _ in range(3):
+        ys=np.convolve(np.pad(ys,3,mode="edge"),k,"valid"); zs=np.convolve(np.pad(zs,3,mode="edge"),k,"valid")
+    return np.stack([xs,ys,zs],1)
+def band(C, vorne, h, t, von, bis):
+    """Rechteck-Röhre entlang C[von:bis+1]"""
+    C=C[von:bis+1]
+    T=np.gradient(C,axis=0); T/=np.linalg.norm(T,axis=1,keepdims=True)
+    N=np.stack([T[:,2],np.zeros(len(T)),-T[:,0]],1) if vorne else np.stack([-T[:,2],np.zeros(len(T)),T[:,0]],1)
+    N/=np.linalg.norm(N,axis=1,keepdims=True)
+    up=np.array([0,1,0])
+    M=C+N*(t/2+0.01)
+    ecken=[(+1,+1),(+1,-1),(-1,-1),(-1,+1)]
+    Vb=np.concatenate([M+a*up*h/2+b*N*t/2 for a,b in ecken],0)   # Block je Ecke
+    n=len(C); Fb=[]
+    for e in range(4):
+        e2=(e+1)%4
+        for i in range(n-1):
+            a0,a1,b0,b1=e*n+i,e*n+i+1,e2*n+i,e2*n+i+1
+            Fb+=[(a0,b0,a1),(a1,b0,b1)]
+    for i in (0,n-1):
+        q=[e*n+i for e in range(4)]
+        Fb+=[(q[0],q[1],q[2]),(q[0],q[2],q[3])] if i==0 else [(q[0],q[2],q[1]),(q[0],q[3],q[2])]
+    return Vb,np.array(Fb)
+for vorne,pkt,name,nm,a,h,t,grenze in ((True,np.concatenate([LICHT_PUNKTE[3][LICHT_PUNKTE[3][:,1]>2.0],LICHT_PUNKTE[5][LICHT_PUNKTE[5][:,1]>2.0]]),"V","Scheinwerfer","scheinwerfer",0.13,0.12,2.8),
+                                        (False,np.concatenate([LICHT_PUNKTE[4],LICHT_PUNKTE[6]]),"H","Ruecklicht","neon_rot",0.2,0.12,2.45)):
+    C=bandkurve(pkt,vorne)
+    xs=C[:,0]; mitte=np.argmin(np.abs(xs)); li=np.where(xs<=-grenze)[0][-1]; re=np.where(xs>=grenze)[0][0]
+    for teilname,von,bis,meta_ in (("BlinkL",0,li,{"n":"BlinkerL","a":"blinker"}),("LichtL",li,mitte,{"n":nm,"a":a}),
+                                    ("LichtR",mitte,re,{"n":nm,"a":a}),("BlinkR",re,len(C)-1,{"n":"BlinkerR","a":"blinker"})):
+        Vb,Fb=band(C,vorne,h,t,von,bis)
+        nn=teilname[:-1]+name+teilname[-1]          # z. B. LichtVL, BlinkHR
+        meshes[nn]=(Vb,Fb,meta_)
+        print(nn,len(Fb),"x",round(xs[von],2),"..",round(xs[bis],2))
+# ---- Normalen: über alle Teile gemeinsam (gleiche Normale an Teilgrenzen -> keine sichtbaren Nähte) ----
+schluessel={}
+summe=[]
+def key(P): return [tuple(r) for r in np.round(P,3)]
+alle=[k for k in meshes if not (k.startswith("Licht") or k.startswith("Blink"))]
+acc={}
+for k2 in alle:
+    Vx,Fx=meshes[k2][0],meshes[k2][1]
+    fn=np.cross(Vx[Fx[:,1]]-Vx[Fx[:,0]],Vx[Fx[:,2]]-Vx[Fx[:,0]])
+    Nv=np.zeros_like(Vx)
+    for j in range(3): np.add.at(Nv,Fx[:,j],fn)
+    for kk,nv in zip(key(Vx),Nv):
+        acc[kk]=acc.get(kk,0)+nv
+NORMALEN={}
+for k2 in alle:
+    Vx=meshes[k2][0]
+    Nx=np.array([acc[kk] for kk in key(Vx)])
+    NORMALEN[k2]=Nx/(np.linalg.norm(Nx,axis=1,keepdims=True)+1e-12)
 out={}; meta={}
 for k2,v in meshes.items():
     out[k2+"_V"]=v[0].astype(np.float32); out[k2+"_F"]=v[1].astype(np.int32)
+    if k2 in NORMALEN: out[k2+"_N"]=NORMALEN[k2].astype(np.float32)
     if len(v)>2 and v[2]: meta[k2]=v[2]
 out["Dach_V"]=np.zeros((0,3),np.float32); out["Dach_F"]=np.zeros((0,3),np.int32)
 out["meta"]=np.array(json.dumps(meta))

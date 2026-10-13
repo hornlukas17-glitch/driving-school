@@ -1,5 +1,10 @@
 # Changelog
 
+## v21
+- Vanta GS: Lichtleiste vorne und Rücklichtband hinten jetzt durchgehend und sauber (eigene Leuchtleisten entlang der Lichtlinie des Modells, Blinker an den Enden). Neue `dist/mesh/VantaGS.obj` importieren.
+- Glattere Karosserie: stärker geglättet, mehr als doppelt so viele Dreiecke, eigene Normalen für weiche Schattierung, Sprenkel im Lack entfernt.
+- Fix: Scheinwerfer der Vanta GS leuchten nach vorn (bei gedreht importierten Modellen zeigte das Licht nach hinten).
+
 ## v20
 - Vanta GS: Frontecken sauber – die schwarze Frontzone läuft nicht mehr um die Ecke (keine blauen Zacken mehr), Lack/Schwarz-Grenzen glatter. Neue `dist/mesh/VantaGS.obj` importieren.
 - In Studio geprüft: Fahrer sitzt komplett im Auto (Arm innerhalb der Tür, Kopf unter dem Dach).

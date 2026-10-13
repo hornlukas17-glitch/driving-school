@@ -42,11 +42,19 @@ newmtl LichtVR
 Kd 0.5 0.5 0.5
 d 1.0
 
+newmtl Mittelteil
+Kd 0.5 0.5 0.5
+d 1.0
+
 newmtl Verkleidung
 Kd 0.1 0.1 0.1
 d 1.0
 
 newmtl Verkleidung2
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl Verkleidung3
 Kd 0.5 0.5 0.5
 d 1.0
 

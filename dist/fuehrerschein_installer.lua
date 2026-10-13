@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v20
+--  DRIVER'S LICENSE SYSTEM v21
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -4989,7 +4989,8 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 					mp.CastShadow = false
 					if d.a == "scheinwerfer" then
 						local licht = Instance.new("SpotLight")
-						licht.Face = Enum.NormalId.Front
+						-- the mesh part may be turned around (drehung 180): then its front face points backwards
+						licht.Face = ((rundDef.drehung or Auto.MESH_DREHUNG) % 360 == 180) and Enum.NormalId.Back or Enum.NormalId.Front
 						licht.Angle = 55
 						licht.Range = 50
 						licht.Brightness = 1.2
@@ -6405,19 +6406,21 @@ return {
 		armaturenZ = -2,
 		drehung = 180,
 		mesh = {
-			BlinkHL = { groesse = { 0.4353, 0.1754, 0.9406 }, mitte = { -2.8368, 3.1413, 7.5583 }, n = "BlinkerL", a = "blinker" },
-			BlinkHR = { groesse = { 0.427, 0.1833, 0.983 }, mitte = { 2.8562, 3.1447, 7.5193 }, n = "BlinkerR", a = "blinker" },
-			BlinkVL = { groesse = { 0.709, 2.053, 0.8837 }, mitte = { -3.1822, 1.5596, -6.9666 }, n = "BlinkerL", a = "blinker" },
-			BlinkVR = { groesse = { 0.7508, 2.0686, 1.3082 }, mitte = { 3.1926, 1.5687, -7.1517 }, n = "BlinkerR", a = "blinker" },
-			Glas = { groesse = { 6.1495, 1.7708, 10.2874 }, mitte = { 0.0027, 4.1296, 1.6387 } },
-			Heckpartie = { groesse = { 7.498, 4.3977, 16.3466 }, mitte = { 0.003, 2.7112, 0.9089 } },
-			Karosserie = { groesse = { 7.0101, 2.4534, 1.488 }, mitte = { -0.0052, 1.7729, -7.582 } },
-			LichtHL = { groesse = { 2.7714, 0.2557, 0.7324 }, mitte = { -1.282, 3.2101, 8.293 }, n = "Ruecklicht", a = "neon_rot" },
-			LichtHR = { groesse = { 2.7122, 0.2418, 0.6942 }, mitte = { 1.3175, 3.2029, 8.3122 }, n = "Ruecklicht", a = "neon_rot" },
-			LichtVL = { groesse = { 2.9243, 2.6653, 1.9529 }, mitte = { -1.3803, 1.8542, -7.1927 }, n = "Scheinwerfer", a = "scheinwerfer" },
-			LichtVR = { groesse = { 2.9038, 2.6103, 2.058 }, mitte = { 1.3942, 1.838, -7.292 }, n = "Scheinwerfer", a = "scheinwerfer" },
-			Verkleidung = { groesse = { 5.7368, 1.8291, 0.7349 }, mitte = { -0.0004, 1.4538, -7.9612 } },
-			Verkleidung2 = { groesse = { 7.4893, 4.1019, 17.0185 }, mitte = { 0.0073, 2.5626, 0.5097 }, n = "Verkleidung2", a = "schwarz" },
+			BlinkHL = { groesse = { 0.6036, 0.2091, 0.4538 }, mitte = { -2.7857, 3.1519, 8.0194 }, n = "BlinkerL", a = "blinker" },
+			BlinkHR = { groesse = { 0.5234, 0.2091, 0.3976 }, mitte = { 2.7493, 3.1519, 7.9913 }, n = "BlinkerR", a = "blinker" },
+			BlinkVL = { groesse = { 0.4371, 0.1727, 0.3246 }, mitte = { -3.0999, 2.5005, -7.0249 }, n = "BlinkerL", a = "blinker" },
+			BlinkVR = { groesse = { 0.4371, 0.1727, 0.3246 }, mitte = { 3.0293, 2.5005, -7.0249 }, n = "BlinkerR", a = "blinker" },
+			Glas = { groesse = { 6.1492, 1.7719, 10.2832 }, mitte = { 0.0027, 4.1297, 1.6394 } },
+			Heckpartie = { groesse = { 7.1411, 3.0209, 5.1285 }, mitte = { 0.0007, 2.0234, -5.2276 } },
+			Karosserie = { groesse = { 6.2131, 2.1651, 0.8334 }, mitte = { -0.0123, 1.6387, -7.9082 } },
+			LichtHL = { groesse = { 2.5479, 0.3173, 0.6244 }, mitte = { -1.2722, 3.2093, 8.4593 }, n = "Ruecklicht", a = "neon_rot" },
+			LichtHR = { groesse = { 2.5526, 0.3198, 0.6787 }, mitte = { 1.2782, 3.2081, 8.4322 }, n = "Ruecklicht", a = "neon_rot" },
+			LichtVL = { groesse = { 2.9609, 0.3214, 1.197 }, mitte = { -1.4757, 2.3834, -7.6902 }, n = "Scheinwerfer", a = "scheinwerfer" },
+			LichtVR = { groesse = { 2.8808, 0.3214, 1.197 }, mitte = { 1.4452, 2.3834, -7.6902 }, n = "Scheinwerfer", a = "scheinwerfer" },
+			Mittelteil = { groesse = { 7.4942, 4.3711, 12.3801 }, mitte = { 0.0027, 2.7252, 2.8966 } },
+			Verkleidung = { groesse = { 5.4438, 1.8285, 0.6085 }, mitte = { 0.0028, 1.4535, -8.0244 } },
+			Verkleidung2 = { groesse = { 6.9697, 1.9953, 1.0151 }, mitte = { -0.0061, 1.5407, -7.531 }, n = "Verkleidung2", a = "schwarz" },
+			Verkleidung3 = { groesse = { 7.4877, 4.1019, 16.135 }, mitte = { 0.0059, 2.5626, 0.9651 }, n = "Verkleidung2", a = "schwarz" },
 			Radhaus = { groesse = { 6.9, 2.3083, 13.7185 }, mitte = { 0, 1.9659, 0 }, n = "Radhaus", a = "schwarz" },
 		},
 		anbau = {
@@ -6426,8 +6429,8 @@ return {
 			{ g = { 6.6, 0.4, 15.6 }, p = { 0, 3.1, 0.3 } },
 			{ g = { 5.6, 1.3, 7 }, p = { 0, 4.2, 1 } },
 		},
-		kennzeichen = { vorne = { 1.45, -8.177 }, hinten = { 2.05, 9.162 } },
-		spoiler = { 4.255, 7.6, 0.4 },
+		kennzeichen = { vorne = { 1.45, -8.179 }, hinten = { 2.05, 9.167 } },
+		spoiler = { 4.217, 7.6, 0.4 },
 	},
 	limousine = {
 		vorlage = "Executive",
@@ -6676,7 +6679,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v20 loaded")
+print("[Driving School] client v21 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -9605,7 +9608,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v20 loading")
+	print("[Driving School] start screen v21 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -9792,4 +9795,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v20 installed. Press F5 to test.")
+print("License system v21 installed. Press F5 to test.")

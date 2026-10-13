@@ -1000,7 +1000,8 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 					mp.CastShadow = false
 					if d.a == "scheinwerfer" then
 						local licht = Instance.new("SpotLight")
-						licht.Face = Enum.NormalId.Front
+						-- the mesh part may be turned around (drehung 180): then its front face points backwards
+						licht.Face = ((rundDef.drehung or Auto.MESH_DREHUNG) % 360 == 180) and Enum.NormalId.Back or Enum.NormalId.Front
 						licht.Angle = 55
 						licht.Range = 50
 						licht.Brightness = 1.2

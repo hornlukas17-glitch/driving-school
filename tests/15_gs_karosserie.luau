@@ -52,6 +52,10 @@ pruefe("mesh parts", a:FindFirstChild("Karosserie").ClassName == "MeshPart" and 
 pruefe("no block windows", a:FindFirstChild("Seitenscheiben") == nil)
 local function mesh(name) local n = 0 for _, t in a:GetChildren() do if t.Name == name and t.ClassName == "MeshPart" then n += 1 end end return n end
 pruefe("surface headlights", mesh("Scheinwerfer") == 2 and a:FindFirstChild("Scheinwerfer"):FindFirstChildOfClass("SpotLight") ~= nil)
+local spot = a:FindFirstChild("Scheinwerfer"):FindFirstChildOfClass("SpotLight")
+local sw = a:FindFirstChild("Scheinwerfer")
+local vorwaerts = sw.CFrame:VectorToWorldSpace(spot.Face == Enum.NormalId.Back and Vector3.new(0, 0, 1) or Vector3.new(0, 0, -1))
+pruefe("headlights shine forward", vorwaerts:Dot(a.Chassis.CFrame.LookVector) > 0.9)
 pruefe("surface tail lights", mesh("Ruecklicht") == 2)
 pruefe("surface indicators", mesh("BlinkerL") == 2 and mesh("BlinkerR") == 2)
 pruefe("spoke rims", zahl("Felge") >= 4 * 10 and zahl("Bremssattel") == 4)

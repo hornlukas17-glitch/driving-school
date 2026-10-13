@@ -318,7 +318,8 @@ def spiegel(teil):
     return [(-x, y, z) for x, y, z in verts], [(a, c, b) for a, b, c in faces]
 
 
-def schreiben(pfad, titel, teile):
+def schreiben(pfad, titel, teile, normalen=None):
+    normalen = normalen or {}
     # eigene Gruppe + eigenes Material je Teil, damit der Roblox-Importer getrennte MeshParts anlegt
     mtl = os.path.splitext(os.path.basename(pfad))[0] + ".mtl"
     zeilen = [f"# {titel} - own design, generated for Roblox (import with the 3D Importer)", f"mtllib {mtl}"]
@@ -329,14 +330,22 @@ def schreiben(pfad, titel, teile):
     os.makedirs(os.path.dirname(pfad), exist_ok=True)
     open(os.path.join(os.path.dirname(pfad), mtl), "w").write("\n".join(mtl_zeilen))
     basis = 1
+    nbasis = 1
     for name, (verts, faces) in teile:
         zeilen.append(f"o {name}")
         zeilen.append(f"g {name}")
         zeilen.append(f"usemtl {name}")
         for x, y, z in verts:
             zeilen.append(f"v {x:.4f} {y:.4f} {z:.4f}")
-        for a, b, c in faces:
-            zeilen.append(f"f {a + basis} {b + basis} {c + basis}")
+        if name in normalen:                    # glatte Schattierung (gemeinsame Normalen an Teilgrenzen)
+            for x, y, z in normalen[name]:
+                zeilen.append(f"vn {x:.4f} {y:.4f} {z:.4f}")
+            for a, b, c in faces:
+                zeilen.append(f"f {a + basis}//{a + nbasis} {b + basis}//{b + nbasis} {c + basis}//{c + nbasis}")
+            nbasis += len(verts)
+        else:
+            for a, b, c in faces:
+                zeilen.append(f"f {a + basis} {b + basis} {c + basis}")
         basis += len(verts)
     os.makedirs(os.path.dirname(pfad), exist_ok=True)
     open(pfad, "w").write("\n".join(zeilen) + "\n")
@@ -370,11 +379,11 @@ def linie(name, punkte, art="fuge", dicke=0.035, spiegeln=False):
     return teile
 
 
-def erzeugen(typ, vorlage, titel, rad, meshes, anbau, kollision, kennzeichen, spoiler, sitz_y=None, armaturen_z=None, drehung=None, sitz_x=None):
+def erzeugen(typ, vorlage, titel, rad, meshes, anbau, kollision, kennzeichen, spoiler, sitz_y=None, armaturen_z=None, drehung=None, sitz_x=None, normalen=None):
     """meshes: {"Karosserie": (verts, faces), ...}; rad = (R, spur, achse)"""
     for name, m in meshes.items():
         assert len(m[1]) <= 20000, f"{name} hat {len(m[1])} Dreiecke (Roblox-Limit 20000)"
-    schreiben(os.path.join(ROOT, "dist", "mesh", vorlage + ".obj"), titel, [(k, (m[0], m[1])) for k, m in meshes.items()])
+    schreiben(os.path.join(ROOT, "dist", "mesh", vorlage + ".obj"), titel, [(k, (m[0], m[1])) for k, m in meshes.items()], normalen)
     info = {"typ": typ, "vorlage": vorlage, "rad": list(rad), "mesh": {}, "anbau": anbau,
             "kollision": kollision, "kennzeichen": kennzeichen, "spoiler": spoiler}
     if sitz_y is not None:

@@ -1,0 +1,103 @@
+newmtl Karosserie
+Kd 0.8 0.1 0.1
+d 1.0
+
+newmtl Verkleidung
+Kd 0.1 0.1 0.1
+d 1.0
+
+newmtl Glas
+Kd 0.2 0.25 0.3
+d 1.0
+
+newmtl Dach
+Kd 0.8 0.1 0.1
+d 1.0
+
+newmtl LichtVR
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl LichtVL
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl LeisteVR
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl LeisteVL
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl BlinkVR
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl BlinkVL
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl Grill
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl Einlass
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl EckeinlassR
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl EckeinlassL
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl LichtHR
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl LichtHL
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl BlinkHR
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl BlinkHL
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl Blende
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl Diffusor
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl KiemeR
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl KiemeL
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl Griff0R
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl Griff0L
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl Griff1R
+Kd 0.5 0.5 0.5
+d 1.0
+
+newmtl Griff1L
+Kd 0.5 0.5 0.5
+d 1.0

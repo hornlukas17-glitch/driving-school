@@ -1,5 +1,11 @@
 # Changelog
 
+## v17
+- Neue runde Karosserie für die Limousine „Executive“ (eigenes Design): sportliche Oberklasse-Limousine mit flacher Front, vier Türen, Fensterleiste in Chrom, Diffusor und vier runden Endrohren. `dist/mesh/Executive.obj` importieren.
+- Alle runden Autos realistischer: echter Karosserie-Querschnitt (unten eingezogen, Schulter, runde Oberkante) statt senkrechter Seiten.
+- Scheinwerfer, Rückleuchten, Blinker, Grill und Lufteinlässe liegen jetzt als gebogene Flächen auf der Karosserie statt als aufgesetzte Blöcke. Endrohre sind rund.
+- Dachhaut läuft an den Enden aus (keine Zacke mehr im Seitenfenster).
+
 ## v16
 - Getönte Scheiben (dunkler, weniger durchsichtig): Kabinen wirken geschlossen statt hohl.
 - Dachhaut beginnt erst hinter der Frontscheibe: keine zackige Kante mehr im vorderen Seitenfenster (neue OBJ-Dateien importieren).

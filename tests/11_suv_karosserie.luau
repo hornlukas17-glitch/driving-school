@@ -28,9 +28,12 @@ frage("autoWeg")
 M.laufen(M.zeit() + 1)
 
 -- 2) imported model "RangerX" in ServerStorage (like the 3D importer makes it)
+local KM = require(game.ServerScriptService.FuehrerscheinServer.Karosserien).suv
 local vorlage = Instance.new("Model")
 vorlage.Name = "RangerX"
-for _, n in { "Karosserie", "Verkleidung", "Glas", "Dach" } do
+local namen = {}
+for n in KM.mesh do table.insert(namen, n) end
+for _, n in namen do
 	local mp = Instance.new("MeshPart")
 	mp.Name = n
 	mp.Parent = vorlage
@@ -44,7 +47,8 @@ local zahl = function(name) local n = 0 for _, t in a:GetChildren() do if t.Name
 for _, t in a:GetChildren() do if t.ClassName == "MeshPart" or t.Name:find("Rund") or t.Name == "Karosserie" then print("  part", t.Name, t.ClassName) end end
 pruefe("mesh parts", a:FindFirstChild("Karosserie").ClassName == "MeshPart" and a:FindFirstChild("Rund_Glas") ~= nil and a:FindFirstChild("Rund_Verkleidung") ~= nil and a:FindFirstChild("Rund_Dach") ~= nil)
 pruefe("no block windows", a:FindFirstChild("Seitenscheiben") == nil and a:FindFirstChild("Reserverad") == nil)
-pruefe("body size", (a.Karosserie.Size - Vector3.new(7.797, 3.77, 17.5)).Magnitude < 0.01)
+local gk = KM.mesh.Karosserie.groesse
+pruefe("body size", (a.Karosserie.Size - Vector3.new(gk[1], gk[2], gk[3])).Magnitude < 0.01)
 pruefe("headlights with light", zahl("Scheinwerfer") == 2 and a.Scheinwerfer:FindFirstChildOfClass("SpotLight") ~= nil)
 pruefe("indicators", zahl("BlinkerL") == 2 and zahl("BlinkerR") == 2)
 pruefe("tail lights", zahl("Ruecklicht") == 2)

@@ -4,7 +4,7 @@ Passt zu Auto.MODELLE.suv: Räder R = 1.6 bei x = ±3.4, z = ±5.6, Länge 17.5.
 Aufruf:  python3 tools/mesh/suv.py  ->  dist/mesh/RangerX.obj, tools/mesh/suv_info.json, src/Karosserien.lua
 """
 import math
-from basis import Form, glatt, loft, sauber, zusammen, doppelseitig, dach_teil, saeulen_teil, verkleidung_teil, teil, erzeugen, linie
+from basis import Form, glatt, loft, sauber, zusammen, doppelseitig, dach_teil, saeulen_teil, verkleidung_teil, teil, erzeugen, linie, profil, flaechen_paar, flaeche_mitte
 
 LH = 8.75              # halbe Länge
 ACHSE = 5.6
@@ -76,7 +76,8 @@ def gh_unten(z):
 
 
 form = Form(halbbreite=halbbreite, boden=boden, oben=oben, gh_oben=gh_oben, gh_breite=gh_breite, gh_unten=gh_unten,
-            g_von=G_VON, g_bis=G_BIS, lh=LH, n_unten=7.0, n_glas=7.0)
+            g_von=G_VON, g_bis=G_BIS, lh=LH, n_unten=5.5, n_glas=6.0,
+            profil=profil(einzug=0.08, schulter=0.62, oben=0.07))
 
 
 def kante(z):
@@ -90,6 +91,21 @@ def kante(z):
     if z > 7.3:                                      # Heckschürze
         k = max(k, 1.85 + 0.45 * glatt((z - 7.3) / 0.8))
     return k
+
+
+def flaechen():
+    m = {}
+    flaechen_paar(m, form, "LichtV", "Scheinwerfer", "scheinwerfer", "vorne", [(1.6, 4.08), (3.1, 4.02), (3.15, 4.34), (1.55, 4.4)], n_u=12, n_v=3)
+    flaechen_paar(m, form, "LeisteV", "Tagfahrlicht", "neon_weiss", "vorne", [(1.65, 3.94), (3.1, 3.88), (3.1, 3.95), (1.65, 4.0)], n_u=10, n_v=1, abstand=0.045)
+    flaechen_paar(m, form, "BlinkV", "Blinker#", "blinker", "vorne", [(3.18, 4.02), (3.45, 3.98), (3.45, 4.28), (3.2, 4.32)], n_u=3, n_v=2)
+    flaechen_paar(m, form, "Nebel", "Nebelscheinwerfer", "neon_weiss", "vorne", [(2.45, 2.12), (3.05, 2.12), (3.05, 2.3), (2.45, 2.3)], n_u=4, n_v=1)
+    flaeche_mitte(m, form, "Grill", "Kuehlergrill", "grill", "vorne", [(-1.55, 3.15), (1.55, 3.15), (1.55, 3.98), (-1.55, 3.98)], n_u=14, n_v=3)
+    flaeche_mitte(m, form, "Grillleiste", "Grillchrom", "chrom", "vorne", [(-1.6, 3.98), (1.6, 3.98), (1.6, 4.07), (-1.6, 4.07)], n_u=12, n_v=1, abstand=0.045)
+    flaeche_mitte(m, form, "Einlass", "Lufteinlass", "grill", "vorne", [(-2.2, 1.85), (2.2, 1.85), (2.2, 2.32), (-2.2, 2.32)], n_u=14, n_v=2)
+    flaechen_paar(m, form, "LichtH", "Ruecklicht", "neon_rot", "hinten", [(1.55, 4.28), (3.15, 4.3), (3.15, 4.6), (1.55, 4.56)], n_u=10, n_v=3)
+    flaechen_paar(m, form, "BlinkH", "Blinker#", "blinker", "hinten", [(3.18, 4.3), (3.42, 4.3), (3.42, 4.56), (3.18, 4.6)], n_u=3, n_v=2)
+    flaeche_mitte(m, form, "Band", "Ruecklichtband", "neon_rot", "hinten", [(-1.5, 4.4), (1.5, 4.4), (1.5, 4.48), (-1.5, 4.48)], n_u=10, n_v=1)
+    return m
 
 
 def anbauteile():
@@ -109,25 +125,14 @@ def anbauteile():
     ds = [0, gh_oben(6.3) + 0.08, 6.55]
     bl = [0, gh_oben(6.4) + 0.05, 6.4]
     t = [
-        teil("Kuehlergrill", "grill", (3.6, 0.95, 0.15), plus(grill, dz=0.02)),
-        teil("Grillchrom", "chrom", (3.7, 0.08, 0.1), plus(grill, dy=0.5, dz=-0.04)),
-        teil("Lufteinlass", "grill", (4.2, 0.5, 0.08), luft),
         teil("Unterfahrschutz", "chrom", (3.2, 0.18, 0.1), plus(luft, dy=-0.45, dz=-0.04)),
-        teil("Scheinwerferrahmen", "schwarz", (1.7, 0.44, 0.12), plus(sw, dz=0.1), True),
-        teil("Scheinwerfer", "scheinwerfer", (1.5, 0.3, 0.2), plus(sw, dz=0.06), True),
-        teil("Tagfahrlicht", "neon_weiss", (1.5, 0.06, 0.08), plus(sw, dy=-0.22, dz=0.02), True),
-        teil("Blinker", "blinker", (0.3, 0.3, 0.2), plus(sw, dx=0.9, dz=0.12), True),
-        teil("Nebelscheinwerfer", "neon_weiss", (0.7, 0.16, 0.08), nebel, True),
-        teil("Ruecklicht", "neon_rot", (1.3, 0.3, 0.2), plus(rl, dz=-0.04), True),
-        teil("Blinker", "blinker", (0.3, 0.3, 0.2), plus(rl, dx=0.75, dz=-0.06), True),
-        teil("Auspuff", "chrom", (0.7, 0.3, 0.3), plus(auspuff, dz=-0.15), True),
+        teil("Auspuff", "chrom", (0.5, 0.36, 0.36), plus(auspuff, dz=-0.1), True, zylinder=True),
         teil("Spiegel", "lack", (0.7, 0.5, 0.8), plus(sp, dx=0.45, dy=0.15), True),
         teil("Spiegelfuss", "schwarz", (0.5, 0.15, 0.4), plus(sp, dx=0.1, dz=0.1), True),
         teil("Griff", "chrom", (0.08, 0.14, 0.75), plus(seite(4.4, 0.0, 0.12), dx=0.04), True),
         teil("Griff", "chrom", (0.08, 0.14, 0.75), plus(seite(4.45, 3.4, 0.12), dx=0.04), True),
         teil("Zierleiste", "chrom", (0.05, 0.08, 6.5), plus(seite(2.0, 0.6, 0.06), dx=0.04), True),
         teil("Dachreling", "alu", (0.16, 0.14, 6.2), reling, True),
-        teil("Ruecklichtband", "neon_rot", (2.4, 0.1, 0.08), band),
         teil("Dachspoiler", "lack", (5.4, 0.12, 0.6), ds),
         teil("Bremslicht_oben", "neon_rot", (1.2, 0.08, 0.1), plus(bl, dy=0.08, dz=0.25)),
     ]
@@ -146,6 +151,7 @@ if __name__ == "__main__":
         "Glas": doppelseitig(*sauber(loft(form.querschnitt_glas, G_VON, G_BIS, 60))),
         "Dach": sauber(zusammen(dach_teil(form, -0.75, 6.6), saeulen_teil(form, ((0.85, 1.3, 4), (4.15, 4.5, 4), (6.55, 7.9, 10))))),
     }
+    meshes.update(flaechen())
     anbau, kennz, spoiler = anbauteile()
     kollision = [{"g": [7.4, 1.3, 16.5], "p": [0, 2 * RAD_R + 0.95, 0]}, {"g": [6.6, 2.4, 10], "p": [0, 6.0, 2.4]}]
     erzeugen("suv", "RangerX", "Ranger X SUV body", (RAD_R, 3.4, ACHSE), meshes, anbau, kollision, kennz, spoiler)

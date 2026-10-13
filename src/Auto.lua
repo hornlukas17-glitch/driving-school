@@ -871,9 +871,13 @@ local ANBAU_ART = {
 	neon_rot = { farbe = Color3.fromRGB(170, 15, 15), mat = Enum.Material.Neon },
 	blinker = { farbe = Color3.fromRGB(150, 95, 35), mat = Enum.Material.SmoothPlastic },
 	fuge = { farbe = Color3.fromRGB(8, 8, 10), mat = Enum.Material.SmoothPlastic },
+	glanzschwarz = { farbe = Color3.fromRGB(10, 10, 12), mat = Enum.Material.SmoothPlastic, glanz = 0.35 },
 }
 
 local function meshTeil(vorlage, name)
+	for _, t in vorlage:GetDescendants() do
+		if t:IsA("MeshPart") and t.Name == name then return t end
+	end
 	for _, t in vorlage:GetDescendants() do
 		if t:IsA("MeshPart") and string.find(string.lower(t.Name), string.lower(name), 1, true) then
 			return t
@@ -981,7 +985,24 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 					if kind:IsA("SurfaceAppearance") or kind:IsA("Decal") or kind:IsA("Texture") then kind:Destroy() end
 				end
 				pcall(function() mp.TextureID = "" end)
-				if name == "Glas" then
+				if d.a then -- lights, grille, vents: surface pieces that follow the body
+					local art = ANBAU_ART[d.a] or ANBAU_ART.schwarz
+					mp.Name = d.n or name
+					mp.Color = d.a == "lack" and farbe or art.farbe
+					mp.Material = art.mat
+					mp.Reflectance = art.glanz or 0
+					mp.Transparency = 0
+					mp.CastShadow = false
+					if d.a == "scheinwerfer" then
+						local licht = Instance.new("SpotLight")
+						licht.Face = Enum.NormalId.Front
+						licht.Angle = 55
+						licht.Range = 50
+						licht.Brightness = 1.2
+						licht.Shadows = false
+						licht.Parent = mp
+					end
+				elseif name == "Glas" then
 					mp.Color = Color3.fromRGB(14, 17, 22) -- dark tinted glass, the cabin looks solid
 					mp.Material = Enum.Material.Glass
 					mp.Transparency = 0.12
@@ -1016,7 +1037,8 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 					local richtung = cf:VectorToWorldSpace(Vector3.new(s * t.d[1], t.d[2], t.d[3]))
 					lage = CFrame.lookAt(lage.Position, lage.Position + richtung)
 				end
-				local teil = k(name, v3(t.g), lage, t.a == "lack" and farbe or art.farbe, art.mat, { schatten = t.a == "lack" })
+				if t.f == "zyl" then lage *= CFrame.Angles(0, math.rad(90), 0) end -- round part along the car (exhausts)
+				local teil = k(name, v3(t.g), lage, t.a == "lack" and farbe or art.farbe, art.mat, { schatten = t.a == "lack", form = t.f == "zyl" and Enum.PartType.Cylinder or nil })
 				if t.a == "scheinwerfer" then
 					local licht = Instance.new("SpotLight")
 					licht.Face = Enum.NormalId.Front
@@ -1049,6 +1071,9 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		k("Dachspoiler", V3(B - 1, 0.2, 0.8), at(0, oben + 2.25, L / 2 - 1.6), SCHWARZ)
 		lichter(unten + 1.1, -L / 2 + 0.3, L / 2 - 0.3, 2.3)
 	elseif typ == "limousine" then
+		if rundVorlage then
+			rundBauen()
+		else
 		local unten = R + 0.25
 		k("Karosserie", V3(B, 1.9, L - 0.8), at(0, unten + 0.95, 0), farbe)
 		k("Kollision", V3(B, 0.6, L - 1), at(0, 2 * R + 0.45, 0), farbe, nil, { kollision = true, transparenz = 1, schatten = false })
@@ -1064,6 +1089,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 			k("Zierleiste", V3(0.08, 0.12, L - 3), at(s * (B / 2 + 0.03), unten + 1.5, 0), CHROM, Enum.Material.Metal, { schatten = false })
 		end
 		lichter(unten + 1.2, -L / 2 + 0.4, L / 2 - 0.4, 2.6)
+		end
 	elseif typ == "supersport" then
 		sitzY = 1.15
 		local unten = R + 0.1

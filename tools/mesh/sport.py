@@ -5,7 +5,7 @@ Passt zu Auto.MODELLE.sport: Räder R = 1.3 bei x = ±3.3, z = ±5.0, Länge 15.
 Aufruf:  python3 tools/mesh/sport.py  ->  dist/mesh/VelocityGT.obj, tools/mesh/sport_info.json, src/Karosserien.lua
 """
 import math
-from basis import Form, glatt, loft, sauber, zusammen, doppelseitig, dach_teil, saeulen_teil, verkleidung_teil, teil, erzeugen, linie
+from basis import Form, glatt, loft, sauber, zusammen, doppelseitig, dach_teil, saeulen_teil, verkleidung_teil, teil, erzeugen, linie, profil, flaechen_paar, flaeche_mitte
 
 LH = 7.75              # halbe Länge
 ACHSE = 5.0
@@ -87,7 +87,8 @@ def gh_breite(z, y):
 
 
 form = Form(halbbreite=halbbreite, boden=boden, oben=oben, gh_oben=gh_oben, gh_breite=gh_breite, gh_unten=gh_unten,
-            g_von=G_VON, g_bis=G_BIS, lh=LH, n_unten=4.5, n_glas=5.0, bogen=bogen, kotfluegel=0.22)
+            g_von=G_VON, g_bis=G_BIS, lh=LH, n_unten=4.5, n_glas=5.0, bogen=bogen, kotfluegel=0.22,
+            profil=profil(einzug=0.1, schulter=0.55, oben=0.12))
 
 
 def kante(z):
@@ -102,6 +103,21 @@ def kante(z):
     return k
 
 
+def flaechen():
+    m = {}
+    flaechen_paar(m, form, "LichtV", "Scheinwerfer", "scheinwerfer", "vorne", [(1.65, 1.5), (2.95, 1.56), (2.98, 1.72), (1.58, 1.66)], n_u=12, n_v=3)
+    flaechen_paar(m, form, "LeisteV", "Tagfahrlicht", "neon_weiss", "vorne", [(1.7, 1.42), (2.95, 1.47), (2.95, 1.51), (1.7, 1.46)], n_u=10, n_v=1, abstand=0.045)
+    flaechen_paar(m, form, "BlinkV", "Blinker#", "blinker", "vorne", [(3.0, 1.48), (3.3, 1.46), (3.3, 1.62), (3.02, 1.66)], n_u=3, n_v=2)
+    flaeche_mitte(m, form, "Einlass", "Lufteinlass", "grill", "vorne", [(-1.75, 0.7), (1.75, 0.7), (1.6, 1.12), (-1.6, 1.12)], n_u=14, n_v=2)
+    flaechen_paar(m, form, "Eckeinlass", "Lufteinlass", "grill", "vorne", [(2.2, 0.75), (2.95, 0.75), (2.9, 1.25), (2.3, 1.3)], n_u=4, n_v=3)
+    flaechen_paar(m, form, "SeitenEinlass", "Seitenlufteinlass", "grill", "seite", [(2.25, 1.3), (3.15, 1.35), (3.1, 2.05), (2.4, 2.0)], n_u=4, n_v=3)
+    flaechen_paar(m, form, "LichtH", "Ruecklicht", "neon_rot", "hinten", [(1.55, 2.44), (3.1, 2.47), (3.1, 2.62), (1.55, 2.6)], n_u=10, n_v=2)
+    flaechen_paar(m, form, "BlinkH", "Blinker#", "blinker", "hinten", [(3.12, 2.45), (3.4, 2.45), (3.4, 2.6), (3.12, 2.62)], n_u=3, n_v=2)
+    flaeche_mitte(m, form, "Band", "Ruecklichtband", "neon_rot", "hinten", [(-1.5, 2.5), (1.5, 2.5), (1.5, 2.56), (-1.5, 2.56)], n_u=10, n_v=1)
+    flaeche_mitte(m, form, "Gitter", "Heckgitter", "grill", "hinten", [(-2.5, 1.7), (2.5, 1.7), (2.5, 2.2), (-2.5, 2.2)], n_u=14, n_v=2)
+    return m
+
+
 def anbauteile():
     def vorne(x, y, tiefe): return [x, y, form.front_z(x, y) - tiefe / 2 + 0.04]
     def hinten(x, y, tiefe): return [x, y, form.heck_z(x, y) + tiefe / 2 - 0.04]
@@ -114,23 +130,13 @@ def anbauteile():
     deck_z = 7.05
     t = [
         # vorne
-        teil("Scheinwerfer", "scheinwerfer", (1.35, 0.16, 0.25), plus(sw, dz=0.05), True, (0, -14, 0)),
-        teil("Tagfahrlicht", "neon_weiss", (1.25, 0.05, 0.08), plus(sw, dy=-0.15, dz=0.06), True, (0, -14, 0)),
-        teil("Blinker", "blinker", (0.3, 0.14, 0.2), plus(sw, dx=0.75, dz=0.25), True, (0, -14, 0)),
-        teil("Lufteinlass", "grill", (3.4, 0.42, 0.1), vorne(0, 0.88, 0.1)),
-        teil("Lufteinlass", "grill", (0.95, 0.5, 0.1), vorne(2.55, 0.95, 0.1), True, (0, -20, 0)),
         teil("Frontsplitter", "carbon", (5.8, 0.07, 0.45), plus(vorne(0, 0.72, 0.1), dy=-0.12, dz=0.12)),
         teil("Haubenkante", "schwarz", (2.2, 0.04, 0.6), [0, form.oben_y(0, -5.2) + 0.01, -5.2], False, (-11, 0, 0)),
         # Seite
         teil("Spiegel", "lack", (0.55, 0.38, 0.75), plus(sp, dx=0.42, dy=0.18), True),
         teil("Spiegelfuss", "schwarz", (0.45, 0.12, 0.3), plus(sp, dx=0.08, dy=0.05, dz=0.1), True),
-        teil("Seitenlufteinlass", "grill", (0.06, 0.8, 1.6), plus(luft_seite, dx=-0.05), True, (0, 6, 0)),
         # hinten
-        teil("Ruecklicht", "neon_rot", (1.6, 0.13, 0.15), plus(rl, dz=-0.02), True),
-        teil("Ruecklichtband", "neon_rot", (1.6, 0.06, 0.08), hinten(0, 2.55, 0.08)),
-        teil("Blinker", "blinker", (0.3, 0.13, 0.15), plus(rl, dx=0.95, dz=-0.04), True),
-        teil("Heckgitter", "schwarz", (5.2, 0.55, 0.08), hinten(0, 1.95, 0.08)),
-        teil("Auspuff", "chrom", (0.5, 0.32, 0.4), plus(hinten(0.45, 1.25, 0.4), dz=-0.05), True),
+        teil("Auspuff", "chrom", (0.5, 0.36, 0.36), plus(hinten(0.45, 1.25, 0.4), dz=-0.05), True, zylinder=True),
         teil("Diffusor", "carbon", (4.6, 0.08, 0.9), [0, 0.98, 7.2]),
         teil("Abrisskante", "lack", (5.8, 0.1, 0.65), [0, oben(deck_z) + 0.05, deck_z + 0.2], False, (-9, 0, 0)),
         teil("Motorgitter", "schwarz", (2.6, 0.04, 1.6), [0, gh_oben(5.3) + 0.02, 5.3], False, (-12, 0, 0)),
@@ -150,6 +156,7 @@ if __name__ == "__main__":
         "Glas": doppelseitig(*sauber(loft(form.querschnitt_glas, G_VON, G_BIS, 60))),
         "Dach": sauber(zusammen(dach_teil(form, 0.5, 2.5, dicke=0.3, n=24), saeulen_teil(form, ((2.35, 6.5, 14),)))),
     }
+    meshes.update(flaechen())
     anbau, kennz, spoiler = anbauteile()
     kollision = [{"g": [7.2, 0.35, 14.5], "p": [0, 2 * RAD_R + 0.25, 0]}, {"g": [5.4, 1.3, 5.6], "p": [0, 3.75, 0.9]}]
     erzeugen("sport", "VelocityGT", "Velocity GT sports car body", (RAD_R, 3.3, ACHSE), meshes, anbau, kollision, kennz, spoiler, sitz_y=SITZ_Y, armaturen_z=-0.9)

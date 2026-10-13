@@ -4815,9 +4815,13 @@ local ANBAU_ART = {
 	neon_rot = { farbe = Color3.fromRGB(170, 15, 15), mat = Enum.Material.Neon },
 	blinker = { farbe = Color3.fromRGB(150, 95, 35), mat = Enum.Material.SmoothPlastic },
 	fuge = { farbe = Color3.fromRGB(8, 8, 10), mat = Enum.Material.SmoothPlastic },
+	glanzschwarz = { farbe = Color3.fromRGB(10, 10, 12), mat = Enum.Material.SmoothPlastic, glanz = 0.35 },
 }
 
 local function meshTeil(vorlage, name)
+	for _, t in vorlage:GetDescendants() do
+		if t:IsA("MeshPart") and t.Name == name then return t end
+	end
 	for _, t in vorlage:GetDescendants() do
 		if t:IsA("MeshPart") and string.find(string.lower(t.Name), string.lower(name), 1, true) then
 			return t
@@ -4925,7 +4929,24 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 					if kind:IsA("SurfaceAppearance") or kind:IsA("Decal") or kind:IsA("Texture") then kind:Destroy() end
 				end
 				pcall(function() mp.TextureID = "" end)
-				if name == "Glas" then
+				if d.a then -- lights, grille, vents: surface pieces that follow the body
+					local art = ANBAU_ART[d.a] or ANBAU_ART.schwarz
+					mp.Name = d.n or name
+					mp.Color = d.a == "lack" and farbe or art.farbe
+					mp.Material = art.mat
+					mp.Reflectance = art.glanz or 0
+					mp.Transparency = 0
+					mp.CastShadow = false
+					if d.a == "scheinwerfer" then
+						local licht = Instance.new("SpotLight")
+						licht.Face = Enum.NormalId.Front
+						licht.Angle = 55
+						licht.Range = 50
+						licht.Brightness = 1.2
+						licht.Shadows = false
+						licht.Parent = mp
+					end
+				elseif name == "Glas" then
 					mp.Color = Color3.fromRGB(14, 17, 22) -- dark tinted glass, the cabin looks solid
 					mp.Material = Enum.Material.Glass
 					mp.Transparency = 0.12
@@ -4960,7 +4981,8 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 					local richtung = cf:VectorToWorldSpace(Vector3.new(s * t.d[1], t.d[2], t.d[3]))
 					lage = CFrame.lookAt(lage.Position, lage.Position + richtung)
 				end
-				local teil = k(name, v3(t.g), lage, t.a == "lack" and farbe or art.farbe, art.mat, { schatten = t.a == "lack" })
+				if t.f == "zyl" then lage *= CFrame.Angles(0, math.rad(90), 0) end -- round part along the car (exhausts)
+				local teil = k(name, v3(t.g), lage, t.a == "lack" and farbe or art.farbe, art.mat, { schatten = t.a == "lack", form = t.f == "zyl" and Enum.PartType.Cylinder or nil })
 				if t.a == "scheinwerfer" then
 					local licht = Instance.new("SpotLight")
 					licht.Face = Enum.NormalId.Front
@@ -4993,6 +5015,9 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		k("Dachspoiler", V3(B - 1, 0.2, 0.8), at(0, oben + 2.25, L / 2 - 1.6), SCHWARZ)
 		lichter(unten + 1.1, -L / 2 + 0.3, L / 2 - 0.3, 2.3)
 	elseif typ == "limousine" then
+		if rundVorlage then
+			rundBauen()
+		else
 		local unten = R + 0.25
 		k("Karosserie", V3(B, 1.9, L - 0.8), at(0, unten + 0.95, 0), farbe)
 		k("Kollision", V3(B, 0.6, L - 1), at(0, 2 * R + 0.45, 0), farbe, nil, { kollision = true, transparenz = 1, schatten = false })
@@ -5008,6 +5033,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 			k("Zierleiste", V3(0.08, 0.12, L - 3), at(s * (B / 2 + 0.03), unten + 1.5, 0), CHROM, Enum.Material.Metal, { schatten = false })
 		end
 		lichter(unten + 1.2, -L / 2 + 0.4, L / 2 - 0.4, 2.6)
+		end
 	elseif typ == "supersport" then
 		sitzY = 1.15
 		local unten = R + 0.1
@@ -6293,45 +6319,119 @@ return Missionen
 -- Round bodies for the private cars. Import dist/mesh/<vorlage>.obj with the 3D Importer
 -- and put the model (named like <vorlage>) into ServerStorage; then the car uses it.
 return {
+	limousine = {
+		vorlage = "Executive",
+		sitzY = 1.45,
+		armaturenZ = -1.6,
+		mesh = {
+			Karosserie = { groesse = { 7.8696, 3.0097, 17 }, mitte = { -0, 2.2549, 0 } },
+			Verkleidung = { groesse = { 7.9875, 2.3486, 17.068 }, mitte = { -0, 1.9243, 0 } },
+			Glas = { groesse = { 6.3973, 2.2752, 8.65 }, mitte = { 0, 4.4523, 1.675 } },
+			Dach = { groesse = { 6.4854, 2.3134, 5.8 }, mitte = { 0, 4.4633, 2.9 } },
+			LichtVR = { groesse = { 1.6458, 0.397, 1.7209 }, mitte = { 2.4403, 2.7833, -7.2928 }, n = "Scheinwerfer", a = "scheinwerfer" },
+			LichtVL = { groesse = { 1.6458, 0.397, 1.7209 }, mitte = { -2.4403, 2.7833, -7.2928 }, n = "Scheinwerfer", a = "scheinwerfer" },
+			LeisteVR = { groesse = { 1.52, 0.1848, 0.7394 }, mitte = { 2.4744, 2.5859, -7.874 }, n = "Tagfahrlicht", a = "neon_weiss" },
+			LeisteVL = { groesse = { 1.52, 0.1848, 0.7394 }, mitte = { -2.4744, 2.5859, -7.874 }, n = "Tagfahrlicht", a = "neon_weiss" },
+			BlinkVR = { groesse = { 0.2708, 0.3249, 1.4183 }, mitte = { 3.3719, 2.7281, -6.6028 }, n = "BlinkerR", a = "blinker" },
+			BlinkVL = { groesse = { 0.2708, 0.3249, 1.4183 }, mitte = { -3.3719, 2.7281, -6.6028 }, n = "BlinkerL", a = "blinker" },
+			Grill = { groesse = { 2.9, 0.6205, 0.3487 }, mitte = { 0, 2.3303, -8.3506 }, n = "Kuehlergrill", a = "grill" },
+			Einlass = { groesse = { 4.7162, 0.4208, 0.6208 }, mitte = { 0, 1.1635, -8.2146 }, n = "Lufteinlass", a = "grill" },
+			EckeinlassR = { groesse = { 0.6367, 0.9282, 1.5674 }, mitte = { 2.8454, 1.4876, -7.4974 }, n = "Seiteneinlass", a = "glanzschwarz" },
+			EckeinlassL = { groesse = { 0.6367, 0.9282, 1.5674 }, mitte = { -2.8454, 1.4876, -7.4974 }, n = "Seiteneinlass", a = "glanzschwarz" },
+			LichtHR = { groesse = { 1.746, 0.2974, 0.8899 }, mitte = { 2.3693, 3.0687, 8.0751 }, n = "Ruecklicht", a = "neon_rot" },
+			LichtHL = { groesse = { 1.746, 0.2974, 0.8899 }, mitte = { -2.3693, 3.0687, 8.0751 }, n = "Ruecklicht", a = "neon_rot" },
+			BlinkHR = { groesse = { 0.4519, 0.2137, 0.1044 }, mitte = { 1.2759, 3.0369, 8.4728 }, n = "BlinkerR", a = "blinker" },
+			BlinkHL = { groesse = { 0.4519, 0.2137, 0.1044 }, mitte = { -1.2759, 3.0369, 8.4728 }, n = "BlinkerL", a = "blinker" },
+			Blende = { groesse = { 1.96, 0.16, 0.09 }, mitte = { 0, 3.03, 8.48 }, n = "Heckblende", a = "glanzschwarz" },
+			Diffusor = { groesse = { 5.0219, 0.5521, 0.9056 }, mitte = { 0, 1.1989, 8.0722 }, n = "Diffusor", a = "carbon" },
+			KiemeR = { groesse = { 0.1332, 0.3289, 0.7 }, mitte = { 3.8584, 2.3645, -3 }, n = "Kieme", a = "glanzschwarz" },
+			KiemeL = { groesse = { 0.1332, 0.3289, 0.7 }, mitte = { -3.8584, 2.3645, -3 }, n = "Kieme", a = "glanzschwarz" },
+			Griff0R = { groesse = { 0.4246, 0.2088, 0.7029 }, mitte = { 3.148, 3.1696, -0.8994 }, n = "Griff", a = "chrom" },
+			Griff0L = { groesse = { 0.4246, 0.2088, 0.7029 }, mitte = { -3.148, 3.1696, -0.8994 }, n = "Griff", a = "chrom" },
+			Griff1R = { groesse = { 0.27, 0.1987, 0.7039 }, mitte = { 3.4475, 3.1717, 2.6999 }, n = "Griff", a = "chrom" },
+			Griff1L = { groesse = { 0.27, 0.1987, 0.7039 }, mitte = { -3.4475, 3.1717, 2.6999 }, n = "Griff", a = "chrom" },
+		},
+		anbau = {
+			{ n = "Spiegel", a = "lack", g = { 0.62, 0.4, 0.8 }, p = { 3.505, 3.46, -1.95 }, s = true },
+			{ n = "Spiegelfuss", a = "glanzschwarz", g = { 0.5, 0.12, 0.35 }, p = { 3.155, 3.3, -1.85 }, s = true },
+			{ n = "Frontlippe", a = "carbon", g = { 5.6, 0.06, 0.4 }, p = { 0, 0.9, -8.215 }, s = false },
+			{ n = "Auspuff", a = "chrom", g = { 0.5, 0.4, 0.4 }, p = { 1.7, 1.2, 8.505 }, s = true, f = "zyl" },
+			{ n = "Auspuff", a = "chrom", g = { 0.5, 0.4, 0.4 }, p = { 2.22, 1.2, 8.35 }, s = true, f = "zyl" },
+			{ n = "Fensterleiste", a = "chrom", g = { 0.05, 0.05, 1.35 }, p = { 2.538, 3.313, -1.65 }, s = true, d = { -0.0038, 0.0187, 0.9998 } },
+			{ n = "Fensterleiste", a = "chrom", g = { 0.05, 0.05, 1.551 }, p = { 2.53, 3.355, -0.25 }, s = true, d = { -0.0067, 0.0396, 0.9992 } },
+			{ n = "Fensterleiste", a = "chrom", g = { 0.05, 0.05, 1.552 }, p = { 2.518, 3.42, 1.25 }, s = true, d = { -0.01, 0.048, 0.9988 } },
+			{ n = "Fensterleiste", a = "chrom", g = { 0.05, 0.05, 1.551 }, p = { 2.505, 3.488, 2.75 }, s = true, d = { -0.0067, 0.0416, 0.9991 } },
+			{ n = "Fensterleiste", a = "chrom", g = { 0.05, 0.05, 1.25 }, p = { 2.51, 3.533, 4.1 }, s = true, d = { 0.0167, 0.0234, 0.9996 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.707 }, p = { 3.81, 1.775, -2.4 }, s = true, d = { 0.253, 0.9675, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.701 }, p = { 3.823, 2.425, -2.4 }, s = true, d = { -0.2177, 0.976, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.537 }, p = { 3.055, 3.035, -2.4 }, s = true, d = { -0.9252, 0.3794, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.789 }, p = { 3.74, 1.65, 1.2 }, s = true, d = { 0.3714, 0.9285, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.737 }, p = { 3.853, 2.35, 1.2 }, s = true, d = { -0.0783, 0.9969, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.416 }, p = { 3.23, 3.05, 1.2 }, s = true, d = { -0.8619, 0.507, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.445 }, p = { 3.528, 3.175, 4.1 }, s = true, d = { -0.7926, 0.6097, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.696 }, p = { 3.05, 3.4, 4.1 }, s = true, d = { -0.9531, 0.3026, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.291 }, p = { 2.55, 3.031, -6.925 }, s = true, d = { 0, 0.0995, 0.995 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.337 }, p = { 2.55, 3.133, -5.65 }, s = true, d = { 0, 0.0614, 0.9981 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.337 }, p = { 2.55, 3.208, -4.35 }, s = true, d = { 0, 0.0538, 0.9986 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.086 }, p = { 2.55, 3.268, -3.175 }, s = true, d = { 0, 0.0476, 0.9989 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.286 }, p = { -1.825, 3.593, 5.45 }, s = false, d = { 0.9988, 0.0479, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.235 }, p = { -0.6, 3.623, 5.45 }, s = false, d = { 1, 0, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.235 }, p = { 0.6, 3.623, 5.45 }, s = false, d = { 1, 0, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.286 }, p = { 1.825, 3.593, 5.45 }, s = false, d = { 0.9988, -0.0479, 0 } },
+		},
+		kollision = {
+			{ g = { 7.2, 0.4, 16 }, p = { 0, 3, 0 } },
+			{ g = { 6, 1.6, 7.5 }, p = { 0, 4.4, 1.2 } },
+		},
+		kennzeichen = { vorne = { 1.68, -8.555 }, hinten = { 2.2, 8.575 } },
+		spoiler = { 4.7125, 7, 0.45 },
+	},
 	sport = {
 		vorlage = "VelocityGT",
 		sitzY = 1.25,
 		armaturenZ = -0.9,
 		mesh = {
-			Karosserie = { groesse = { 8.0741, 2.5, 15.5 }, mitte = { 0, 1.8, 0 } },
-			Verkleidung = { groesse = { 8.2357, 2.39, 15.562 }, mitte = { 0, 1.745, 0 } },
+			Karosserie = { groesse = { 8.0674, 2.5, 15.5 }, mitte = { -0, 1.8, 0 } },
+			Verkleidung = { groesse = { 8.2289, 2.39, 15.562 }, mitte = { -0, 1.745, 0 } },
 			Glas = { groesse = { 6.0368, 2.1035, 9 }, mitte = { 0, 3.5781, 2.2 } },
 			Dach = { groesse = { 6.1209, 1.8062, 6 }, mitte = { -0, 3.7567, 3.5 } },
+			LichtVR = { groesse = { 1.4333, 0.254, 1.3668 }, mitte = { 2.2825, 1.6129, -6.9549 }, n = "Scheinwerfer", a = "scheinwerfer" },
+			LichtVL = { groesse = { 1.4333, 0.254, 1.3668 }, mitte = { -2.2825, 1.6129, -6.9549 }, n = "Scheinwerfer", a = "scheinwerfer" },
+			LeisteVR = { groesse = { 1.3044, 0.1118, 1.1141 }, mitte = { 2.3344, 1.4688, -7.0956 }, n = "Tagfahrlicht", a = "neon_weiss" },
+			LeisteVL = { groesse = { 1.3044, 0.1118, 1.1141 }, mitte = { -2.3344, 1.4688, -7.0956 }, n = "Tagfahrlicht", a = "neon_weiss" },
+			BlinkVR = { groesse = { 0.3772, 0.225, 0.7551 }, mitte = { 3.139, 1.5642, -6.1472 }, n = "BlinkerR", a = "blinker" },
+			BlinkVL = { groesse = { 0.3772, 0.225, 0.7551 }, mitte = { -3.139, 1.5642, -6.1472 }, n = "BlinkerL", a = "blinker" },
+			Einlass = { groesse = { 3.5097, 0.4515, 0.5208 }, mitte = { 0, 0.898, -7.5146 }, n = "Lufteinlass", a = "grill" },
+			EckeinlassR = { groesse = { 0.7799, 0.5782, 1.6645 }, mitte = { 2.5701, 1.0109, -6.5373 }, n = "Lufteinlass", a = "grill" },
+			EckeinlassL = { groesse = { 0.7799, 0.5782, 1.6645 }, mitte = { -2.5701, 1.0109, -6.5373 }, n = "Lufteinlass", a = "grill" },
+			SeitenEinlassR = { groesse = { 0.2319, 0.7644, 0.9054 }, mitte = { 3.8038, 1.6733, 2.7009 }, n = "Seitenlufteinlass", a = "grill" },
+			SeitenEinlassL = { groesse = { 0.2319, 0.7644, 0.9054 }, mitte = { -3.8038, 1.6733, 2.7009 }, n = "Seitenlufteinlass", a = "grill" },
+			LichtHR = { groesse = { 1.5709, 0.2006, 0.5968 }, mitte = { 2.3317, 2.5396, 7.4766 }, n = "Ruecklicht", a = "neon_rot" },
+			LichtHL = { groesse = { 1.5709, 0.2006, 0.5968 }, mitte = { -2.3317, 2.5396, 7.4766 }, n = "Ruecklicht", a = "neon_rot" },
+			BlinkHR = { groesse = { 0.3367, 0.2214, 0.6797 }, mitte = { 3.2545, 2.5297, 7.0357 }, n = "BlinkerR", a = "blinker" },
+			BlinkHL = { groesse = { 0.3367, 0.2214, 0.6797 }, mitte = { -3.2545, 2.5297, 7.0357 }, n = "BlinkerL", a = "blinker" },
+			Band = { groesse = { 3, 0.06, 0.09 }, mitte = { 0, 2.53, 7.73 }, n = "Ruecklichtband", a = "neon_rot" },
+			Gitter = { groesse = { 5.011, 0.5019, 0.1395 }, mitte = { 0, 1.9509, 7.7052 }, n = "Heckgitter", a = "grill" },
 		},
 		anbau = {
-			{ n = "Scheinwerfer", a = "scheinwerfer", g = { 1.35, 0.16, 0.25 }, p = { 2.35, 1.62, -7.3 }, s = true, r = { 0, -14, 0 } },
-			{ n = "Tagfahrlicht", a = "neon_weiss", g = { 1.25, 0.05, 0.08 }, p = { 2.35, 1.47, -7.29 }, s = true, r = { 0, -14, 0 } },
-			{ n = "Blinker", a = "blinker", g = { 0.3, 0.14, 0.2 }, p = { 3.1, 1.62, -7.1 }, s = true, r = { 0, -14, 0 } },
-			{ n = "Lufteinlass", a = "grill", g = { 3.4, 0.42, 0.1 }, p = { 0, 0.88, -7.755 }, s = false },
-			{ n = "Lufteinlass", a = "grill", g = { 0.95, 0.5, 0.1 }, p = { 2.55, 0.95, -7.13 }, s = true, r = { 0, -20, 0 } },
 			{ n = "Frontsplitter", a = "carbon", g = { 5.8, 0.07, 0.45 }, p = { 0, 0.6, -7.37 }, s = false },
 			{ n = "Haubenkante", a = "schwarz", g = { 2.2, 0.04, 0.6 }, p = { 0, 2.255, -5.2 }, s = false, r = { -11, 0, 0 } },
-			{ n = "Spiegel", a = "lack", g = { 0.55, 0.38, 0.75 }, p = { 3.795, 2.6, -1.3 }, s = true },
-			{ n = "Spiegelfuss", a = "schwarz", g = { 0.45, 0.12, 0.3 }, p = { 3.455, 2.47, -1.2 }, s = true },
-			{ n = "Seitenlufteinlass", a = "grill", g = { 0.06, 0.8, 1.6 }, p = { 3.885, 1.75, 3.15 }, s = true, r = { 0, 6, 0 } },
-			{ n = "Ruecklicht", a = "neon_rot", g = { 1.6, 0.13, 0.15 }, p = { 2.3, 2.55, 7.72 }, s = true },
-			{ n = "Ruecklichtband", a = "neon_rot", g = { 1.6, 0.06, 0.08 }, p = { 0, 2.55, 7.745 }, s = false },
-			{ n = "Blinker", a = "blinker", g = { 0.3, 0.13, 0.15 }, p = { 3.25, 2.55, 7.7 }, s = true },
-			{ n = "Heckgitter", a = "schwarz", g = { 5.2, 0.55, 0.08 }, p = { 0, 1.95, 7.745 }, s = false },
-			{ n = "Auspuff", a = "chrom", g = { 0.5, 0.32, 0.4 }, p = { 0.45, 1.25, 7.855 }, s = true },
+			{ n = "Spiegel", a = "lack", g = { 0.55, 0.38, 0.75 }, p = { 3.52, 2.6, -1.3 }, s = true },
+			{ n = "Spiegelfuss", a = "schwarz", g = { 0.45, 0.12, 0.3 }, p = { 3.18, 2.47, -1.2 }, s = true },
+			{ n = "Auspuff", a = "chrom", g = { 0.5, 0.36, 0.36 }, p = { 0.45, 1.25, 7.855 }, s = true, f = "zyl" },
 			{ n = "Diffusor", a = "carbon", g = { 4.6, 0.08, 0.9 }, p = { 0, 0.98, 7.2 }, s = false },
 			{ n = "Abrisskante", a = "lack", g = { 5.8, 0.1, 0.65 }, p = { 0, 3.097, 7.25 }, s = false, r = { -9, 0, 0 } },
 			{ n = "Motorgitter", a = "schwarz", g = { 2.6, 0.04, 1.6 }, p = { 0, 3.394, 5.3 }, s = false, r = { -12, 0, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.539 }, p = { 3.685, 1.25, -1.95 }, s = true, d = { 0.1191, 0.9929, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.535 }, p = { 3.705, 1.75, -1.95 }, s = true, d = { -0.04, 0.9992, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.654 }, p = { 3.468, 2.21, -1.95 }, s = true, d = { -0.7348, 0.6783, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.546 }, p = { 3.763, 1.25, 1.9 }, s = true, d = { 0.2055, 0.9787, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.535 }, p = { 3.815, 1.75, 1.9 }, s = true, d = { 0, 1, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.459 }, p = { 3.788, 2.21, 1.9 }, s = true, d = { -0.1298, 0.9915, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.162 }, p = { 2, 1.991, -6.55 }, s = true, d = { 0, 0.2174, 0.9761 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.55 }, p = { 2, 2.221, -5.25 }, s = true, d = { 0, 0.1419, 0.9899 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.544 }, p = { 2, 2.411, -3.75 }, s = true, d = { 0, 0.1093, 0.994 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.638 }, p = { 2, 2.523, -2.7 }, s = true, d = { 0, 0.0995, 0.995 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.566 }, p = { 3.615, 1.25, -1.95 }, s = true, d = { 0.3387, 0.9409, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.544 }, p = { 3.658, 1.75, -1.95 }, s = true, d = { -0.1867, 0.9824, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.817 }, p = { 3.28, 2.21, -1.95 }, s = true, d = { -0.8437, 0.5369, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.59 }, p = { 3.665, 1.25, 1.9 }, s = true, d = { 0.4327, 0.9015, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.535 }, p = { 3.795, 1.75, 1.9 }, s = true, d = { 0.04, 0.9992, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.498 }, p = { 3.708, 2.21, 1.9 }, s = true, d = { -0.4211, 0.907, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.168 }, p = { 2, 1.963, -6.55 }, s = true, d = { 0, 0.2384, 0.9712 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.551 }, p = { 2, 2.208, -5.25 }, s = true, d = { 0, 0.1451, 0.9894 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.544 }, p = { 2, 2.401, -3.75 }, s = true, d = { 0, 0.1093, 0.994 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.638 }, p = { 2, 2.513, -2.7 }, s = true, d = { 0, 0.0995, 0.995 } },
 		},
 		kollision = {
 			{ g = { 7.2, 0.35, 14.5 }, p = { 0, 2.85, 0 } },
@@ -6343,46 +6443,51 @@ return {
 	suv = {
 		vorlage = "RangerX",
 		mesh = {
-			Karosserie = { groesse = { 7.797, 3.77, 17.5 }, mitte = { 0, 3.035, 0 } },
-			Verkleidung = { groesse = { 7.9685, 2.7691, 17.57 }, mitte = { 0, 2.5346, 0 } },
-			Glas = { groesse = { 7.1621, 2.6275, 11.75 }, mitte = { 0, 6.0438, 2.575 } },
-			Dach = { groesse = { 7.2609, 2.7094, 8.65 }, mitte = { 0, 6.0329, 3.575 } },
+			Karosserie = { groesse = { 7.7737, 3.77, 17.5 }, mitte = { -0, 3.035, 0 } },
+			Verkleidung = { groesse = { 7.9446, 2.7691, 17.57 }, mitte = { -0, 2.5346, 0 } },
+			Glas = { groesse = { 7.1373, 2.6275, 11.75 }, mitte = { 0, 6.0438, 2.575 } },
+			Dach = { groesse = { 7.2353, 2.7094, 8.65 }, mitte = { 0, 6.0329, 3.575 } },
+			LichtVR = { groesse = { 1.6213, 0.4133, 0.6152 }, mitte = { 2.3579, 4.2139, -8.4674 }, n = "Scheinwerfer", a = "scheinwerfer" },
+			LichtVL = { groesse = { 1.6213, 0.4133, 0.6152 }, mitte = { -2.3579, 4.2139, -8.4674 }, n = "Scheinwerfer", a = "scheinwerfer" },
+			LeisteVR = { groesse = { 1.4719, 0.1265, 0.3061 }, mitte = { 2.386, 3.9368, -8.637 }, n = "Tagfahrlicht", a = "neon_weiss" },
+			LeisteVL = { groesse = { 1.4719, 0.1265, 0.3061 }, mitte = { -2.386, 3.9368, -8.637 }, n = "Tagfahrlicht", a = "neon_weiss" },
+			BlinkVR = { groesse = { 0.3333, 0.3826, 0.8471 }, mitte = { 3.3099, 4.1508, -8.0641 }, n = "BlinkerR", a = "blinker" },
+			BlinkVL = { groesse = { 0.3333, 0.3826, 0.8471 }, mitte = { -3.3099, 4.1508, -8.0641 }, n = "BlinkerL", a = "blinker" },
+			NebelR = { groesse = { 0.6231, 0.1985, 0.2984 }, mitte = { 2.7542, 2.2102, -8.6007 }, n = "Nebelscheinwerfer", a = "neon_weiss" },
+			NebelL = { groesse = { 0.6231, 0.1985, 0.2984 }, mitte = { -2.7542, 2.2102, -8.6007 }, n = "Nebelscheinwerfer", a = "neon_weiss" },
+			Grill = { groesse = { 3.1, 0.83, 0.09 }, mitte = { 0, 3.565, -8.73 }, n = "Kuehlergrill", a = "grill" },
+			Grillleiste = { groesse = { 3.2, 0.09, 0.105 }, mitte = { 0, 4.025, -8.7375 }, n = "Grillchrom", a = "chrom" },
+			Einlass = { groesse = { 4.4094, 0.4857, 0.1602 }, mitte = { 0, 2.0771, -8.6949 }, n = "Lufteinlass", a = "grill" },
+			LichtHR = { groesse = { 1.617, 0.3616, 0.8824 }, mitte = { 2.3585, 4.4448, 8.3338 }, n = "Ruecklicht", a = "neon_rot" },
+			LichtHL = { groesse = { 1.617, 0.3616, 0.8824 }, mitte = { -2.3585, 4.4448, 8.3338 }, n = "Ruecklicht", a = "neon_rot" },
+			BlinkHR = { groesse = { 0.2965, 0.3624, 0.8543 }, mitte = { 3.2944, 4.4433, 8.0588 }, n = "BlinkerR", a = "blinker" },
+			BlinkHL = { groesse = { 0.2965, 0.3624, 0.8543 }, mitte = { -3.2944, 4.4433, 8.0588 }, n = "BlinkerL", a = "blinker" },
+			Band = { groesse = { 3, 0.08, 0.09 }, mitte = { 0, 4.44, 8.73 }, n = "Ruecklichtband", a = "neon_rot" },
 		},
 		anbau = {
-			{ n = "Kuehlergrill", a = "grill", g = { 3.6, 0.95, 0.15 }, p = { 0, 3.65, -8.785 }, s = false },
-			{ n = "Grillchrom", a = "chrom", g = { 3.7, 0.08, 0.1 }, p = { 0, 4.15, -8.845 }, s = false },
-			{ n = "Lufteinlass", a = "grill", g = { 4.2, 0.5, 0.08 }, p = { 0, 2.05, -8.755 }, s = false },
 			{ n = "Unterfahrschutz", a = "chrom", g = { 3.2, 0.18, 0.1 }, p = { 0, 1.6, -8.795 }, s = false },
-			{ n = "Scheinwerferrahmen", a = "schwarz", g = { 1.7, 0.44, 0.12 }, p = { 2.35, 4.2, -8.735 }, s = true },
-			{ n = "Scheinwerfer", a = "scheinwerfer", g = { 1.5, 0.3, 0.2 }, p = { 2.35, 4.2, -8.775 }, s = true },
-			{ n = "Tagfahrlicht", a = "neon_weiss", g = { 1.5, 0.06, 0.08 }, p = { 2.35, 3.98, -8.815 }, s = true },
-			{ n = "Blinker", a = "blinker", g = { 0.3, 0.3, 0.2 }, p = { 3.25, 4.2, -8.715 }, s = true },
-			{ n = "Nebelscheinwerfer", a = "neon_weiss", g = { 0.7, 0.16, 0.08 }, p = { 2.85, 2.2, -8.68 }, s = true },
-			{ n = "Ruecklicht", a = "neon_rot", g = { 1.3, 0.3, 0.2 }, p = { 2.45, 4.45, 8.785 }, s = true },
-			{ n = "Blinker", a = "blinker", g = { 0.3, 0.3, 0.2 }, p = { 3.2, 4.45, 8.765 }, s = true },
-			{ n = "Auspuff", a = "chrom", g = { 0.7, 0.3, 0.3 }, p = { 2.3, 1.75, 8.695 }, s = true },
-			{ n = "Spiegel", a = "lack", g = { 0.7, 0.5, 0.8 }, p = { 3.75, 4.85, -2.85 }, s = true },
-			{ n = "Spiegelfuss", a = "schwarz", g = { 0.5, 0.15, 0.4 }, p = { 3.4, 4.7, -2.75 }, s = true },
-			{ n = "Griff", a = "chrom", g = { 0.08, 0.14, 0.75 }, p = { 3.8, 4.4, 0 }, s = true },
-			{ n = "Griff", a = "chrom", g = { 0.08, 0.14, 0.75 }, p = { 3.81, 4.45, 3.4 }, s = true },
-			{ n = "Zierleiste", a = "chrom", g = { 0.05, 0.08, 6.5 }, p = { 3.86, 2, 0.6 }, s = true },
+			{ n = "Auspuff", a = "chrom", g = { 0.5, 0.36, 0.36 }, p = { 2.3, 1.75, 8.71 }, s = true, f = "zyl" },
+			{ n = "Spiegel", a = "lack", g = { 0.7, 0.5, 0.8 }, p = { 3.3, 4.85, -2.85 }, s = true },
+			{ n = "Spiegelfuss", a = "schwarz", g = { 0.5, 0.15, 0.4 }, p = { 2.95, 4.7, -2.75 }, s = true },
+			{ n = "Griff", a = "chrom", g = { 0.08, 0.14, 0.75 }, p = { 3.56, 4.4, 0 }, s = true },
+			{ n = "Griff", a = "chrom", g = { 0.08, 0.14, 0.75 }, p = { 3.575, 4.45, 3.4 }, s = true },
+			{ n = "Zierleiste", a = "chrom", g = { 0.05, 0.08, 6.5 }, p = { 3.725, 2, 0.6 }, s = true },
 			{ n = "Dachreling", a = "alu", g = { 0.16, 0.14, 6.2 }, p = { 2.81, 7.403, 2.6 }, s = true },
-			{ n = "Ruecklichtband", a = "neon_rot", g = { 2.4, 0.1, 0.08 }, p = { 0, 4.5, 8.745 }, s = false },
 			{ n = "Dachspoiler", a = "lack", g = { 5.4, 0.12, 0.6 }, p = { 0, 7.25, 6.55 }, s = false },
 			{ n = "Bremslicht_oben", a = "neon_rot", g = { 1.2, 0.08, 0.1 }, p = { 0, 7.285, 6.65 }, s = false },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.935 }, p = { 3.818, 2.45, -2.95 }, s = true, d = { 0.0056, 1, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.935 }, p = { 3.82, 3.35, -2.95 }, s = true, d = { 0, 1, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.904 }, p = { 3.65, 4.2, -2.95 }, s = true, d = { -0.3911, 0.9203, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.935 }, p = { 3.818, 2.45, 1.05 }, s = true, d = { 0.0056, 1, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.935 }, p = { 3.82, 3.35, 1.05 }, s = true, d = { 0, 1, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.876 }, p = { 3.69, 4.2, 1.05 }, s = true, d = { -0.3091, 0.951, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.935 }, p = { 3.823, 2.45, 3.3 }, s = true, d = { 0.0056, 1, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.935 }, p = { 3.825, 3.35, 3.3 }, s = true, d = { 0, 1, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.862 }, p = { 3.72, 4.2, 3.3 }, s = true, d = { -0.2539, 0.9672, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.441 }, p = { 2.95, 4.631, -7.7 }, s = true, d = { 0, 0.096, 0.9954 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.536 }, p = { 2.95, 4.721, -6.25 }, s = true, d = { 0, 0.03, 0.9996 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.535 }, p = { 2.95, 4.751, -4.75 }, s = true, d = { 0, 0.01, 1 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.585 }, p = { 2.95, 4.748, -3.725 }, s = true, d = { 0, -0.0363, 0.9993 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.943 }, p = { 3.745, 2.45, -2.95 }, s = true, d = { 0.1322, 0.9912, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.935 }, p = { 3.79, 3.35, -2.95 }, s = true, d = { -0.0333, 0.9994, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.079 }, p = { 3.44, 4.2, -2.95 }, s = true, d = { -0.6421, 0.7666, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.944 }, p = { 3.743, 2.45, 1.05 }, s = true, d = { 0.1376, 0.9905, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.935 }, p = { 3.795, 3.35, 1.05 }, s = true, d = { -0.0222, 0.9998, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.014 }, p = { 3.503, 4.2, 1.05 }, s = true, d = { -0.5769, 0.8168, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.944 }, p = { 3.745, 2.45, 3.3 }, s = true, d = { 0.143, 0.9897, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.935 }, p = { 3.803, 3.35, 3.3 }, s = true, d = { -0.0167, 0.9999, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.976 }, p = { 3.548, 4.2, 3.3 }, s = true, d = { -0.5262, 0.8504, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.457 }, p = { 2.95, 4.528, -7.7 }, s = true, d = { 0, 0.1758, 0.9844 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.536 }, p = { 2.95, 4.686, -6.25 }, s = true, d = { 0, 0.0433, 0.9991 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.535 }, p = { 2.95, 4.716, -4.75 }, s = true, d = { 0, -0.0033, 1 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.588 }, p = { 2.95, 4.683, -3.725 }, s = true, d = { 0, -0.1084, 0.9941 } },
 		},
 		kollision = {
 			{ g = { 7.4, 1.3, 16.5 }, p = { 0, 4.15, 0 } },
@@ -6396,46 +6501,52 @@ return {
 		sitzY = 1.3,
 		armaturenZ = -0.4,
 		mesh = {
-			Karosserie = { groesse = { 8.0532, 2.4997, 16.5 }, mitte = { 0, 1.8499, 0 } },
-			Verkleidung = { groesse = { 8.2156, 2.4396, 16.566 }, mitte = { 0, 1.8198, 0 } },
+			Karosserie = { groesse = { 8.0465, 2.4997, 16.5 }, mitte = { -0, 1.8499, 0 } },
+			Verkleidung = { groesse = { 8.2088, 2.4396, 16.566 }, mitte = { -0, 1.8198, 0 } },
 			Glas = { groesse = { 6.2607, 2.2446, 6.75 }, mitte = { 0, 3.6475, 1.925 } },
 			Dach = { groesse = { 6.3482, 2.1939, 4.05 }, mitte = { 0, 3.7029, 2.975 } },
+			LichtVR = { groesse = { 1.2384, 0.2834, 0.9677 }, mitte = { 2.5023, 1.7084, -7.6902 }, n = "Scheinwerfer", a = "scheinwerfer" },
+			LichtVL = { groesse = { 1.2384, 0.2834, 0.9677 }, mitte = { -2.5023, 1.7084, -7.6902 }, n = "Scheinwerfer", a = "scheinwerfer" },
+			LeisteVR = { groesse = { 1.1201, 0.0995, 0.7844 }, mitte = { 2.5255, 1.543, -7.7965 }, n = "Tagfahrlicht", a = "neon_weiss" },
+			LeisteVL = { groesse = { 1.1201, 0.0995, 0.7844 }, mitte = { -2.5255, 1.543, -7.7965 }, n = "Tagfahrlicht", a = "neon_weiss" },
+			BlinkVR = { groesse = { 0.3547, 0.2318, 0.6107 }, mitte = { 3.2492, 1.6376, -7.0514 }, n = "BlinkerR", a = "blinker" },
+			BlinkVL = { groesse = { 0.3547, 0.2318, 0.6107 }, mitte = { -3.2492, 1.6376, -7.0514 }, n = "BlinkerL", a = "blinker" },
+			Grill = { groesse = { 4.3219, 0.5343, 0.29 }, mitte = { 0, 1.2347, -8.13 }, n = "Kuehlergrill", a = "grill" },
+			EckeinlassR = { groesse = { 0.6978, 0.4881, 0.8443 }, mitte = { 2.7721, 1.176, -7.554 }, n = "Lufteinlass", a = "grill" },
+			EckeinlassL = { groesse = { 0.6978, 0.4881, 0.8443 }, mitte = { -2.7721, 1.176, -7.554 }, n = "Lufteinlass", a = "grill" },
+			Band = { groesse = { 4.4107, 0.1075, 0.1579 }, mitte = { 0, 2.6095, 8.196 }, n = "Ruecklichtband", a = "neon_rot" },
+			LichtHR = { groesse = { 0.8804, 0.2624, 0.7245 }, mitte = { 2.6798, 2.5901, 7.8823 }, n = "Ruecklicht", a = "neon_rot" },
+			LichtHL = { groesse = { 0.8804, 0.2624, 0.7245 }, mitte = { -2.6798, 2.5901, 7.8823 }, n = "Ruecklicht", a = "neon_rot" },
+			BlinkHR = { groesse = { 0.6189, 0.1386, 0.2377 }, mitte = { 2.6021, 2.3589, 8.136 }, n = "BlinkerR", a = "blinker" },
+			BlinkHL = { groesse = { 0.6189, 0.1386, 0.2377 }, mitte = { -2.6021, 2.3589, 8.136 }, n = "BlinkerL", a = "blinker" },
+			Gitter = { groesse = { 4.4037, 0.4, 0.0999 }, mitte = { 0, 1.95, 8.2251 }, n = "Heckgitter", a = "grill" },
 		},
 		anbau = {
-			{ n = "Scheinwerfer", a = "scheinwerfer", g = { 1.4, 0.14, 0.22 }, p = { 2.55, 1.78, -7.935 }, s = true, r = { 0, -16, -5 } },
-			{ n = "Tagfahrlicht", a = "neon_weiss", g = { 1.25, 0.04, 0.08 }, p = { 2.55, 1.65, -7.925 }, s = true, r = { 0, -16, -5 } },
-			{ n = "Blinker", a = "blinker", g = { 0.3, 0.12, 0.2 }, p = { 3.33, 1.78, -7.735 }, s = true, r = { 0, -16, 0 } },
-			{ n = "Kuehlergrill", a = "grill", g = { 1.35, 0.5, 0.12 }, p = { 1.45, 1.22, -8.245 }, s = true },
-			{ n = "Lufteinlass", a = "grill", g = { 0.8, 0.42, 0.1 }, p = { 2.85, 1.12, -7.69 }, s = true, r = { 0, -25, 0 } },
 			{ n = "Frontsplitter", a = "carbon", g = { 6.4, 0.07, 0.5 }, p = { 0, 0.66, -8 }, s = false },
 			{ n = "Haubenschlitz", a = "grill", g = { 0.9, 0.03, 1.3 }, p = { 0.95, 2.42, -4.6 }, s = true, r = { -3.58, 0, 0 } },
-			{ n = "Spiegel", a = "lack", g = { 0.6, 0.38, 0.75 }, p = { 3.61, 2.7, -0.7 }, s = true },
-			{ n = "Spiegelfuss", a = "schwarz", g = { 0.45, 0.12, 0.3 }, p = { 3.27, 2.55, -0.6 }, s = true },
-			{ n = "Kieme", a = "schwarz", g = { 0.05, 0.12, 0.85 }, p = { 3.78, 1.95, -3.05 }, s = true, r = { 0, 0, 0 } },
-			{ n = "Kieme", a = "schwarz", g = { 0.05, 0.12, 0.85 }, p = { 3.78, 1.93, -2.75 }, s = true, r = { 0, 0, 0 } },
-			{ n = "Kieme", a = "schwarz", g = { 0.05, 0.12, 0.85 }, p = { 3.785, 1.91, -2.45 }, s = true, r = { 0, 0, 0 } },
-			{ n = "Ruecklichtband", a = "neon_rot", g = { 4.4, 0.09, 0.08 }, p = { 0, 2.62, 8.245 }, s = false },
-			{ n = "Ruecklicht", a = "neon_rot", g = { 0.9, 0.2, 0.14 }, p = { 2.75, 2.6, 8.13 }, s = true },
-			{ n = "Blinker", a = "blinker", g = { 0.3, 0.12, 0.14 }, p = { 2.75, 2.38, 8.16 }, s = true },
-			{ n = "Heckgitter", a = "grill", g = { 4.4, 0.4, 0.08 }, p = { 0, 1.95, 8.245 }, s = false },
+			{ n = "Spiegel", a = "lack", g = { 0.6, 0.38, 0.75 }, p = { 3.29, 2.7, -0.7 }, s = true },
+			{ n = "Spiegelfuss", a = "schwarz", g = { 0.45, 0.12, 0.3 }, p = { 2.95, 2.55, -0.6 }, s = true },
+			{ n = "Kieme", a = "schwarz", g = { 0.05, 0.12, 0.85 }, p = { 3.69, 1.95, -3.05 }, s = true, r = { 0, 0, 0 } },
+			{ n = "Kieme", a = "schwarz", g = { 0.05, 0.12, 0.85 }, p = { 3.705, 1.93, -2.75 }, s = true, r = { 0, 0, 0 } },
+			{ n = "Kieme", a = "schwarz", g = { 0.05, 0.12, 0.85 }, p = { 3.72, 1.91, -2.45 }, s = true, r = { 0, 0, 0 } },
 			{ n = "Diffusor", a = "carbon", g = { 5.2, 0.07, 1 }, p = { 0, 1, 7.65 }, s = false },
-			{ n = "Auspuff", a = "chrom", g = { 0.42, 0.3, 0.4 }, p = { 0.5, 1.38, 8.345 }, s = true },
-			{ n = "Auspuff", a = "chrom", g = { 0.42, 0.3, 0.4 }, p = { 1.05, 1.38, 8.345 }, s = true },
+			{ n = "Auspuff", a = "chrom", g = { 0.45, 0.34, 0.34 }, p = { 0.5, 1.38, 8.345 }, s = true, f = "zyl" },
+			{ n = "Auspuff", a = "chrom", g = { 0.45, 0.34, 0.34 }, p = { 1.05, 1.38, 8.345 }, s = true, f = "zyl" },
 			{ n = "Fluegel", a = "carbon", g = { 6.8, 0.12, 1.35 }, p = { 0, 4.32, 7.05 }, s = false, r = { -7, 0, 0 } },
 			{ n = "Fluegelendplatte", a = "lack", g = { 0.08, 0.85, 1.6 }, p = { 3.42, 4.22, 7.05 }, s = true },
 			{ n = "Fluegelstuetze", a = "carbon", g = { 0.12, 1.25, 0.35 }, p = { 1.35, 3.67, 7.25 }, s = true, r = { 12, 0, 0 } },
 			{ n = "Diffusorfinne", a = "carbon", g = { 0.06, 0.4, 0.95 }, p = { 0.5, 1.2, 7.65 }, s = true },
 			{ n = "Diffusorfinne", a = "carbon", g = { 0.06, 0.4, 0.95 }, p = { 1.5, 1.2, 7.65 }, s = true },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.485 }, p = { 3.795, 1.375, -1.35 }, s = true, d = { 0.0222, 0.9998, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.485 }, p = { 3.793, 1.825, -1.35 }, s = true, d = { -0.0333, 0.9994, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.781 }, p = { 3.48, 2.265, -1.35 }, s = true, d = { -0.8173, 0.5762, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.485 }, p = { 3.79, 1.375, 2.55 }, s = true, d = { 0.0444, 0.999, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.485 }, p = { 3.8, 1.825, 2.55 }, s = true, d = { 0, 1, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.505 }, p = { 3.705, 2.265, 2.55 }, s = true, d = { -0.4042, 0.9147, 0 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.094 }, p = { 2.25, 2.181, -7.025 }, s = true, d = { 0, 0.1275, 0.9918 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.54 }, p = { 2.25, 2.308, -5.75 }, s = true, d = { 0, 0.0797, 0.9968 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.538 }, p = { 2.25, 2.413, -4.25 }, s = true, d = { 0, 0.0599, 0.9982 } },
-			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.637 }, p = { 2.25, 2.501, -2.7 }, s = true, d = { 0, 0.0531, 0.9986 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.497 }, p = { 3.748, 1.375, -1.35 }, s = true, d = { 0.2272, 0.9738, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.501 }, p = { 3.74, 1.825, -1.35 }, s = true, d = { -0.2577, 0.9662, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.961 }, p = { 3.27, 2.265, -1.35 }, s = true, d = { -0.8856, 0.4644, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.501 }, p = { 3.735, 1.375, 2.55 }, s = true, d = { 0.2577, 0.9662, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.488 }, p = { 3.768, 1.825, 2.55 }, s = true, d = { -0.1213, 0.9926, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 0.612 }, p = { 3.548, 2.265, 2.55 }, s = true, d = { -0.667, 0.745, 0 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.096 }, p = { 2.25, 2.156, -7.025 }, s = true, d = { 0, 0.146, 0.9893 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.54 }, p = { 2.25, 2.296, -5.75 }, s = true, d = { 0, 0.083, 0.9965 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.538 }, p = { 2.25, 2.403, -4.25 }, s = true, d = { 0, 0.0599, 0.9982 } },
+			{ n = "Fuge", a = "fuge", g = { 0.035, 0.035, 1.637 }, p = { 2.25, 2.488, -2.7 }, s = true, d = { 0, 0.0499, 0.9988 } },
 		},
 		kollision = {
 			{ g = { 7.6, 0.35, 15.5 }, p = { 0, 2.95, 0 } },
@@ -6451,7 +6562,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v16 loaded")
+print("[Driving School] client v17 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -9380,7 +9491,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v16 loading")
+	print("[Driving School] start screen v17 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true

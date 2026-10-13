@@ -15,7 +15,7 @@ Roblox-Fahrschulspiel von Lukas. Antworten an Lukas auf **Deutsch**, kurz und eh
   - LocalScript `FuehrerscheinClient` (`Client.lua`). `v{VERSION}` im Code wird beim Build ersetzt.
 - `tools/mock.luau` – Roblox-Nachbau zum Testen ohne Studio. `tests/*.luau` – Szenarien (laufen über `tools/runner.py`). Ein Test schlägt fehl, wenn eine `ERROR:`-Zeile erscheint.
 - Neue Funktion → passenden Test in `tests/` ergänzen.
-- `tools/mesh/` – Karosserie-Generatoren: `basis.py` (gemeinsam) + je Auto eine Formdatei (`suv.py`, `sport.py`, `track.py`). `python3 tools/mesh/<auto>.py` schreibt `dist/mesh/<Vorlage>.obj` und erzeugt `src/Karosserien.lua` neu (nie von Hand ändern). `Auto.bauenPrivat` nutzt die Karosserie, wenn das Modell im ServerStorage liegt; der Typ-Zweig braucht dafür `if rundVorlage then rundBauen() else <Block> end`. Vorschau: `python3 tools/mesh/render.py <obj> <info.json> <png> r,g,b`. Nur eigene Designs, keine Nachbauten echter Automodelle oder Marken.
+- `tools/mesh/` – Karosserie-Generatoren: `basis.py` (gemeinsam) + je Auto eine Formdatei (`suv.py`, `sport.py`, `track.py`, `limousine.py`); `profil()` für den Querschnitt, `flaechen_paar`/`flaeche_mitte` für Lichter, Grill und Lüftungen als Flächen auf der Karosserie. `python3 tools/mesh/<auto>.py` schreibt `dist/mesh/<Vorlage>.obj` und erzeugt `src/Karosserien.lua` neu (nie von Hand ändern). `Auto.bauenPrivat` nutzt die Karosserie, wenn das Modell im ServerStorage liegt; der Typ-Zweig braucht dafür `if rundVorlage then rundBauen() else <Block> end`. Vorschau: `python3 tools/mesh/render.py <obj> <info.json> <png> r,g,b`. Nur eigene Designs, keine Nachbauten echter Automodelle oder Marken.
 
 ## Daten
 DataStore `Fuehrerschein_v1` (nie umbenennen, sonst verlieren Spieler alles). Neue Felder immer mit Standardwert ergänzen. OrderedDataStores `Rangliste_Level/Km/Perfekt`.
@@ -25,7 +25,8 @@ Stadt |x|,|z| ≤ 324 (50 km/h) · Autobahn z = -520 (130) · Siedlungen x 405�
 Tempolimits zentral in `src/Verkehrsregeln.lua` (WOHNSTRASSEN muss zum Generator passen).
 
 ## Offene Punkte
-- **Stand 13.10.:** Lukas' Studio (Place1.rbxl) läuft auf v16 (Code + Karosserien im ServerStorage, in Studio geprüft). Im Repo schon vorbereitet, noch NICHT in Studio: Dachhaut läuft an den Enden aus (kleine Zacke im vorderen SUV-Seitenfenster weg) – braucht neuen OBJ-Import + Karosserien-Update, mit dem nächsten Karosserie-Release ausliefern. Studio-Verbindung: MCP-Server von Roblox Studio + Claude Desktop; Änderungen in Studio per Ersetzungs-Patch (`execute_luau`), danach Längen gegen das Repo prüfen. Achtung: Browser benennt doppelte Downloads um (RangerX1) – beim Einsortieren Namen angleichen.
+- **Stand 13.10. (v17):** Auto.lua v17 ist in Lukas' Studio eingespielt. Offen: Lukas importiert die vier OBJ (+ .mtl) `RangerX`, `VelocityGT`, `StrikerTR`, `Executive`; dann Modelle in den ServerStorage (Namen angleichen, Browser hängt Zahlen an), `Karosserien.Source` komplett auf Repo-Stand setzen (Länge prüfen), Vorschau + Bilder. Neue Mesh-Teile (Lichter/Grill) heißen im OBJ z. B. `LichtVR` und bekommen im Spiel ihren Teilnamen (`Scheinwerfer`, `BlinkerR` …) über `n`/`a` in `Karosserien.lua`.
+- Studio-Verbindung: MCP-Server von Roblox Studio + Claude Desktop; Änderungen per Ersetzungs-Patch (`execute_luau`), danach Längen gegen das Repo prüfen.
 - Etappe 2 Rest: Busfahrer-Job, Abschlepp-Job.
 - Etappe 3: Spieler-Polizei, Gebrauchtwagenmarkt, echte Spieler als Fahrlehrer, Rettungsdienst/Feuerwehr, Schaltgetriebe, Hupe (Sound-ID von Lukas nötig).
 - Noch nie in echtem Studio getestet – Fehlermeldungen von Lukas haben Vorrang.

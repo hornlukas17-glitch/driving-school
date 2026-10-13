@@ -33,9 +33,12 @@ frage("autoWeg")
 M.laufen(M.zeit() + 1)
 
 -- 2) imported model "RangerX" in ServerStorage (like the 3D importer makes it)
+local KM = require(game.ServerScriptService.FuehrerscheinServer.Karosserien).track
 local vorlage = Instance.new("Model")
 vorlage.Name = "StrikerTR"
-for _, n in { "Karosserie", "Verkleidung", "Glas", "Dach" } do
+local namen = {}
+for n in KM.mesh do table.insert(namen, n) end
+for _, n in namen do
 	local mp = Instance.new("MeshPart")
 	mp.Name = n
 	mp.Parent = vorlage

@@ -16,7 +16,7 @@ objs = {}; cur = None; V = []
 for line in open(obj):
     if line.startswith("o "): cur = line.split()[1]; objs[cur] = []
     elif line.startswith("v "): V.append([float(x) for x in line.split()[1:]])
-    elif line.startswith("f "): objs[cur].append([int(x) - 1 for x in line.split()[1:]])
+    elif line.startswith("f "): objs[cur].append([int(x.split("/")[0]) - 1 for x in line.split()[1:]])
 V = np.array(V)
 INFO = json.load(open(info_pfad))
 R, SPUR, ACHSE = INFO["rad"]

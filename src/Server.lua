@@ -2583,7 +2583,13 @@ task.spawn(function()
 	for _, platz in autohaus:GetChildren() do
 		local typ = platz.Name == "Ausstellungsplatz" and platz:GetAttribute("Typ")
 		if typ and Auto.MODELLE[typ] then
-			local m, sitz, beifahrer = Auto.bauenPrivat(platz.CFrame * CFrame.new(0, -0.5, 0), typ, farben[typ])
+			-- stand the wheels on top of the podium (the indoor podiums from the map are 0.5 higher than the marker)
+			local rpPodest = RaycastParams.new()
+			rpPodest.FilterType = Enum.RaycastFilterType.Exclude
+			rpPodest.FilterDescendantsInstances = { platz }
+			local podest = workspace:Raycast(platz.Position + Vector3.new(0, 3, 0), Vector3.new(0, -10, 0), rpPodest)
+			local hoehe = podest and (podest.Position.Y - platz.Position.Y) or -0.5
+			local m, sitz, beifahrer = Auto.bauenPrivat(platz.CFrame * CFrame.new(0, hoehe, 0), typ, farben[typ])
 			m.Name = "Ausstellung_" .. typ
 			for _, t in m:GetDescendants() do
 				if t:IsA("BasePart") then t.Anchored = true end

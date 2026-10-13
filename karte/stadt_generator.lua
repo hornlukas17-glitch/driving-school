@@ -1938,7 +1938,9 @@ local gelaende = workspace.Terrain
 gelaende:Clear()
 local wiese = fBoden:FindFirstChild("Wiese")
 if wiese then wiese:Destroy() end
-gelaende:FillBlock(CFrame.new(0, -2, 0), V(KARTE * 2, 4, KARTE * 2), M.Grass)
+-- Grasoberflaeche endet bei y = 0, knapp unter dem Asphalt (0.2): Autos rollen auf der Fahrbahn
+local GRAS_Y = -4
+gelaende:FillBlock(CFrame.new(0, GRAS_Y, 0), V(KARTE * 2, 4, KARTE * 2), M.Grass)
 pcall(function() gelaende.Decoration = true end)
 gelaende:SetMaterialColor(M.Grass, RGB(95, 140, 65))
 -- unter Strassen, Gehwegen und Parkplaetzen das Gelaende ganz entfernen: so kann weder Gras
@@ -1946,9 +1948,9 @@ gelaende:SetMaterialColor(M.Grass, RGB(95, 140, 65))
 local function unterGras(teilchen)
 	local cf, gr = teilchen.CFrame, teilchen.Size
 	if teilchen.Shape == Enum.PartType.Cylinder then
-		gelaende:FillCylinder(CFrame.new(cf.Position.X, -2, cf.Position.Z), 4, gr.Y / 2, M.Air)
+		gelaende:FillCylinder(CFrame.new(cf.Position.X, GRAS_Y, cf.Position.Z), 4, gr.Y / 2, M.Air)
 	else
-		gelaende:FillBlock(CFrame.new(cf.Position.X, -2, cf.Position.Z) * cf.Rotation, V(gr.X, 4, gr.Z), M.Air)
+		gelaende:FillBlock(CFrame.new(cf.Position.X, GRAS_Y, cf.Position.Z) * cf.Rotation, V(gr.X, 4, gr.Z), M.Air)
 	end
 end
 for _, t in fStrassen:GetDescendants() do
@@ -1964,6 +1966,45 @@ end
 for _, t in fVorstadt:GetDescendants() do
 	if t.Name == "Querstrasse" or t.Name == "Laengsstrasse" or t.Name == "Siedlungsstrasse" then unterGras(t) end
 end
+-- Loecher schliessen: das Ausschneiden laesst an Teilkanten schmale Spalten ohne Boden zurueck.
+-- Jede 4er-Voxelspalte, unter der weder ein Teil noch Gelaende liegt, wird wieder mit Gras gefuellt.
+task.spawn(function() -- laeuft im Hintergrund, damit Studio nicht einfriert
+	task.wait(1)
+	local lochStrahl = RaycastParams.new()
+	lochStrahl.FilterType = Enum.RaycastFilterType.Exclude
+	lochStrahl.FilterDescendantsInstances = { karte:FindFirstChild("Kartenrand") } -- Sicherheitsboden zaehlt nicht als Boden
+	local loecher = 0
+	local ECKEN = { V(0, 0, 0), V(1.5, 0, 1.5), V(-1.5, 0, -1.5), V(1.5, 0, -1.5), V(-1.5, 0, 1.5) }
+	for cx = -KARTE, KARTE, 4 do -- -850 liegt auf der Voxelmitte (4k+2)
+		for cz = -KARTE, KARTE, 4 do
+			for _, o in ECKEN do
+				if not workspace:Raycast(V(cx, 60, cz) + o, V(0, -80, 0), lochStrahl) then
+					gelaende:FillBlock(CFrame.new(cx, GRAS_Y, cz), V(4, 4, 4), M.Grass)
+					loecher += 1
+					break
+				end
+			end
+		end
+		if cx % 40 == 30 then task.wait() end
+	end
+	print("Gelaendeloecher geschlossen: " .. loecher)
+end)
+-- unsichtbarer Kartenrand und ein Sicherheitsboden: niemand faellt oder fliegt aus der Karte
+local rand = Instance.new("Folder")
+rand.Name = "Kartenrand"
+rand.Parent = karte
+local function randTeil(name, gr, pos)
+	local p = Instance.new("Part")
+	p.Name, p.Size, p.Position = name, gr, pos
+	p.Anchored, p.Transparency, p.CastShadow = true, 1, false
+	p.Parent = rand
+end
+randTeil("Wand", V(4, 400, KARTE * 2 + 8), V(KARTE + 2, 180, 0))
+randTeil("Wand", V(4, 400, KARTE * 2 + 8), V(-KARTE - 2, 180, 0))
+randTeil("Wand", V(KARTE * 2 + 8, 400, 4), V(0, 180, KARTE + 2))
+randTeil("Wand", V(KARTE * 2 + 8, 400, 4), V(0, 180, -KARTE - 2))
+randTeil("Sicherheitsboden", V(KARTE * 2 + 4, 2, KARTE * 2 + 4), V(0, -9, 0))
+
 local wolken = gelaende:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
 wolken.Cover = 0.55
 wolken.Density = 0.7

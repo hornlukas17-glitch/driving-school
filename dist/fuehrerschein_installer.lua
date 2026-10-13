@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v24
+--  DRIVER'S LICENSE SYSTEM v25
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -3514,7 +3514,13 @@ task.spawn(function()
 	for _, platz in autohaus:GetChildren() do
 		local typ = platz.Name == "Ausstellungsplatz" and platz:GetAttribute("Typ")
 		if typ and Auto.MODELLE[typ] then
-			local m, sitz, beifahrer = Auto.bauenPrivat(platz.CFrame * CFrame.new(0, -0.5, 0), typ, farben[typ])
+			-- stand the wheels on top of the podium (the indoor podiums from the map are 0.5 higher than the marker)
+			local rpPodest = RaycastParams.new()
+			rpPodest.FilterType = Enum.RaycastFilterType.Exclude
+			rpPodest.FilterDescendantsInstances = { platz }
+			local podest = workspace:Raycast(platz.Position + Vector3.new(0, 3, 0), Vector3.new(0, -10, 0), rpPodest)
+			local hoehe = podest and (podest.Position.Y - platz.Position.Y) or -0.5
+			local m, sitz, beifahrer = Auto.bauenPrivat(platz.CFrame * CFrame.new(0, hoehe, 0), typ, farben[typ])
 			m.Name = "Ausstellung_" .. typ
 			for _, t in m:GetDescendants() do
 				if t:IsA("BasePart") then t.Anchored = true end
@@ -7361,7 +7367,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v24 loaded")
+print("[Driving School] client v25 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -10744,7 +10750,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v24 loading")
+	print("[Driving School] start screen v25 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -10932,4 +10938,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v24 installed. Press F5 to test.")
+print("License system v25 installed. Press F5 to test.")

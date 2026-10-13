@@ -1,5 +1,11 @@
 # Changelog
 
+## v25 – Karte repariert
+- **Kein Rausfallen mehr:** Gras liegt jetzt knapp unter dem Asphalt (vorher 2 Studs darüber), Spalten im Gelände an Straßenrändern sind zu, unsichtbarer Kartenrand rundherum plus Sicherheitsboden.
+- **Autos fahren auf den Reifen:** Die Karte war in Studio um 2,8 Studs angehoben – NPC-Verkehr fuhr dadurch *in* der Straße. Karte wieder auf Originalhöhe.
+- Ausstellungsautos im Autohaus stehen auf dem Podest statt 0,5 Studs darin.
+- Shop/Belohnungen: Lade-Absicherung jetzt auch in Studio.
+
 ## v24 – Belohnungen & Shop
 - **Tägliche Belohnung:** 7-Tage-Kalender mit Serie (Tag 7 = große Truhe), öffnet sich beim Spielstart automatisch. Wer einen Tag auslässt, fängt wieder bei Tag 1 an.
 - **Spielzeit-Geschenke:** nach 10/25/45/70/100 Minuten pro Tag (erstes nach 10 min – so lange muss jemand spielen, damit Roblox dir Creator Rewards zahlt).

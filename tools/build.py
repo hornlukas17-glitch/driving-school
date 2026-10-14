@@ -45,6 +45,10 @@ neu("ModuleScript", "Verkehrsregeln", ordner, [=====[
 ''' + src("Verkehrsregeln.lua") + ''']=====])
 neu("ModuleScript", "Verkehr", ordner, [=====[
 ''' + src("Verkehr.lua") + ''']=====])
+neu("ModuleScript", "Motorklaenge", ordner, [=====[
+''' + src("Motorklaenge.lua") + ''']=====])
+neu("ModuleScript", "Motorsound", ordner, [=====[
+''' + src("Motorsound.lua") + ''']=====])
 
 local server = Instance.new("Script")
 server.Name = "FuehrerscheinServer"
@@ -105,6 +109,8 @@ rs = item("Folder", "Fuehrerschein", [
     item("RemoteEvent", "Blinker"), item("RemoteEvent", "VerkehrDaten"),
     item("ModuleScript", "Verkehrsregeln", quelle=src("Verkehrsregeln.lua")),
     item("ModuleScript", "Verkehr", quelle=src("Verkehr.lua")),
+    item("ModuleScript", "Motorklaenge", quelle=src("Motorklaenge.lua")),
+    item("ModuleScript", "Motorsound", quelle=src("Motorsound.lua")),
 ])
 server = item("Script", "FuehrerscheinServer", [
     item("ModuleScript", n, quelle=src(n + ".lua")) for n in ["Fragen", "Auto", "Fahrstunden", "Strafen", "Umwelt", "Fahrzeugpflege", "Missionen", "Shop", "Belohnungen", "Karosserien"]

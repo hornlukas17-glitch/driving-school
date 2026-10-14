@@ -12,6 +12,8 @@ local fahrEvent = ordner:WaitForChild("Fahrstunde")
 local blinkerEvent = ordner:WaitForChild("Blinker")
 local Regeln = require(ordner:WaitForChild("Verkehrsregeln"))
 local Verkehr = require(ordner:WaitForChild("Verkehr"))
+local Motorsound = require(ordner:WaitForChild("Motorsound"))
+Motorsound.starten() -- engine sounds for every car (pure sound, the driving is not touched)
 
 local BLAU = Color3.fromRGB(30, 90, 180)
 local GRUEN = Color3.fromRGB(40, 150, 70)
@@ -3085,7 +3087,7 @@ task.spawn(function()
 	for _ = 1, 15 do
 		local r = frage("verkehr")
 		if r.liste then
-			Verkehr.anzeigen(r.liste, event)
+			Motorsound.verkehr(Verkehr.anzeigen(r.liste, event))
 			return
 		end
 		task.wait(2)

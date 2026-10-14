@@ -1,5 +1,11 @@
 # Changelog
 
+## v33 – Motorsounds
+- **Jedes Auto klingt anders:** eigene, selbst erzeugte Motorstimmen – Dreizylinder (Zipster), Vierzylinder (Fahrschulauto, Pizza), V6 (Ranger X), weicher V8 (Executive/Taxi), Reihensechser (Velocity GT), Biturbo-V6 (Vanta GS), Sportauspuff (Night Edition), Boxer (Striker TR), Renn-V8 (Apex R1), V12 (Nova SS), Diesel mit Turbo (LKW, Lieferwagen).
+- **Drehzahl wie echt:** virtuelles Getriebe mit Gangwechseln, Gas im Stand dreht hoch, vom Gas gehen klingt dumpfer. Anlassen beim Einsteigen, Motor geht beim Aussteigen aus.
+- **Andere Spieler und NPC-Verkehr** sind auch zu hören (die nächsten paar Autos, leiser). Im Fast-Modus weniger gleichzeitige Sounds.
+- Bis die eigenen Sound-Dateien hochgeladen sind, läuft der kostenlose Roblox-Motorsound – pro Auto anders gestimmt.
+
 ## v32 – Kleine Korrekturen nach dem Studio-Test
 - **Leistungsmodus:** Die FPS-Überwachung zählt nur noch, solange das Spielfenster aktiv ist. Vorher schaltete sich „⚡ Fast“ ein, sobald Studio oder das Spiel im Hintergrund lief (dort drosselt Roblox absichtlich die Bildrate).
 - **Vanta GS Night Edition:** Die mittlere Diffusor-Finne saß vorne unter der Stoßstange statt hinten – jetzt sitzen alle fünf Finnen am Heck.

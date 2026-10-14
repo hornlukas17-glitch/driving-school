@@ -472,6 +472,11 @@ function methoden.Sit(seat, hum)
 	hum.SeatPart = seat
 	local w = neueInstanz("Weld") w.Name = "SeatWeld" w.Parent = seat
 end
+-- sounds (and animation tracks): only remember whether they play
+function methoden.Play(o) o.__props.IsPlaying = true end
+function methoden.Stop(o) o.__props.IsPlaying = false end
+function methoden.Pause(o) o.__props.IsPlaying = false end
+function methoden.Resume(o) o.__props.IsPlaying = true end
 function methoden.LoadAnimation(o, a)
 	local spur = neueInstanz("AnimationTrack")
 	return spur

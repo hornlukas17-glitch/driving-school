@@ -4,7 +4,6 @@
 return {
 	fahrschule = {
 		vorlage = "Fahrschulwagen",
-		drehung = 180,
 		mesh = {
 			Glas = { groesse = { 7.0507, 2.2561, 10.6513 }, mitte = { -0.0041, 4.8071, 1.7671 } },
 			Heckpartie = { groesse = { 7.0896, 5.1011, 7.8364 }, mitte = { 0.0008, 3.4147, 3.4722 } },
@@ -28,6 +27,7 @@ return {
 			{ g = { 6, 1.4, 7.5 }, p = { 0, 4.4, 0.8 } },
 		},
 		dachschild = { z = 2.068, tiefe = 0.991, breite = 5.071, y = 5.935 },
+		autodrehung = true,
 		kennzeichen = { vorne = { 1.55, -7.952 }, hinten = { 2.55, 7.449 } },
 		spoiler = { 6.235, 5.6, 0.4 },
 	},

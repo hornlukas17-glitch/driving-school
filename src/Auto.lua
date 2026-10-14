@@ -989,6 +989,8 @@ function Auto.rundeKarosserie(m, chassis, cf, rundDef, rundVorlage, farbe, k, zu
 	ohne = ohne or {}
 	local function at(x, y, z) return cf * CFrame.new(x, y, z) end
 	local function v3(t) return V3(t[1], t[2], t[3]) end
+	local drehung = rundDef.drehung or Auto.MESH_DREHUNG
+	if rundDef.autodrehung then drehung = Auto.drehungErkennen(rundDef, rundVorlage) or drehung end
 	for name, d in rundDef.mesh do
 		local quelle = not (d.a and ohne[d.a]) and meshTeil(rundVorlage, name)
 		if quelle then
@@ -999,7 +1001,7 @@ function Auto.rundeKarosserie(m, chassis, cf, rundDef, rundVorlage, farbe, k, zu
 			mp.CanTouch = false
 			mp.Massless = true
 			mp.Size = v3(d.groesse)
-			mp.CFrame = at(d.mitte[1], d.mitte[2], d.mitte[3]) * CFrame.Angles(0, math.rad(rundDef.drehung or Auto.MESH_DREHUNG), 0)
+			mp.CFrame = at(d.mitte[1], d.mitte[2], d.mitte[3]) * CFrame.Angles(0, math.rad(drehung), 0)
 			for _, kind in mp:GetChildren() do
 				if kind:IsA("SurfaceAppearance") or kind:IsA("Decal") or kind:IsA("Texture") then kind:Destroy() end
 			end
@@ -1015,7 +1017,7 @@ function Auto.rundeKarosserie(m, chassis, cf, rundDef, rundVorlage, farbe, k, zu
 				if d.a == "scheinwerfer" then
 					local licht = Instance.new("SpotLight")
 					-- the mesh part may be turned around (drehung 180): then its front face points backwards
-					licht.Face = ((rundDef.drehung or Auto.MESH_DREHUNG) % 360 == 180) and Enum.NormalId.Back or Enum.NormalId.Front
+					licht.Face = (drehung % 360 == 180) and Enum.NormalId.Back or Enum.NormalId.Front
 					licht.Angle = 55
 					licht.Range = 50
 					licht.Brightness = 1.2
@@ -1072,6 +1074,27 @@ function Auto.rundeKarosserie(m, chassis, cf, rundDef, rundVorlage, farbe, k, zu
 	end
 end
 Auto.meshTeil = meshTeil
+
+-- Does the 3D importer hand us the body turned around? Compare where the part that sits furthest to the front
+-- or back (e.g. the headlights) lies relative to the body in the imported model and in the generator data.
+local drehungCache = setmetatable({}, { __mode = "k" })
+function Auto.drehungErkennen(rundDef, vorlage)
+	if drehungCache[vorlage] then return drehungCache[vorlage] end
+	local basis = meshTeil(vorlage, "Karosserie")
+	local kd = rundDef.mesh.Karosserie
+	if not basis or not kd then return nil end
+	local bester, abstand = nil, 0
+	for name, d in rundDef.mesh do
+		local dz = d.mitte[3] - kd.mitte[3]
+		if name ~= "Karosserie" and math.abs(dz) > abstand and meshTeil(vorlage, name) then bester, abstand = name, math.abs(dz) end
+	end
+	if not bester or abstand < 1 then return nil end
+	local soll = rundDef.mesh[bester].mitte[3] - kd.mitte[3]
+	local ist = basis.CFrame:PointToObjectSpace(meshTeil(vorlage, bester).Position).Z
+	local ergebnis = (soll * ist < 0) and 180 or 0
+	drehungCache[vorlage] = ergebnis
+	return ergebnis
+end
 
 function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 	local D = Auto.MODELLE[typ] or Auto.MODELLE.suv

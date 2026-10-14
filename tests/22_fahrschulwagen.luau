@@ -86,5 +86,18 @@ local pizza = Auto.bauen(CFrame.new(30, 0.2, -700), Color3.fromRGB(200, 40, 30),
 pruefe("pizza car keeps its colour", pizza.Karosserie.Color == Color3.fromRGB(200, 40, 30))
 pruefe("pizza car without stripes", sichtbar(pizza, "Streifen") == 0)
 pruefe("pizza sign text", pizza.Dachschild:FindFirstChildOfClass("SurfaceGui"):FindFirstChildOfClass("TextLabel").Text == "PIZZA RAPIDO")
+-- 4) the game finds out by itself whether the 3D importer turned the model around
+local function drehungImAuto(vorzeichen)
+	for _, x in vorlage:GetChildren() do
+		local d = K.mesh[x.Name]
+		x.CFrame = CFrame.new(vorzeichen * d.mitte[1], d.mitte[2], vorzeichen * d.mitte[3])
+	end
+	local a = Auto.bauen(CFrame.new(60, 0.2, -700), Color3.new(1, 1, 1))
+	local blick = a.Chassis.CFrame:VectorToObjectSpace(a.Karosserie.CFrame.LookVector)
+	return blick.Z
+end
+pruefe("imported as written: not turned", drehungImAuto(1) < -0.9)
+local vorlage2 = vorlage:Clone() vorlage:Destroy() vorlage = vorlage2 vorlage.Parent = game:GetService("ServerStorage")
+pruefe("importer turned it around: turned back by 180 degrees", drehungImAuto(-1) > 0.9)
 vorlage:Destroy()
 print("driving school car ok")

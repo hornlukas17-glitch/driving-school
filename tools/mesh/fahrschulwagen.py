@@ -204,4 +204,5 @@ dachschild = {"z": round((sch["z0"] + sch["z1"]) / 2, 3), "tiefe": round(sch["z1
 print("Dachschild", dachschild, "Kennzeichen", kennz)
 
 erzeugen("fahrschule", "Fahrschulwagen", "Driving school car body", (RAD_R, SPUR, ACHSE), meshes, anbau, kollision, kennz,
-         [round(sch["dach_y"] + 0.3, 3), 5.6, 0.4], normalen=normalen, drehung=180, extra={"dachschild": dachschild})
+         [round(sch["dach_y"] + 0.3, 3), 5.6, 0.4], normalen=normalen,
+         extra={"dachschild": dachschild, "autodrehung": True})   # das Spiel erkennt selbst, ob der Importer das Modell gedreht hat

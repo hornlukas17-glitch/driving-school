@@ -1,5 +1,8 @@
 # Changelog
 
+## v34 – Platzhalter-Sounds klar unterscheidbar
+- Solange die eigenen Motorsounds noch nicht hochgeladen sind, klingt trotzdem jedes Auto anders: der Roblox-Platzhalter bekommt pro Motor eigene Tonhöhe, Bass/Höhen, Rauheit, Pulsieren (wenige Zylinder, Diesel) oder Chorus (V12). Vanta GS und Night Edition klingen jetzt tiefer und rauer als das Fahrschulauto.
+
 ## v33 – Motorsounds
 - **Jedes Auto klingt anders:** eigene, selbst erzeugte Motorstimmen – Dreizylinder (Zipster), Vierzylinder (Fahrschulauto, Pizza), V6 (Ranger X), weicher V8 (Executive/Taxi), Reihensechser (Velocity GT), Biturbo-V6 (Vanta GS), Sportauspuff (Night Edition), Boxer (Striker TR), Renn-V8 (Apex R1), V12 (Nova SS), Diesel mit Turbo (LKW, Lieferwagen).
 - **Drehzahl wie echt:** virtuelles Getriebe mit Gangwechseln, Gas im Stand dreht hoch, vom Gas gehen klingt dumpfer. Anlassen beim Einsteigen, Motor geht beim Aussteigen aus.

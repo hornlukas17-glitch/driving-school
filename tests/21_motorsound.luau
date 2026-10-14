@@ -78,6 +78,13 @@ M.laufen(M.zeit() + 2)
 local s = motorSounds(auto)
 pruefe("engine runs when the driver sits in", #s == 1 and s[1].IsPlaying == true and s[1].Looped == true)
 pruefe("stand-in sound until own files are uploaded", s[1].SoundId == "rbxassetid://" .. MS.ERSATZ_ID)
+pruefe("stand-in has the character of its voice (raspy six)", s[1]:FindFirstChildOfClass("DistortionSoundEffect") ~= nil)
+local namen = {}
+for stimme, k in MS.ERSATZ_KLANG do
+	local key = ("%.2f/%s/%s/%s/%s"):format(k.ton, tostring(k.oktave), tostring(k.verzerrung), tostring(k.tremolo and k.tremolo[1]), tostring(k.chorus))
+	pruefe("stand-in of " .. stimme .. " differs from the others", namen[key] == nil)
+	namen[key] = true
+end
 pruefe("audible", s[1].Volume > 0.05)
 local leerlaufTon = s[1].PlaybackSpeed
 auto.Chassis.AssemblyLinearVelocity = auto.Chassis.CFrame.LookVector * 60

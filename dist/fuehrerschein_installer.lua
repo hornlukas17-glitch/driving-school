@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v33
+--  DRIVER'S LICENSE SYSTEM v34
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -1006,30 +1006,49 @@ local Motorsound = {}
 Motorsound.DATEN = DATEN
 Motorsound.ERSATZ_ID = 80317022777602 -- "Car-Engine-Loop" (Roblox, free to use)
 
--- which voice each vehicle uses: laut = volume, ton = pitch, ersatzTon = pitch of the stand-in loop
+-- which voice each vehicle uses: laut = volume, ton = pitch
 local PROFILE = {
-	fahrschule = { stimme = "Fahrschule", laut = 0.85, ersatzTon = 1.0 },
-	kleinwagen = { stimme = "Zipster", laut = 0.8, ersatzTon = 1.25 },
-	suv = { stimme = "Ranger", laut = 0.95, ersatzTon = 0.8 },
-	limousine = { stimme = "Executive", laut = 0.75, ersatzTon = 0.72 },
-	sport = { stimme = "Velocity", laut = 1.0, ersatzTon = 1.12 },
-	gs = { stimme = "Vanta", laut = 1.0, ersatzTon = 0.95 },
-	gs_night = { stimme = "VantaNight", laut = 1.15, ersatzTon = 0.88 },
-	track = { stimme = "Striker", laut = 1.1, ersatzTon = 1.3 },
-	renn = { stimme = "Apex", laut = 1.2, ersatzTon = 1.42 },
-	supersport = { stimme = "Nova", laut = 1.15, ersatzTon = 1.2 },
-	lkw1 = { stimme = "Lkw", laut = 1.0, ton = 1.08, ersatzTon = 0.62 },
-	lkw2 = { stimme = "Lkw", laut = 1.1, ton = 1.0, ersatzTon = 0.56 },
-	lkw3 = { stimme = "Lkw", laut = 1.2, ton = 0.92, ersatzTon = 0.5 },
+	fahrschule = { stimme = "Fahrschule", laut = 0.85 },
+	kleinwagen = { stimme = "Zipster", laut = 0.8 },
+	suv = { stimme = "Ranger", laut = 0.95 },
+	limousine = { stimme = "Executive", laut = 0.75 },
+	sport = { stimme = "Velocity", laut = 1.0 },
+	gs = { stimme = "Vanta", laut = 1.0 },
+	gs_night = { stimme = "VantaNight", laut = 1.15 },
+	track = { stimme = "Striker", laut = 1.1 },
+	renn = { stimme = "Apex", laut = 1.2 },
+	supersport = { stimme = "Nova", laut = 1.15 },
+	lkw1 = { stimme = "Lkw", laut = 1.0, ton = 1.08 },
+	lkw2 = { stimme = "Lkw", laut = 1.1, ton = 1.0 },
+	lkw3 = { stimme = "Lkw", laut = 1.2, ton = 0.92 },
 	-- NPC traffic (quieter, only the nearest few)
-	npc_kleinwagen = { stimme = "Zipster", laut = 0.45, ersatzTon = 1.25 },
-	npc_limousine = { stimme = "Fahrschule", laut = 0.45, ton = 0.94, ersatzTon = 0.95 },
-	npc_suv = { stimme = "Ranger", laut = 0.5, ersatzTon = 0.8 },
-	npc_polizei = { stimme = "Fahrschule", laut = 0.5, ton = 1.06, ersatzTon = 1.05 },
-	npc_transporter = { stimme = "Transporter", laut = 0.55, ersatzTon = 0.7 },
-	npc_lkw = { stimme = "Lkw", laut = 0.7, ersatzTon = 0.55 },
+	npc_kleinwagen = { stimme = "Zipster", laut = 0.45 },
+	npc_limousine = { stimme = "Fahrschule", laut = 0.45, ton = 0.94 },
+	npc_suv = { stimme = "Ranger", laut = 0.5 },
+	npc_polizei = { stimme = "Fahrschule", laut = 0.5, ton = 1.06 },
+	npc_transporter = { stimme = "Transporter", laut = 0.55 },
+	npc_lkw = { stimme = "Lkw", laut = 0.7 },
 }
 Motorsound.PROFILE = PROFILE
+
+-- Stand-in until the own files are uploaded: the same Roblox loop, but every voice gets its own
+-- character with sound effects. ton = speed, oktave = pitch shift, eq = { low, mid, high } dB,
+-- verzerrung = distortion (raspy), tremolo = { depth, Hz per rpm } (pulsing like few cylinders), chorus = smooth V12
+local ERSATZ_KLANG = {
+	Fahrschule = { ton = 1.0 },
+	Zipster = { ton = 1.3, eq = { -6, 2, 2 }, tremolo = { 0.35, 1 / 70 } },
+	Ranger = { ton = 0.8, oktave = 0.85, eq = { 5, 0, -4 } },
+	Executive = { ton = 0.72, eq = { 4, -2, -8 }, tremolo = { 0.18, 1 / 110 } },
+	Velocity = { ton = 1.15, verzerrung = 0.25, eq = { 0, 2, 4 } },
+	Vanta = { ton = 0.92, oktave = 0.9, verzerrung = 0.15, eq = { 4, 1, 1 } },
+	VantaNight = { ton = 0.85, oktave = 0.85, verzerrung = 0.45, eq = { 7, 2, 2 }, tremolo = { 0.3, 1 / 90 } },
+	Striker = { ton = 1.35, oktave = 1.15, verzerrung = 0.3, eq = { -2, 3, 5 } },
+	Apex = { ton = 1.45, verzerrung = 0.55, eq = { 0, 3, 6 }, tremolo = { 0.15, 1 / 60 } },
+	Nova = { ton = 1.25, oktave = 1.25, chorus = true, eq = { 1, 2, 3 } },
+	Lkw = { ton = 0.55, oktave = 0.6, verzerrung = 0.2, eq = { 6, 0, -6 }, tremolo = { 0.4, 1 / 45 } },
+	Transporter = { ton = 0.7, oktave = 0.75, verzerrung = 0.15, eq = { 3, 0, -4 }, tremolo = { 0.3, 1 / 55 } },
+}
+Motorsound.ERSATZ_KLANG = ERSATZ_KLANG
 
 local HOERWEITE = 200        -- studs: further away, a car gets no sound objects at all
 local NPC_HOERWEITE = 75
@@ -1122,7 +1141,30 @@ local function soundsBauen(st, teil, nurNiedrig)
 	else
 		st.eigen = false
 		local s, eq = neuerSound(teil, Motorsound.ERSATZ_ID)
-		st.loops[1] = { sound = s, eq = eq }
+		local k = ERSATZ_KLANG[p.stimme] or ERSATZ_KLANG.Fahrschule
+		local l = { sound = s, eq = eq, klang = k }
+		if k.oktave then
+			local ps = Instance.new("PitchShiftSoundEffect")
+			ps.Octave = k.oktave
+			ps.Parent = s
+		end
+		if k.verzerrung then
+			local dz = Instance.new("DistortionSoundEffect")
+			dz.Level = k.verzerrung
+			dz.Parent = s
+		end
+		if k.tremolo then
+			l.tremolo = Instance.new("TremoloSoundEffect")
+			l.tremolo.Depth = k.tremolo[1]
+			l.tremolo.Duty = 0.5
+			l.tremolo.Parent = s
+		end
+		if k.chorus then
+			local ch = Instance.new("ChorusSoundEffect")
+			ch.Depth, ch.Mix, ch.Rate = 0.2, 0.5, 1.5
+			ch.Parent = s
+		end
+		st.loops[1] = l
 	end
 	for _, l in st.loops do l.sound:Play() end
 end
@@ -1151,10 +1193,13 @@ local function klangSetzen(st, rpm, last, lautstaerke)
 		end
 	else
 		local l = st.loops[1]
+		local k = l.klang
 		local anteil = (rpm - d.leerlauf) / (d.max - d.leerlauf)
-		l.sound.PlaybackSpeed = (p.ersatzTon or 1) * (0.62 + 1.1 * anteil)
+		l.sound.PlaybackSpeed = k.ton * ton * (0.62 + 1.1 * anteil)
 		l.sound.Volume = lautstaerke
-		l.eq.HighGain = hoch
+		local eq = k.eq or { 0, 0, 0 }
+		l.eq.LowGain, l.eq.MidGain, l.eq.HighGain = eq[1], eq[2], eq[3] + hoch
+		if l.tremolo then l.tremolo.Frequency = math.clamp(rpm * k.tremolo[2], 0.5, 20) end
 	end
 end
 
@@ -8140,7 +8185,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v33 loaded")
+print("[Driving School] client v34 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -11944,7 +11989,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v33 loading")
+	print("[Driving School] start screen v34 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -12144,4 +12189,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v33 installed. Press F5 to test.")
+print("License system v34 installed. Press F5 to test.")

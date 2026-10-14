@@ -1327,10 +1327,7 @@ s.Source = src:sub(1, k - 1) .. [==[
 ]==] .. src:sub(k)
 end)
 
-schritt("Streaming + Detailstufen", function()
-workspace.StreamingEnabled = true
-workspace.StreamingTargetRadius = 640
-workspace.StreamingMinRadius = 160
+schritt("Detailstufen (weite Gebaeude vereinfacht)", function()
 local n = 0
 for _, m in workspace.Karte:GetDescendants() do
 	if m:IsA("Model") and #m:GetDescendants() >= 12 then
@@ -1339,5 +1336,13 @@ for _, m in workspace.Karte:GetDescendants() do
 end
 assert(n > 0, "Detailstufen liessen sich nicht setzen")
 end)
+-- Streaming-Radius: manche Studio-Versionen erlauben das nur im Eigenschaften-Fenster (Workspace -> Streaming)
+local okRadius = pcall(function()
+	workspace.StreamingEnabled = true
+	workspace.StreamingTargetRadius = 640
+	workspace.StreamingMinRadius = 160
+end)
+table.insert(ergebnis, okRadius and "OK     Streaming-Radius 640" or "HINWEIS Streaming-Radius bitte selbst setzen: Workspace -> StreamingTargetRadius 640, StreamingMinRadius 160 (optional)")
+
 print(table.concat(ergebnis, "\n"))
 print("Fertig - jetzt File -> Save (Strg+S)")

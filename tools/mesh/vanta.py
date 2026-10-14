@@ -202,10 +202,15 @@ for sx in (-1, 1):
     if h:
         nacht.append(teil("Endrohr", "alu", (0.5, 0.34, 0.34), [sx * 1.95, 1.28, h[0] - 0.1], zylinder=True))
         nacht.append(teil("Endrohr_Innen", "fuge", (0.52, 0.24, 0.24), [sx * 1.95, 1.28, h[0] - 0.1], zylinder=True))
-for x in (-1.2, -0.6, 0.0, 0.6, 1.2):
+diff_z = {}
+for x in (-1.2, -0.6, 0.6, 1.2):
     h = hinten(TRI, x, 1.15)
-    if h:
-        nacht.append(teil("Diffusor", "glanzschwarz", (0.05, 0.24, 0.42), [x, 1.14, h[0] - 0.08]))
+    if h and h[0] > 5:          # nur Treffer an der Heckschürze (in der Mitte hat das Netz eine Lücke -> Strahl träfe die Front)
+        diff_z[x] = h[0]
+if -0.6 in diff_z and 0.6 in diff_z:
+    diff_z[0.0] = (diff_z[-0.6] + diff_z[0.6]) / 2
+for x in sorted(diff_z):
+    nacht.append(teil("Diffusor", "glanzschwarz", (0.05, 0.24, 0.42), [x, 1.14, diff_z[x] - 0.08]))
 print("Night-Edition-Heck", len(nacht), "Teile")
 
 kennz = {"vorne": [1.45, round(front_z(1.45) - 0.06, 3)], "hinten": [2.05, round(heck_z(2.05) + 0.08, 3)]}

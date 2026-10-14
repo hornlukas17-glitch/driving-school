@@ -2978,16 +2978,24 @@ do
 	end
 	_G.SparmodusAuto()
 
-	-- frame rate watch: stays below 30 fps for 10 seconds -> performance mode (only if the player didn't choose)
+	-- frame rate watch: stays below 30 fps for 10 seconds -> performance mode (only if the player didn't choose).
+	-- Only counts while the game window has focus: in the background (alt-tab, Studio behind another app)
+	-- the frame rate drops on purpose and says nothing about the device.
 	local bilder, langsam = 0, 0
+	local imFokus, fokusGewechselt = true, false
+	UIS.WindowFocusReleased:Connect(function() imFokus, fokusGewechselt = false, true end)
+	UIS.WindowFocused:Connect(function() imFokus, fokusGewechselt = true, true end)
 	RunService.RenderStepped:Connect(function() bilder += 1 end)
 	task.spawn(function()
 		while true do
 			bilder = 0
+			fokusGewechselt = false
 			task.wait(5)
 			local fps = bilder / 5
 			local e = _G.Einstellungen
-			if _G.ImSpiel and e and not e.sparmodusGewaehlt and not e.sparmodus then
+			if not imFokus or fokusGewechselt then
+				langsam = 0
+			elseif _G.ImSpiel and e and not e.sparmodusGewaehlt and not e.sparmodus then
 				langsam = fps < 30 and langsam + 1 or 0
 				if langsam >= 2 then
 					e.sparmodus = true

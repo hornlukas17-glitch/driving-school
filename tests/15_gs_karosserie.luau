@@ -111,6 +111,14 @@ pruefe("normal GS without night parts", anzahl(normal, "Segment") == 0 and anzah
 local seg = nachtAuto:FindFirstChild("Segment")
 local relS = nachtAuto.Chassis.CFrame:PointToObjectSpace(seg.Position)
 pruefe("segments sit at the rear", relS.Z > 6)
+-- every night part belongs to the rear (a diffuser fin once ended up at the front)
+local vorne = 0
+for _, x in nachtAuto:GetChildren() do
+	if x:IsA("BasePart") and (x.Name == "Diffusor" or x.Name == "Endrohr" or x.Name == "Rueckstrahler" or x.Name == "Nachtlinie" or x.Name == "Lichtrahmen") then
+		if nachtAuto.Chassis.CFrame:PointToObjectSpace(x.Position).Z < 6 then vorne += 1 end
+	end
+end
+pruefe("all night parts at the rear", vorne == 0)
 nachtAuto:Destroy()
 normal:Destroy()
 print("done")

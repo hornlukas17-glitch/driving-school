@@ -1,5 +1,9 @@
 # Changelog
 
+## v32 – Kleine Korrekturen nach dem Studio-Test
+- **Leistungsmodus:** Die FPS-Überwachung zählt nur noch, solange das Spielfenster aktiv ist. Vorher schaltete sich „⚡ Fast“ ein, sobald Studio oder das Spiel im Hintergrund lief (dort drosselt Roblox absichtlich die Bildrate).
+- **Vanta GS Night Edition:** Die mittlere Diffusor-Finne saß vorne unter der Stoßstange statt hinten – jetzt sitzen alle fünf Finnen am Heck.
+
 ## v31 – Sofort fahren, Sterne, Auswertung, Handy-Pedale
 - **Neuer Einstieg:** Neue Spieler sitzen nach PLAY direkt in der ersten Fahrstunde („Lesson 1: First Drive“, eine kurze Runde um den Block) – ohne Anmelden und ohne Theorie vorher. Die Theorie (Tafel + Prüfungsplatz) ist erst vor der praktischen Prüfung nötig. Jetzt 6 Fahrstunden.
 - **Sterne pro Fahrstunde:** 0 Fehler = ★★★, bis 2 Fehler = ★★, sonst ★. Bei Anna „⭐ Improve a lesson“ zum Wiederholen; jeder neue Stern bringt Bonus-Coins. Das Ergebnisfenster zeigt die Sterne und den nächsten Schritt.

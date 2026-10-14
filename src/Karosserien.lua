@@ -143,7 +143,7 @@ return {
 			{ n = "Endrohr_Innen", a = "fuge", g = { 0.52, 0.24, 0.24 }, p = { 1.95, 1.28, 8.373 }, s = false, f = "zyl" },
 			{ n = "Diffusor", a = "glanzschwarz", g = { 0.05, 0.24, 0.42 }, p = { -1.2, 1.14, 8.83 }, s = false },
 			{ n = "Diffusor", a = "glanzschwarz", g = { 0.05, 0.24, 0.42 }, p = { -0.6, 1.14, 8.617 }, s = false },
-			{ n = "Diffusor", a = "glanzschwarz", g = { 0.05, 0.24, 0.42 }, p = { 0, 1.14, -8.14 }, s = false },
+			{ n = "Diffusor", a = "glanzschwarz", g = { 0.05, 0.24, 0.42 }, p = { 0, 1.14, 8.618 }, s = false },
 			{ n = "Diffusor", a = "glanzschwarz", g = { 0.05, 0.24, 0.42 }, p = { 0.6, 1.14, 8.619 }, s = false },
 			{ n = "Diffusor", a = "glanzschwarz", g = { 0.05, 0.24, 0.42 }, p = { 1.2, 1.14, 8.8 }, s = false },
 		},

@@ -92,4 +92,16 @@ pedale.gas.InputEnded:Fire(beruehrung)
 pedale.rechts.InputEnded:Fire(beruehrung)
 pruefe("released", _G.TouchGas == 0 and _G.TouchLenk == 0)
 UIS.TouchEnabled = false
+
+-- 6) frame rate watch: low fps only counts while the game window has focus
+--    (Studio in the background / alt-tab throttle rendering – that says nothing about the device)
+local e = _G.Einstellungen
+e.sparmodus, e.sparmodusGewaehlt = false, false
+_G.SparmodusSetzen(false)
+UIS.WindowFocusReleased:Fire()
+M.laufen(M.zeit() + 22, 1 / 10)
+pruefe("window in the background: no performance mode", e.sparmodus == false)
+UIS.WindowFocused:Fire()
+M.laufen(M.zeit() + 22, 1 / 10)
+pruefe("low fps with the window in focus: performance mode", e.sparmodus == true)
 print("performance ok")

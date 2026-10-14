@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v31
+--  DRIVER'S LICENSE SYSTEM v32
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -7494,7 +7494,7 @@ return {
 			{ n = "Endrohr_Innen", a = "fuge", g = { 0.52, 0.24, 0.24 }, p = { 1.95, 1.28, 8.373 }, s = false, f = "zyl" },
 			{ n = "Diffusor", a = "glanzschwarz", g = { 0.05, 0.24, 0.42 }, p = { -1.2, 1.14, 8.83 }, s = false },
 			{ n = "Diffusor", a = "glanzschwarz", g = { 0.05, 0.24, 0.42 }, p = { -0.6, 1.14, 8.617 }, s = false },
-			{ n = "Diffusor", a = "glanzschwarz", g = { 0.05, 0.24, 0.42 }, p = { 0, 1.14, -8.14 }, s = false },
+			{ n = "Diffusor", a = "glanzschwarz", g = { 0.05, 0.24, 0.42 }, p = { 0, 1.14, 8.618 }, s = false },
 			{ n = "Diffusor", a = "glanzschwarz", g = { 0.05, 0.24, 0.42 }, p = { 0.6, 1.14, 8.619 }, s = false },
 			{ n = "Diffusor", a = "glanzschwarz", g = { 0.05, 0.24, 0.42 }, p = { 1.2, 1.14, 8.8 }, s = false },
 		},
@@ -7752,7 +7752,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v31 loaded")
+print("[Driving School] client v32 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -10726,16 +10726,24 @@ do
 	end
 	_G.SparmodusAuto()
 
-	-- frame rate watch: stays below 30 fps for 10 seconds -> performance mode (only if the player didn't choose)
+	-- frame rate watch: stays below 30 fps for 10 seconds -> performance mode (only if the player didn't choose).
+	-- Only counts while the game window has focus: in the background (alt-tab, Studio behind another app)
+	-- the frame rate drops on purpose and says nothing about the device.
 	local bilder, langsam = 0, 0
+	local imFokus, fokusGewechselt = true, false
+	UIS.WindowFocusReleased:Connect(function() imFokus, fokusGewechselt = false, true end)
+	UIS.WindowFocused:Connect(function() imFokus, fokusGewechselt = true, true end)
 	RunService.RenderStepped:Connect(function() bilder += 1 end)
 	task.spawn(function()
 		while true do
 			bilder = 0
+			fokusGewechselt = false
 			task.wait(5)
 			local fps = bilder / 5
 			local e = _G.Einstellungen
-			if _G.ImSpiel and e and not e.sparmodusGewaehlt and not e.sparmodus then
+			if not imFokus or fokusGewechselt then
+				langsam = 0
+			elseif _G.ImSpiel and e and not e.sparmodusGewaehlt and not e.sparmodus then
 				langsam = fps < 30 and langsam + 1 or 0
 				if langsam >= 2 then
 					e.sparmodus = true
@@ -11546,7 +11554,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v31 loading")
+	print("[Driving School] start screen v32 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -11746,4 +11754,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v31 installed. Press F5 to test.")
+print("License system v32 installed. Press F5 to test.")

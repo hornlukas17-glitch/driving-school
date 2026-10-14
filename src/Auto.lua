@@ -77,6 +77,17 @@ for _, n in { "Front", "Motorraum", "Haube", "Motorhaube", "Haubenlinie", "Heck"
 	VERSTECKEN[n] = true
 end
 
+-- New driving school body (Lukas' own design, tools/mesh/fahrschulwagen.py -> dist/mesh/Fahrschulwagen.obj).
+-- If the imported model "Fahrschulwagen" is in ServerStorage, the lesson car (and the pizza car) look like it.
+-- Only the looks change: chassis, wheels, seats and the colliding parts stay exactly the same.
+local NEU_SICHTBAR = {} -- block parts that stay visible inside the new body
+for _, n in { "Armaturenbrett", "Tacho", "Lenkrad", "Display", "Schalthebel", "Sitzflaeche", "Rueckenlehne", "Kopfstuetze",
+	"Ruecksitzbank", "Ruecksitzlehne", "Mittelkonsole", "Dachschild", "Kennzeichen" } do
+	NEU_SICHTBAR[n] = true
+end
+local NEU_BEHALTEN = { Kofferraumdeckel = true } -- invisible, but other code uses it (pizza job: goods at the back)
+local FAHRSCHUL_WEISS = Color3.fromRGB(242, 243, 246)
+
 local R = 1.3        -- wheel radius
 local SPUR = 3.2     -- half track width
 local ACHSE = 4.8    -- distance of the axles from the middle
@@ -149,7 +160,13 @@ end
 
 -- cf = position on the ground, the car faces cf.LookVector
 function Auto.bauen(cf, farbe, dachText)
-	local vorlage = game:GetService("ServerStorage"):FindFirstChild("Limousine")
+	local SS = game:GetService("ServerStorage")
+	local neuDef = Auto.KAROSSERIEN and Auto.KAROSSERIEN.fahrschule
+	local neuVorlage = neuDef and SS:FindFirstChild(neuDef.vorlage)
+	if neuVorlage and not Auto.meshTeil(neuVorlage, "Karosserie") then neuVorlage = nil end
+	local neu = neuVorlage ~= nil
+	if neu and not dachText then farbe = FAHRSCHUL_WEISS end -- driving school livery: white with red/blue stripes
+	local vorlage = not neu and SS:FindFirstChild("Limousine") or nil
 	local rund = vorlage ~= nil
 	local m = Instance.new("Model")
 	m.Name = "Fahrschulauto"
@@ -174,6 +191,7 @@ function Auto.bauen(cf, farbe, dachText)
 	m.PrimaryPart = chassis
 
 	-- body part welded to the chassis; kollision = can hit walls (only parts above the wheels)
+	local versteckt = {} -- block parts the new body replaces
 	local function k(name, gr, lage, f, mat, opt)
 		opt = opt or {}
 		if rund and VERSTECKEN[name] then
@@ -203,6 +221,7 @@ function Auto.bauen(cf, farbe, dachText)
 		w.Part0 = chassis
 		w.Part1 = p
 		w.Parent = p
+		if neu and not opt.sichtbar and not NEU_SICHTBAR[name] then versteckt[p] = true end
 		return p
 	end
 	-- position on the round body (if available), otherwise the block position
@@ -300,7 +319,12 @@ function Auto.bauen(cf, farbe, dachText)
 	k("Bremslicht_oben", V3(1.4, 0.15, 0.1), at(0, 5.55, 3.25), Color3.fromRGB(170, 15, 15), Enum.Material.Neon, { schatten = false })
 	zylinderLaengs("Auspuff", 0.18, 0.5, 2.3, rund and MESH_POS.Auspuff[2] or 1.05, rund and MESH_POS.Auspuff[3] or 7.75, CHROM, Enum.Material.Metal)
 	for _, seite in { { -7.83, Enum.NormalId.Front }, { 7.83, Enum.NormalId.Back } } do
-		local schild = k("Kennzeichen", V3(2.6, 0.75, 0.08), ort(seite[1] < 0 and "KennzeichenVorne" or "KennzeichenHinten", 1, 0, 1.85, seite[1]), Color3.new(1, 1, 1), nil, { schatten = false })
+		local lage = ort(seite[1] < 0 and "KennzeichenVorne" or "KennzeichenHinten", 1, 0, 1.85, seite[1])
+		if neu and neuDef.kennzeichen then
+			local kz = neuDef.kennzeichen[seite[1] < 0 and "vorne" or "hinten"]
+			lage = at(0, kz[1], kz[2])
+		end
+		local schild = k("Kennzeichen", V3(2.6, 0.75, 0.08), lage, Color3.new(1, 1, 1), nil, { schatten = false })
 		local g = Instance.new("SurfaceGui")
 		g.Face = seite[2]
 		g.Parent = schild
@@ -349,7 +373,14 @@ function Auto.bauen(cf, farbe, dachText)
 	k("Ruecksitzlehne", V3(6, 2.4, 0.45), at(0, 2.8, 4.7) * CFrame.Angles(math.rad(-12), 0, 0), INNEN, Enum.Material.Fabric)
 
 	-- ---------- roof sign "STUDENT DRIVER" ----------
-	local dach = k("Dachschild", V3(3.8, 1.3, 0.9), at(0, 6.7, 1.4), Color3.fromRGB(245, 205, 40))
+	local ds = neu and neuDef.dachschild
+	local dach
+	if ds then
+		-- on the new roof exactly where Lukas' model has its sign: white box, blue panel, white letters
+		dach = k("Dachschild", V3(ds.breite, 1.15, ds.tiefe), at(0, ds.y + 0.575, ds.z), dachText and Color3.fromRGB(245, 205, 40) or Color3.fromRGB(245, 246, 248))
+	else
+		dach = k("Dachschild", V3(3.8, 1.3, 0.9), at(0, 6.7, 1.4), Color3.fromRGB(245, 205, 40))
+	end
 	for _, gesicht in { Enum.NormalId.Front, Enum.NormalId.Back } do
 		local g = Instance.new("SurfaceGui")
 		g.Face = gesicht
@@ -362,6 +393,21 @@ function Auto.bauen(cf, farbe, dachText)
 		l.TextScaled = true
 		l.TextColor3 = Color3.fromRGB(20, 20, 20)
 		l.Parent = g
+		if ds and not dachText then
+			g.PixelsPerStud = 60
+			g.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+			l.Text = "DRIVING SCHOOL"
+			l.TextColor3 = Color3.new(1, 1, 1)
+			l.BackgroundTransparency = 0
+			l.BackgroundColor3 = Color3.fromRGB(25, 60, 170)
+			l.AnchorPoint = Vector2.new(0.5, 0.5)
+			l.Position = UDim2.fromScale(0.5, 0.5)
+			l.Size = UDim2.fromScale(0.94, 0.78)
+			Instance.new("UICorner", l).CornerRadius = UDim.new(0.15, 0)
+			local rand = Instance.new("UIPadding")
+			rand.PaddingTop, rand.PaddingBottom = UDim.new(0.12, 0), UDim.new(0.12, 0)
+			rand.Parent = l
+		end
 	end
 
 	-- ---------- round body from the 3D model ----------
@@ -412,6 +458,27 @@ function Auto.bauen(cf, farbe, dachText)
 				local w = Instance.new("WeldConstraint")
 				w.Part0, w.Part1 = chassis, mp
 				w.Parent = mp
+			end
+		end
+	end
+
+	-- ---------- new driving school body (Lukas' model) ----------
+	if neu then
+		Auto.rundeKarosserie(m, chassis, cf, neuDef, neuVorlage, farbe, function(name, gr, lage, f, mat, opt)
+			opt = opt or {}
+			opt.sichtbar = true
+			return k(name, gr, lage, f, mat, opt)
+		end, neuDef.anbau, dachText and { streifen_blau = true, streifen_rot = true } or nil)
+		-- old block body: parts that only looked go away; colliding ones stay invisible (crashes feel the same)
+		for p in versteckt do
+			if p.CanCollide or NEU_BEHALTEN[p.Name] then
+				p.Transparency = 1
+				p.CastShadow = false
+				for _, kind in p:GetChildren() do
+					if not kind:IsA("WeldConstraint") then kind:Destroy() end
+				end
+			else
+				p:Destroy()
 			end
 		end
 	end
@@ -899,7 +966,10 @@ local ANBAU_ART = {
 	glanzschwarz = { farbe = Color3.fromRGB(10, 10, 12), mat = Enum.Material.SmoothPlastic, glanz = 0.35 },
 	neon_lila = { farbe = Color3.fromRGB(150, 70, 255), mat = Enum.Material.Neon },
 	rueckglas = { farbe = Color3.fromRGB(110, 8, 12), mat = Enum.Material.SmoothPlastic, glanz = 0.3 },
+	streifen_blau = { farbe = Color3.fromRGB(25, 60, 170), mat = Enum.Material.SmoothPlastic, glanz = 0.05 },
+	streifen_rot = { farbe = Color3.fromRGB(200, 25, 32), mat = Enum.Material.SmoothPlastic, glanz = 0.05 },
 }
+Auto.KAROSSERIEN = KAROSSERIEN
 
 local function meshTeil(vorlage, name)
 	for _, t in vorlage:GetDescendants() do
@@ -911,6 +981,97 @@ local function meshTeil(vorlage, name)
 		end
 	end
 end
+
+-- Round body from the imported 3D model: mesh parts (body, glass, lights, livery ...) and the generated
+-- attachments (indicators, seams, plates ...). k = the caller's part factory (welds to the chassis).
+-- ohne = arts to leave out (e.g. the driving school stripes on the pizza car).
+function Auto.rundeKarosserie(m, chassis, cf, rundDef, rundVorlage, farbe, k, zusatz, ohne)
+	ohne = ohne or {}
+	local function at(x, y, z) return cf * CFrame.new(x, y, z) end
+	local function v3(t) return V3(t[1], t[2], t[3]) end
+	for name, d in rundDef.mesh do
+		local quelle = not (d.a and ohne[d.a]) and meshTeil(rundVorlage, name)
+		if quelle then
+			local mp = quelle:Clone()
+			mp.Name = name == "Karosserie" and "Karosserie" or ("Rund_" .. name)
+			mp.Anchored = false
+			mp.CanCollide = false
+			mp.CanTouch = false
+			mp.Massless = true
+			mp.Size = v3(d.groesse)
+			mp.CFrame = at(d.mitte[1], d.mitte[2], d.mitte[3]) * CFrame.Angles(0, math.rad(rundDef.drehung or Auto.MESH_DREHUNG), 0)
+			for _, kind in mp:GetChildren() do
+				if kind:IsA("SurfaceAppearance") or kind:IsA("Decal") or kind:IsA("Texture") then kind:Destroy() end
+			end
+			pcall(function() mp.TextureID = "" end)
+			if d.a then -- lights, grille, vents: surface pieces that follow the body
+				local art = ANBAU_ART[d.a] or ANBAU_ART.schwarz
+				mp.Name = d.n or name
+				mp.Color = d.a == "lack" and farbe or art.farbe
+				mp.Material = art.mat
+				mp.Reflectance = art.glanz or 0
+				mp.Transparency = 0
+				mp.CastShadow = false
+				if d.a == "scheinwerfer" then
+					local licht = Instance.new("SpotLight")
+					-- the mesh part may be turned around (drehung 180): then its front face points backwards
+					licht.Face = ((rundDef.drehung or Auto.MESH_DREHUNG) % 360 == 180) and Enum.NormalId.Back or Enum.NormalId.Front
+					licht.Angle = 55
+					licht.Range = 50
+					licht.Brightness = 1.2
+					licht.Shadows = false
+					licht.Parent = mp
+				end
+			elseif name == "Glas" then
+				mp.Color = Color3.fromRGB(14, 17, 22) -- dark tinted glass, the cabin looks solid
+				mp.Material = Enum.Material.Glass
+				mp.Transparency = 0.12
+				mp.Reflectance = 0.3
+				mp.CastShadow = false
+			elseif name == "Verkleidung" then
+				mp.Color = Color3.fromRGB(28, 28, 31)
+				mp.Material = Enum.Material.SmoothPlastic
+				mp.Reflectance = 0
+				mp.Transparency = 0
+			else
+				mp.Color = farbe
+				Auto.lack(mp, farbe)
+				mp.Transparency = 0
+			end
+			mp.Parent = m
+			local w = Instance.new("WeldConstraint")
+			w.Part0, w.Part1 = chassis, mp
+			w.Parent = mp
+		end
+	end
+	-- lights, grille, mirrors ... (positions come from the generator)
+	for _, t in zusatz do
+		if ohne[t.a] then continue end
+		local art = ANBAU_ART[t.a] or ANBAU_ART.schwarz
+		for _, s in (t.s and { -1, 1 } or { 1 }) do
+			local name = t.n
+			if t.a == "blinker" then name = s < 0 and "BlinkerL" or "BlinkerR" end
+			local lage = at(s * t.p[1], t.p[2], t.p[3])
+			if t.r then lage *= CFrame.Angles(math.rad(t.r[1]), math.rad(s * t.r[2]), math.rad(s * t.r[3])) end
+			if t.d then -- line along the body (panel gaps)
+				local richtung = cf:VectorToWorldSpace(Vector3.new(s * t.d[1], t.d[2], t.d[3]))
+				lage = CFrame.lookAt(lage.Position, lage.Position + richtung)
+			end
+			if t.f == "zyl" then lage *= CFrame.Angles(0, math.rad(90), 0) end -- round part along the car (exhausts)
+			local teil = k(name, v3(t.g), lage, t.a == "lack" and farbe or art.farbe, art.mat, { schatten = t.a == "lack", form = t.f == "zyl" and Enum.PartType.Cylinder or nil })
+			if t.a == "scheinwerfer" then
+				local licht = Instance.new("SpotLight")
+				licht.Face = Enum.NormalId.Front
+				licht.Angle = 55
+				licht.Range = 50
+				licht.Brightness = 1.2
+				licht.Shadows = false
+				licht.Parent = teil
+			end
+		end
+	end
+end
+Auto.meshTeil = meshTeil
 
 function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 	local D = Auto.MODELLE[typ] or Auto.MODELLE.suv
@@ -998,61 +1159,6 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 		for _, kol in rundDef.kollision do
 			k("Kollision", v3(kol.g), at(kol.p[1], kol.p[2], kol.p[3]), farbe, nil, { kollision = true, transparenz = 1, schatten = false })
 		end
-		for name, d in rundDef.mesh do
-			local quelle = meshTeil(rundVorlage, name)
-			if quelle then
-				local mp = quelle:Clone()
-				mp.Name = name == "Karosserie" and "Karosserie" or ("Rund_" .. name)
-				mp.Anchored = false
-				mp.CanCollide = false
-				mp.CanTouch = false
-				mp.Massless = true
-				mp.Size = v3(d.groesse)
-				mp.CFrame = at(d.mitte[1], d.mitte[2], d.mitte[3]) * CFrame.Angles(0, math.rad(rundDef.drehung or Auto.MESH_DREHUNG), 0)
-				for _, kind in mp:GetChildren() do
-					if kind:IsA("SurfaceAppearance") or kind:IsA("Decal") or kind:IsA("Texture") then kind:Destroy() end
-				end
-				pcall(function() mp.TextureID = "" end)
-				if d.a then -- lights, grille, vents: surface pieces that follow the body
-					local art = ANBAU_ART[d.a] or ANBAU_ART.schwarz
-					mp.Name = d.n or name
-					mp.Color = d.a == "lack" and farbe or art.farbe
-					mp.Material = art.mat
-					mp.Reflectance = art.glanz or 0
-					mp.Transparency = 0
-					mp.CastShadow = false
-					if d.a == "scheinwerfer" then
-						local licht = Instance.new("SpotLight")
-						-- the mesh part may be turned around (drehung 180): then its front face points backwards
-						licht.Face = ((rundDef.drehung or Auto.MESH_DREHUNG) % 360 == 180) and Enum.NormalId.Back or Enum.NormalId.Front
-						licht.Angle = 55
-						licht.Range = 50
-						licht.Brightness = 1.2
-						licht.Shadows = false
-						licht.Parent = mp
-					end
-				elseif name == "Glas" then
-					mp.Color = Color3.fromRGB(14, 17, 22) -- dark tinted glass, the cabin looks solid
-					mp.Material = Enum.Material.Glass
-					mp.Transparency = 0.12
-					mp.Reflectance = 0.3
-					mp.CastShadow = false
-				elseif name == "Verkleidung" then
-					mp.Color = Color3.fromRGB(28, 28, 31)
-					mp.Material = Enum.Material.SmoothPlastic
-					mp.Reflectance = 0
-					mp.Transparency = 0
-				else
-					mp.Color = farbe
-					Auto.lack(mp, farbe)
-					mp.Transparency = 0
-				end
-				mp.Parent = m
-				local w = Instance.new("WeldConstraint")
-				w.Part0, w.Part1 = chassis, mp
-				w.Parent = mp
-			end
-		end
 		-- lights, grille, mirrors ... (positions come from the generator);
 		-- special editions also get their extra parts (Night Edition: detailed rear light)
 		local zusatz = rundDef.anbau
@@ -1060,30 +1166,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 			zusatz = table.clone(rundDef.anbau)
 			for _, t in rundDef.nacht do table.insert(zusatz, t) end
 		end
-		for _, t in zusatz do
-			local art = ANBAU_ART[t.a] or ANBAU_ART.schwarz
-			for _, s in (t.s and { -1, 1 } or { 1 }) do
-				local name = t.n
-				if t.a == "blinker" then name = s < 0 and "BlinkerL" or "BlinkerR" end
-				local lage = at(s * t.p[1], t.p[2], t.p[3])
-				if t.r then lage *= CFrame.Angles(math.rad(t.r[1]), math.rad(s * t.r[2]), math.rad(s * t.r[3])) end
-				if t.d then -- line along the body (panel gaps)
-					local richtung = cf:VectorToWorldSpace(Vector3.new(s * t.d[1], t.d[2], t.d[3]))
-					lage = CFrame.lookAt(lage.Position, lage.Position + richtung)
-				end
-				if t.f == "zyl" then lage *= CFrame.Angles(0, math.rad(90), 0) end -- round part along the car (exhausts)
-				local teil = k(name, v3(t.g), lage, t.a == "lack" and farbe or art.farbe, art.mat, { schatten = t.a == "lack", form = t.f == "zyl" and Enum.PartType.Cylinder or nil })
-				if t.a == "scheinwerfer" then
-					local licht = Instance.new("SpotLight")
-					licht.Face = Enum.NormalId.Front
-					licht.Angle = 55
-					licht.Range = 50
-					licht.Brightness = 1.2
-					licht.Shadows = false
-					licht.Parent = teil
-				end
-			end
-		end
+		Auto.rundeKarosserie(m, chassis, cf, rundDef, rundVorlage, farbe, k, zusatz)
 		if rundDef.spoiler then
 			m:SetAttribute("SpoilerAmDach", CFrame.new(0, rundDef.spoiler[1] - R, rundDef.spoiler[2])) -- relative to the chassis (spoiler tuning)
 			if rundDef.spoiler[3] then m:SetAttribute("SpoilerStuetze", rundDef.spoiler[3]) end

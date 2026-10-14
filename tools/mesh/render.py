@@ -24,7 +24,8 @@ ART = {"lack": (KFARBE, 0.5), "chrom": ((0.75, 0.75, 0.78), 0.9), "alu": ((0.66,
        "schwarz": ((0.03, 0.03, 0.035), 0.2), "carbon": ((0.09, 0.09, 0.1), 0.4), "grill": ((0.07, 0.07, 0.08), 0.3),
        "scheinwerfer": ((0.95, 0.97, 1.0), 1), "neon_weiss": ((0.95, 0.95, 0.95), 1), "neon_rot": ((0.75, 0.04, 0.04), 0.8),
        "blinker": ((0.6, 0.38, 0.14), 0.5), "fuge": ((0.02, 0.02, 0.025), 0.1), "glanzschwarz": ((0.02, 0.02, 0.025), 0.9),
-       "rueckglas": ((0.35, 0.02, 0.03), 0.9), "neon_lila": ((0.6, 0.27, 1.0), 1)}
+       "rueckglas": ((0.35, 0.02, 0.03), 0.9), "neon_lila": ((0.6, 0.27, 1.0), 1),
+       "streifen_blau": ((0.06, 0.2, 0.62), 0.5), "streifen_rot": ((0.75, 0.06, 0.08), 0.5)}
 FARBEN = {"Karosserie": (KFARBE, 0.5), "Heckpartie": (KFARBE, 0.5), "Dach": (KFARBE, 0.5), "Verkleidung": ((0.06, 0.06, 0.065), 0.1), "Glas": ((0.05, 0.07, 0.1), 0.5)}
 for name, f in objs.items():
     art = INFO["mesh"].get(name, {}).get("a")
@@ -85,6 +86,10 @@ for t in INFO["anbau"] + (INFO.get("nacht", []) if os.environ.get("NACHT") else 
 for ende in ("vorne", "hinten"):
     y, z = INFO["kennzeichen"][ende]
     box((0, y, z), (2.6, 0.7, 0.1), (0.95, 0.95, 0.95), 0.1)
+if "dachschild" in INFO.get("extra", {}):     # Fahrschul-Dachschild (im Spiel mit Schrift)
+    ds = INFO["extra"]["dachschild"]
+    box((0, ds["y"] + 0.6, ds["z"]), (ds["breite"], 1.2, ds["tiefe"]), (0.96, 0.96, 0.97), 0.3)
+    box((0, ds["y"] + 0.6, ds["z"] - ds["tiefe"] / 2 - 0.01), (ds["breite"] - 0.4, 0.75, 0.02), (0.08, 0.25, 0.7), 0.3)
 
 
 # ---------- Renderer ----------

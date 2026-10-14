@@ -1,5 +1,11 @@
 # Changelog
 
+## v36 – Neues Fahrschulauto
+- **Neue Karosserie fürs Fahrschulauto** aus Lukas' Modell: kompakter Fünftürer in Weiß mit rot-blauen Streifen an den Seiten und auf der Haube, Dachschild „DRIVING SCHOOL“ (blaues Feld, weiße Schrift), eigene Scheinwerfer, Rücklichter, Blinker vorne/hinten/im Spiegel.
+- Fahrverhalten, Räder, Sitze und Kollision sind exakt gleich wie vorher – nur die Optik wechselt (Test prüft das).
+- Das Pizza-Auto bekommt dieselbe Form in seiner Farbe, ohne Fahrschul-Streifen.
+- Aktiv, sobald das Modell „Fahrschulwagen“ (dist/mesh/Fahrschulwagen.obj) im ServerStorage liegt; sonst bleibt das alte Auto.
+
 ## v35 – Eigene Motorsounds aktiv
 - Alle 48 eigenen Sound-Dateien sind hochgeladen und eingetragen: jedes Auto spielt jetzt seinen eigenen Motor (Leerlauf, niedrige und hohe Drehzahl überblendet) und seinen eigenen Anlass-Sound beim Einsteigen. Der Roblox-Platzhalter wird nur noch benutzt, falls eine Datei fehlt.
 

@@ -930,30 +930,30 @@ return Verkehr
 -- Engine voices: three seamless loops (idle / low / high rpm) and a start sound per voice.
 -- ref = rpm at which the loop was made (PlaybackSpeed = rpm / ref). id 0 = not uploaded yet.
 return {
-	Fahrschule = { leerlauf = 800, max = 6200, gaenge = 5, start = 0,
-		loops = { { id = 0, ref = 810.0 }, { id = 0, ref = 2000.0 }, { id = 0, ref = 4200.0 } } },
-	Zipster = { leerlauf = 900, max = 6300, gaenge = 5, start = 0,
-		loops = { { id = 0, ref = 900.0 }, { id = 0, ref = 2280.0 }, { id = 0, ref = 4480.0 } } },
-	Ranger = { leerlauf = 700, max = 5800, gaenge = 6, start = 0,
-		loops = { { id = 0, ref = 690.0 }, { id = 0, ref = 1920.0 }, { id = 0, ref = 3920.0 } } },
-	Executive = { leerlauf = 650, max = 6000, gaenge = 8, start = 0,
-		loops = { { id = 0, ref = 660.0 }, { id = 0, ref = 1800.0 }, { id = 0, ref = 3800.0 } } },
-	Velocity = { leerlauf = 850, max = 7200, gaenge = 6, start = 0,
-		loops = { { id = 0, ref = 840.0 }, { id = 0, ref = 2280.0 }, { id = 0, ref = 5000.0 } } },
-	Vanta = { leerlauf = 800, max = 6800, gaenge = 7, start = 0,
-		loops = { { id = 0, ref = 810.0 }, { id = 0, ref = 2200.0 }, { id = 0, ref = 4720.0 } } },
-	VantaNight = { leerlauf = 820, max = 7000, gaenge = 7, start = 0,
-		loops = { { id = 0, ref = 810.0 }, { id = 0, ref = 2280.0 }, { id = 0, ref = 4880.0 } } },
-	Striker = { leerlauf = 950, max = 8800, gaenge = 6, start = 0,
-		loops = { { id = 0, ref = 960.0 }, { id = 0, ref = 2720.0 }, { id = 0, ref = 6200.0 } } },
-	Apex = { leerlauf = 1100, max = 9500, gaenge = 6, start = 0,
-		loops = { { id = 0, ref = 1110.0 }, { id = 0, ref = 3000.0 }, { id = 0, ref = 6800.0 } } },
-	Nova = { leerlauf = 950, max = 8700, gaenge = 7, start = 0,
-		loops = { { id = 0, ref = 960.0 }, { id = 0, ref = 2720.0 }, { id = 0, ref = 6000.0 } } },
-	Lkw = { leerlauf = 600, max = 2500, gaenge = 8, start = 0,
-		loops = { { id = 0, ref = 600.0 }, { id = 0, ref = 1200.0 }, { id = 0, ref = 2000.0 } } },
-	Transporter = { leerlauf = 750, max = 4500, gaenge = 6, start = 0,
-		loops = { { id = 0, ref = 750.0 }, { id = 0, ref = 1600.0 }, { id = 0, ref = 3000.0 } } },
+	Fahrschule = { leerlauf = 800, max = 6200, gaenge = 5, start = 75468265407354,
+		loops = { { id = 73206856777076, ref = 810.0 }, { id = 110781709375441, ref = 2000.0 }, { id = 96348201536353, ref = 4200.0 } } },
+	Zipster = { leerlauf = 900, max = 6300, gaenge = 5, start = 140354674372086,
+		loops = { { id = 72466014205514, ref = 900.0 }, { id = 89365089821239, ref = 2280.0 }, { id = 73327786795124, ref = 4480.0 } } },
+	Ranger = { leerlauf = 700, max = 5800, gaenge = 6, start = 115960759342958,
+		loops = { { id = 109166689108366, ref = 690.0 }, { id = 83735532396446, ref = 1920.0 }, { id = 71896878988911, ref = 3920.0 } } },
+	Executive = { leerlauf = 650, max = 6000, gaenge = 8, start = 131023343984852,
+		loops = { { id = 133932417195848, ref = 660.0 }, { id = 130199977282652, ref = 1800.0 }, { id = 119117875406712, ref = 3800.0 } } },
+	Velocity = { leerlauf = 850, max = 7200, gaenge = 6, start = 120858284866224,
+		loops = { { id = 85577623907997, ref = 840.0 }, { id = 75179228986453, ref = 2280.0 }, { id = 104635438006976, ref = 5000.0 } } },
+	Vanta = { leerlauf = 800, max = 6800, gaenge = 7, start = 80046362564152,
+		loops = { { id = 91667757934059, ref = 810.0 }, { id = 134056861381405, ref = 2200.0 }, { id = 105300804963644, ref = 4720.0 } } },
+	VantaNight = { leerlauf = 820, max = 7000, gaenge = 7, start = 71349763733760,
+		loops = { { id = 95277966250727, ref = 810.0 }, { id = 81387326512596, ref = 2280.0 }, { id = 95104896895840, ref = 4880.0 } } },
+	Striker = { leerlauf = 950, max = 8800, gaenge = 6, start = 82906274669141,
+		loops = { { id = 97559665328632, ref = 960.0 }, { id = 104766702507693, ref = 2720.0 }, { id = 89673333020048, ref = 6200.0 } } },
+	Apex = { leerlauf = 1100, max = 9500, gaenge = 6, start = 120754285417881,
+		loops = { { id = 139005855184316, ref = 1110.0 }, { id = 78551922274873, ref = 3000.0 }, { id = 95773089886721, ref = 6800.0 } } },
+	Nova = { leerlauf = 950, max = 8700, gaenge = 7, start = 101326955559561,
+		loops = { { id = 119830075506873, ref = 960.0 }, { id = 91962246823978, ref = 2720.0 }, { id = 135206924169684, ref = 6000.0 } } },
+	Lkw = { leerlauf = 600, max = 2500, gaenge = 8, start = 117400266487831,
+		loops = { { id = 93015757666365, ref = 600.0 }, { id = 115674851392619, ref = 1200.0 }, { id = 113638645253262, ref = 2000.0 } } },
+	Transporter = { leerlauf = 750, max = 4500, gaenge = 6, start = 104708304153478,
+		loops = { { id = 129587383722810, ref = 750.0 }, { id = 91313838097434, ref = 1600.0 }, { id = 101713343996050, ref = 3000.0 } } },
 }
 ]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX9"><Properties><string name="Name">Motorsound</string><ProtectedString name="Source"><![CDATA[-- Engine sounds for all vehicles (client only – pure sound, the driving itself is not touched).
 -- Every car type has its own engine voice, made with tools/sound/motoren.py: three seamless loops
@@ -8119,7 +8119,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v34 loaded")
+print("[Driving School] client v35 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -11923,7 +11923,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v34 loading")
+	print("[Driving School] start screen v35 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true

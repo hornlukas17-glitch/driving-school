@@ -1,5 +1,8 @@
 # Changelog
 
+## v35 – Eigene Motorsounds aktiv
+- Alle 48 eigenen Sound-Dateien sind hochgeladen und eingetragen: jedes Auto spielt jetzt seinen eigenen Motor (Leerlauf, niedrige und hohe Drehzahl überblendet) und seinen eigenen Anlass-Sound beim Einsteigen. Der Roblox-Platzhalter wird nur noch benutzt, falls eine Datei fehlt.
+
 ## v34 – Platzhalter-Sounds klar unterscheidbar
 - Solange die eigenen Motorsounds noch nicht hochgeladen sind, klingt trotzdem jedes Auto anders: der Roblox-Platzhalter bekommt pro Motor eigene Tonhöhe, Bass/Höhen, Rauheit, Pulsieren (wenige Zylinder, Diesel) oder Chorus (V12). Vanta GS und Night Edition klingen jetzt tiefer und rauer als das Fahrschulauto.
 

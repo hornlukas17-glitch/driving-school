@@ -55,7 +55,14 @@ pruefe("never above the red line", maxR <= d.max)
 local a, b, c = MS.gewichte(1500, { 800, 2000, 4200 })
 pruefe("loops cross-fade with equal power", math.abs(a * a + b * b + c * c - 1) < 1e-6 and a > 0 and b > 0 and c == 0)
 
--- 3) own car: engine starts when you sit in, stand-in sound while the files are not uploaded
+-- every voice has its own uploaded files (IDs from tools/sound/ids.json)
+for stimme, d in MS.DATEN do
+	pruefe("uploaded sounds for " .. stimme, MS.eigeneDateien(stimme) and d.start ~= 0)
+end
+-- 3) own car: engine starts when you sit in; stand-in sound if a voice's files were missing
+local G = MS.DATEN.Velocity
+local echt = { G.loops[1].id, G.loops[2].id, G.loops[3].id, G.start }
+G.loops[1].id, G.loops[2].id, G.loops[3].id, G.start = 0, 0, 0, 0
 A.OnServerInvoke(p, "dev", { befehl = "lizenz" })
 A.OnServerInvoke(p, "adminGeld", 50000)
 A.OnServerInvoke(p, "autoKaufen", "sport")
@@ -100,8 +107,6 @@ M.laufen(M.zeit() + 5)
 pruefe("engine off after getting out", #motorSounds(auto) == 0)
 
 -- 4) with own uploaded files: three loops + start sound
-local G = MS.DATEN.Velocity
-local alt = { G.loops[1].id, G.loops[2].id, G.loops[3].id, G.start }
 G.loops[1].id, G.loops[2].id, G.loops[3].id, G.start = 101, 102, 103, 104
 auto.Fahrersitz:Sit(p.Character.Humanoid)
 M.laufen(M.zeit() + 0.3)
@@ -115,7 +120,7 @@ pruefe("idle loop is the loudest at idle", ids["rbxassetid://101"].Volume > ids[
 auto.Chassis.AssemblyLinearVelocity = auto.Chassis.CFrame.LookVector * 150
 M.laufen(M.zeit() + 3)
 pruefe("high loop takes over at high rpm", ids["rbxassetid://103"].Volume > ids["rbxassetid://101"].Volume)
-G.loops[1].id, G.loops[2].id, G.loops[3].id, G.start = alt[1], alt[2], alt[3], alt[4]
+G.loops[1].id, G.loops[2].id, G.loops[3].id, G.start = echt[1], echt[2], echt[3], echt[4]
 
 -- 5) NPC traffic: only near vehicles get a (quiet) engine sound
 local nah = Instance.new("Model") nah.Name = "NPC_lkw"

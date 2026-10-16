@@ -1062,8 +1062,12 @@ local function chaosBanner(info)
 		if chaosNr == nr then chaosBox.Visible = false end
 	end)
 	if info.rutschen then
-		-- banana peel: the car spins for a moment (only this event; normal driving stays exactly the same)
-		_G.Rutschen = { start = os.clock(), dauer = 1.6, richtung = info.rutschen }
+		-- banana peel: the car spins at least half a turn (only this event; normal driving stays exactly the same)
+		_G.Rutschen = { start = os.clock(), richtung = info.rutschen, gedreht = 0 }
+	end
+	if info.entfuehren then
+		-- UFO beam: the car is pulled up into the air and put down again
+		_G.Entfuehrung = { start = os.clock() }
 	end
 	if info.matsch then
 		-- mud puddle: brown splats on the screen that drip away
@@ -1350,18 +1354,43 @@ local function fahrenStarten(sitz, hum)
 		local rutsch = _G.Rutschen
 		local rutschFaktor, drehSofort = 1, false
 		if rutsch then
-			local anteil = (os.clock() - rutsch.start) / rutsch.dauer
-			if anteil >= 1 then
-				_G.Rutschen = nil
-			else
-				zielDrehung = rutsch.richtung * 4 * (1 - anteil) -- about half a turn in total
-				rutschFaktor = 0.06 + 0.94 * anteil * anteil
+			local jetztR = os.clock()
+			if not rutsch.fertig then
+				-- spin until at least 200 degrees (or 2.5 s, e.g. when the car hits a wall)
+				rutsch.gedreht += math.abs(chassis.AssemblyAngularVelocity.Y) * dt
+				if rutsch.gedreht >= math.rad(200) or jetztR - rutsch.start > 2.5 then rutsch.fertig = jetztR end
+				zielDrehung = rutsch.richtung * 5
+				rutschFaktor = 0.06
 				drehSofort = true -- the tyres must not stop the spin
+			else
+				-- 0.5 s to get the grip back, then everything is normal again
+				local f = (jetztR - rutsch.fertig) / 0.5
+				if f >= 1 then
+					_G.Rutschen = nil
+				else
+					zielDrehung = rutsch.richtung * 5 * (1 - f) + zielDrehung * f
+					rutschFaktor = 0.06 + 0.94 * f * f
+					drehSofort = true
+				end
 			end
 		end
 		local w0 = chassis.AssemblyAngularVelocity
 		local neu = w0.Y + (zielDrehung - w0.Y) * (drehSofort and 1 or math.min(1, wert("Lenkdirekt", 14) * dt))
 		chassis.AssemblyAngularVelocity = Vector3.new(w0.X, neu, w0.Z)
+
+		-- UFO beam (chaos event): up into the air, slowly turning, then gently down again
+		local ent = _G.Entfuehrung
+		if ent then
+			local el = os.clock() - ent.start
+			if el > 5.4 then
+				_G.Entfuehrung = nil
+			else
+				local hoch = el < 2.7 and 9 or -9
+				chassis.AssemblyLinearVelocity = Vector3.new(v.X * 0.9, hoch, v.Z * 0.9)
+				chassis.AssemblyAngularVelocity = Vector3.new(0, 1.4, 0)
+				return -- no grip or downforce while flying
+			end
+		end
 
 		-- grip (no sliding sideways), downforce and roll/pitch damping
 		local masse = chassis.AssemblyMass
@@ -1645,7 +1674,7 @@ if RunService:IsStudio() then
 	devGui.Parent = spieler.PlayerGui
 	local leiste = Instance.new("Frame")
 	leiste.AnchorPoint = Vector2.new(0, 0)
-	leiste.Position = UDim2.new(0, 12, 0, 140)
+	leiste.Position = UDim2.new(0, 74, 0, 6) -- right of the game's Menu button, at the top
 	leiste.Size = UDim2.fromOffset(150, 0)
 	leiste.AutomaticSize = Enum.AutomaticSize.Y
 	leiste.BackgroundColor3 = Color3.fromRGB(60, 20, 20)
@@ -1661,18 +1690,20 @@ if RunService:IsStudio() then
 	ll.Padding = UDim.new(0, 4)
 	ll.SortOrder = Enum.SortOrder.LayoutOrder
 	ll.Parent = leiste
-	local ueberschrift = Instance.new("TextLabel")
+	local ueberschrift = Instance.new("TextButton") -- click = fold in / out
+	ueberschrift.Name = "Kopf"
+	ueberschrift.AutoButtonColor = false
 	ueberschrift.Size = UDim2.new(1, 0, 0, 18)
 	ueberschrift.BackgroundTransparency = 1
 	ueberschrift.Font = Enum.Font.GothamBlack
 	ueberschrift.TextSize = 13
 	ueberschrift.TextColor3 = Color3.fromRGB(255, 200, 200)
-	ueberschrift.Text = "TEST MENU (Studio)"
+	ueberschrift.Text = "TEST MENU ▲"
 	ueberschrift.Parent = leiste
 	local function devKnopf(reihenfolge, beschriftung, befehl, nr, art, eltern)
 		local k = Instance.new("TextButton")
 		k.LayoutOrder = reihenfolge
-		k.Size = UDim2.new(1, 0, 0, 26)
+		k.Size = UDim2.new(1, 0, 0, 24)
 		k.BackgroundColor3 = Color3.fromRGB(110, 40, 40)
 		k.Font = Enum.Font.GothamBold
 		k.TextSize = 13
@@ -1698,15 +1729,29 @@ if RunService:IsStudio() then
 	-- chaos events on demand (during a lesson, they appear in front of the car) – second column
 	local chaosLeiste = leiste:Clone()
 	for _, x in chaosLeiste:GetChildren() do
-		if x:IsA("TextButton") then x:Destroy() end
-		if x:IsA("TextLabel") then x.Text = "CHAOS EVENTS" end
+		if x:IsA("TextButton") and x.Name ~= "Kopf" then x:Destroy() end
 	end
-	chaosLeiste.Position = UDim2.new(0, 168, 0, 140)
+	chaosLeiste.Position = UDim2.new(0, 230, 0, 6)
 	chaosLeiste.Parent = devGui
+	-- both columns fold in and out with a click on their title
+	local function klappen(spalte, titel)
+		local kopf = spalte:FindFirstChild("Kopf")
+		local offen = true
+		kopf.Text = titel .. " ▲"
+		kopf.MouseButton1Click:Connect(function()
+			offen = not offen
+			kopf.Text = titel .. (offen and " ▲" or " ▼")
+			for _, x in spalte:GetChildren() do
+				if x:IsA("TextButton") and x ~= kopf then x.Visible = offen end
+			end
+		end)
+	end
 	for i, ev in { { "🍌 Banana", "banane" }, { "🦆 Ducks", "enten" }, { "🐄 Cows", "kuehe" }, { "🐔 Chickens", "huehner" },
 		{ "⭕ Giant tire", "reifen" }, { "🟤 Mud", "pfuetze" }, { "🤡 Clown camera", "clown" }, { "👽 UFO", "ufo" }, { "🎲 Random event", nil } } do
 		devKnopf(20 + i, ev[1], "chaos", nil, ev[2], chaosLeiste)
 	end
+	klappen(leiste, "TEST MENU")
+	klappen(chaosLeiste, "CHAOS EVENTS")
 end
 
 -- Admin money buttons (only visible for the owner of the game; the server checks it again)

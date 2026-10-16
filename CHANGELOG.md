@@ -1,5 +1,12 @@
 # Changelog
 
+## v43 – Chaos nach Lukas' Test
+- Banane: das Auto dreht sich jetzt immer mindestens 180° (dreht weiter, bis 200° erreicht sind, höchstens 2,5 s), danach 0,5 s bis der Grip zurück ist.
+- UFO: Wer in den grünen Strahl fährt, wird mitsamt Auto hochgezogen (2,7 s hoch, langsam drehend) und wieder abgesetzt. Alien-Bonus sofort, keine Fehler während des Flugs.
+- Riesenreifen rollt um seine Mitte (rutschte vorher halb unter die Straße).
+- Events landen auf der Straße: bevorzugt am nächsten grünen Tor (rechte Spur), sonst geradeaus – aber nie auf Gehweg/Bordstein/Wiese (seitlich nachjustiert oder später neu versucht). Gilt auch für die Matschpfütze.
+- Testmenü oben neben dem Menü-Knopf, beide Spalten per Klick auf die Überschrift ein-/ausklappbar.
+
 ## v42 – Chaos-Knöpfe im Testmenü
 - Testmenü (nur Studio) hat jetzt Knöpfe für jedes Chaos-Event (Banane, Enten, Kühe, Hühner, Riesenreifen, Matsch, Clown, UFO, Zufall). In einer Fahrstunde erscheint das Event vor dem Auto.
 

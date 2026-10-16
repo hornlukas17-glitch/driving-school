@@ -513,7 +513,8 @@ EVENTS.reifen = {
 			tier_.aktSeite = tier_.seite + math.sin(t * 0.8) * 1.5
 			tier_.aktVor = tier_.vor + t * 13 -- rolls towards the car
 			local h = math.abs(math.sin(t * 2.5)) * 1.2 -- bounces a bit
-			tier_.m:PivotTo(bodenCF(e, tier_.aktSeite, tier_.aktVor, h) * CFrame.Angles(t * 13 / 3.2, 0, 0))
+			-- roll around the middle of the tire (not around its bottom, otherwise it dips under the road)
+			tier_.m:PivotTo(bodenCF(e, tier_.aktSeite, tier_.aktVor, h) * CFrame.new(0, 3.2, 0) * CFrame.Angles(t * 13 / 3.2, 0, 0) * CFrame.new(0, -3.2, 0))
 		end
 		e.tiere = { tier }
 	end,
@@ -618,8 +619,15 @@ local function boden(st, punkt)
 	local ok, treffer = pcall(function()
 		return workspace:Raycast(punkt + Vector3.new(0, 25, 0), Vector3.new(0, -60, 0), params)
 	end)
-	if ok and treffer then return treffer.Position.Y end
+	if ok and treffer then return treffer.Position.Y, treffer.Instance end
 	return nil
+end
+
+-- is this part a road (not a pavement, lawn or roof)?
+local function istStrasse(teil)
+	local strassen = workspace:FindFirstChild("Karte") and workspace.Karte:FindFirstChild("Strassen")
+	if not strassen or not teil then return true end -- map without a road folder (tests): accept
+	return teil:IsDescendantOf(strassen) and not teil.Name:lower():find("geh") and not teil.Name:lower():find("bord")
 end
 
 -- start an event in front of the car (art = event name, optional for tests)
@@ -644,10 +652,26 @@ function Chaos.eventStarten(p, st, art)
 	local tempo = st.chassis.AssemblyLinearVelocity.Magnitude
 	local abstand = math.clamp(tempo * 3, 60, 150) + (art == "ufo" and 10 or 0)
 	local mitte = st.chassis.Position + vor * abstand
-	local y = boden(st, mitte)
+	-- the next green gate stands on the road in the right lane: use it when it is ahead and not too far
+	if st.tor and st.tor.pos then
+		local zumTor = Vector3.new(st.tor.pos.X - st.chassis.Position.X, 0, st.tor.pos.Z - st.chassis.Position.Z)
+		if zumTor.Magnitude > 45 and zumTor.Magnitude < abstand + 40 and zumTor.Unit:Dot(vor) > 0.85 then
+			mitte = st.chassis.Position + zumTor
+			vor = zumTor.Unit
+		end
+	end
+	local y, teil = boden(st, mitte)
+	if not istStrasse(teil) then
+		-- not on the road (pavement, grass): look a bit to the left and right
+		local rechts = Vector3.new(-vor.Z, 0, vor.X)
+		for _, versatz in { -5, 5, -9, 9 } do
+			local y2, teil2 = boden(st, mitte + rechts * versatz)
+			if y2 and istStrasse(teil2) then mitte, y, teil = mitte + rechts * versatz, y2, teil2 break end
+		end
+	end
 	local yAuto = boden(st, st.chassis.Position)
-	if y and yAuto and math.abs(y - yAuto) > 4 then
-		-- not a road ahead (roof, wall, hill): try again a bit later
+	if (y and yAuto and math.abs(y - yAuto) > 4) or not istStrasse(teil) then
+		-- no road ahead (roof, wall, hill, lawn): try again a bit later
 		c.anzahl -= 1
 		c.naechstesEvent = os.clock() + 3
 		return nil
@@ -738,11 +762,7 @@ local function eventEnde(p, st, e, grund)
 	end
 	if grund ~= "vorbei" then return end
 	if e.art == "ufo" then
-		if e.durchStrahl then
-			ctx.geldGeben(p, BONUS_UFO, "Alien bonus!")
-			banner(p, "👽 BEAMED!", "The aliens liked your car. Alien bonus!", "gruen")
-			Chaos.sagen(st, "lob")
-		end
+		return -- the alien bonus comes right when you drive into the beam
 	elseif e.clown then
 		return -- the clown only takes a photo
 	elseif not e.getroffen and e.naechster < 40 then
@@ -802,7 +822,12 @@ function Chaos.tick(p, st, pos, tempo, vorneZ, hintenZ, halbB)
 			task.delay(1, function() if st.chaos then Chaos.sagen(st, "event") end end)
 		end
 		if e.ufo and not e.durchStrahl and t < 16 and d < e.strahlR then
+			-- into the beam: the aliens pull the car up (client) – no mistakes while flying
 			e.durchStrahl = true
+			c.schonzeit = os.clock() + 8
+			ctx.geldGeben(p, BONUS_UFO, "Alien bonus!")
+			banner(p, "👽 BEAMED UP!", "The aliens are taking you for a ride!", "gruen", { entfuehren = true })
+			task.delay(1.5, function() if st.chaos then Chaos.sagen(st, "event") end end)
 		end
 		-- over when the car has passed it, after a while, or when the car is far away
 		local lokal = cf:PointToObjectSpace(e.mitte)

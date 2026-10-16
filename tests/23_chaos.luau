@@ -189,7 +189,10 @@ e = Chaos.eventStarten(p, st, "ufo")
 pruefe("UFO is harmless", alleTeileHarmlos(e.modell))
 fahren(198, 90, e.mitte.Z)
 pruefe("drove through the beam", e.durchStrahl)
-pruefe("alien bonus", p:GetAttribute("Geld") > geld2 and letztes("chaos").titel:find("BEAMED") ~= nil)
+local beam
+for i = #events, 1, -1 do if events[i].typ == "chaos" and events[i].entfuehren then beam = events[i] break end end
+pruefe("alien bonus + the car gets beamed up", p:GetAttribute("Geld") > geld2 and beam ~= nil and _G.Entfuehrung ~= nil)
+pruefe("no mistakes while flying", Chaos.schonzeit(st))
 
 -- 6) gag: banner + instructor line, no objects
 Chaos.eventStarten(p, st, "gag")
@@ -227,4 +230,14 @@ pruefe("chaos objects removed", #Chaos.ordner:GetChildren() == 0)
 local erster = name
 local naechster = Chaos.lehrerWaehlen(p)
 pruefe("next lesson gets another instructor", naechster.name ~= erster)
+local tm = p.PlayerGui:FindFirstChild("TestMenu")
+local spalten = {}
+for _, f in tm:GetChildren() do if f:FindFirstChild("Kopf") then table.insert(spalten, f) end end
+pruefe("test menu: 2 columns with a fold button", #spalten == 2)
+local knopf
+for _, x in spalten[1]:GetChildren() do if x:IsA("TextButton") and x.Name ~= "Kopf" then knopf = x break end end
+spalten[1].Kopf.MouseButton1Click:Fire()
+pruefe("test menu folds in", knopf.Visible == false)
+spalten[1].Kopf.MouseButton1Click:Fire()
+pruefe("and out again", knopf.Visible == true)
 print("chaos ok")

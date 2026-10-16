@@ -8374,7 +8374,8 @@ EVENTS.reifen = {
 			tier_.aktSeite = tier_.seite + math.sin(t * 0.8) * 1.5
 			tier_.aktVor = tier_.vor + t * 13 -- rolls towards the car
 			local h = math.abs(math.sin(t * 2.5)) * 1.2 -- bounces a bit
-			tier_.m:PivotTo(bodenCF(e, tier_.aktSeite, tier_.aktVor, h) * CFrame.Angles(t * 13 / 3.2, 0, 0))
+			-- roll around the middle of the tire (not around its bottom, otherwise it dips under the road)
+			tier_.m:PivotTo(bodenCF(e, tier_.aktSeite, tier_.aktVor, h) * CFrame.new(0, 3.2, 0) * CFrame.Angles(t * 13 / 3.2, 0, 0) * CFrame.new(0, -3.2, 0))
 		end
 		e.tiere = { tier }
 	end,
@@ -8479,8 +8480,15 @@ local function boden(st, punkt)
 	local ok, treffer = pcall(function()
 		return workspace:Raycast(punkt + Vector3.new(0, 25, 0), Vector3.new(0, -60, 0), params)
 	end)
-	if ok and treffer then return treffer.Position.Y end
+	if ok and treffer then return treffer.Position.Y, treffer.Instance end
 	return nil
+end
+
+-- is this part a road (not a pavement, lawn or roof)?
+local function istStrasse(teil)
+	local strassen = workspace:FindFirstChild("Karte") and workspace.Karte:FindFirstChild("Strassen")
+	if not strassen or not teil then return true end -- map without a road folder (tests): accept
+	return teil:IsDescendantOf(strassen) and not teil.Name:lower():find("geh") and not teil.Name:lower():find("bord")
 end
 
 -- start an event in front of the car (art = event name, optional for tests)
@@ -8505,10 +8513,26 @@ function Chaos.eventStarten(p, st, art)
 	local tempo = st.chassis.AssemblyLinearVelocity.Magnitude
 	local abstand = math.clamp(tempo * 3, 60, 150) + (art == "ufo" and 10 or 0)
 	local mitte = st.chassis.Position + vor * abstand
-	local y = boden(st, mitte)
+	-- the next green gate stands on the road in the right lane: use it when it is ahead and not too far
+	if st.tor and st.tor.pos then
+		local zumTor = Vector3.new(st.tor.pos.X - st.chassis.Position.X, 0, st.tor.pos.Z - st.chassis.Position.Z)
+		if zumTor.Magnitude > 45 and zumTor.Magnitude < abstand + 40 and zumTor.Unit:Dot(vor) > 0.85 then
+			mitte = st.chassis.Position + zumTor
+			vor = zumTor.Unit
+		end
+	end
+	local y, teil = boden(st, mitte)
+	if not istStrasse(teil) then
+		-- not on the road (pavement, grass): look a bit to the left and right
+		local rechts = Vector3.new(-vor.Z, 0, vor.X)
+		for _, versatz in { -5, 5, -9, 9 } do
+			local y2, teil2 = boden(st, mitte + rechts * versatz)
+			if y2 and istStrasse(teil2) then mitte, y, teil = mitte + rechts * versatz, y2, teil2 break end
+		end
+	end
 	local yAuto = boden(st, st.chassis.Position)
-	if y and yAuto and math.abs(y - yAuto) > 4 then
-		-- not a road ahead (roof, wall, hill): try again a bit later
+	if (y and yAuto and math.abs(y - yAuto) > 4) or not istStrasse(teil) then
+		-- no road ahead (roof, wall, hill, lawn): try again a bit later
 		c.anzahl -= 1
 		c.naechstesEvent = os.clock() + 3
 		return nil
@@ -8599,11 +8623,7 @@ local function eventEnde(p, st, e, grund)
 	end
 	if grund ~= "vorbei" then return end
 	if e.art == "ufo" then
-		if e.durchStrahl then
-			ctx.geldGeben(p, BONUS_UFO, "Alien bonus!")
-			banner(p, "👽 BEAMED!", "The aliens liked your car. Alien bonus!", "gruen")
-			Chaos.sagen(st, "lob")
-		end
+		return -- the alien bonus comes right when you drive into the beam
 	elseif e.clown then
 		return -- the clown only takes a photo
 	elseif not e.getroffen and e.naechster < 40 then
@@ -8663,7 +8683,12 @@ function Chaos.tick(p, st, pos, tempo, vorneZ, hintenZ, halbB)
 			task.delay(1, function() if st.chaos then Chaos.sagen(st, "event") end end)
 		end
 		if e.ufo and not e.durchStrahl and t < 16 and d < e.strahlR then
+			-- into the beam: the aliens pull the car up (client) – no mistakes while flying
 			e.durchStrahl = true
+			c.schonzeit = os.clock() + 8
+			ctx.geldGeben(p, BONUS_UFO, "Alien bonus!")
+			banner(p, "👽 BEAMED UP!", "The aliens are taking you for a ride!", "gruen", { entfuehren = true })
+			task.delay(1.5, function() if st.chaos then Chaos.sagen(st, "event") end end)
 		end
 		-- over when the car has passed it, after a while, or when the car is far away
 		local lokal = cf:PointToObjectSpace(e.mitte)
@@ -9152,7 +9177,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v42 loaded")
+print("[Driving School] client v43 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -10210,8 +10235,12 @@ local function chaosBanner(info)
 		if chaosNr == nr then chaosBox.Visible = false end
 	end)
 	if info.rutschen then
-		-- banana peel: the car spins for a moment (only this event; normal driving stays exactly the same)
-		_G.Rutschen = { start = os.clock(), dauer = 1.6, richtung = info.rutschen }
+		-- banana peel: the car spins at least half a turn (only this event; normal driving stays exactly the same)
+		_G.Rutschen = { start = os.clock(), richtung = info.rutschen, gedreht = 0 }
+	end
+	if info.entfuehren then
+		-- UFO beam: the car is pulled up into the air and put down again
+		_G.Entfuehrung = { start = os.clock() }
 	end
 	if info.matsch then
 		-- mud puddle: brown splats on the screen that drip away
@@ -10498,18 +10527,43 @@ local function fahrenStarten(sitz, hum)
 		local rutsch = _G.Rutschen
 		local rutschFaktor, drehSofort = 1, false
 		if rutsch then
-			local anteil = (os.clock() - rutsch.start) / rutsch.dauer
-			if anteil >= 1 then
-				_G.Rutschen = nil
-			else
-				zielDrehung = rutsch.richtung * 4 * (1 - anteil) -- about half a turn in total
-				rutschFaktor = 0.06 + 0.94 * anteil * anteil
+			local jetztR = os.clock()
+			if not rutsch.fertig then
+				-- spin until at least 200 degrees (or 2.5 s, e.g. when the car hits a wall)
+				rutsch.gedreht += math.abs(chassis.AssemblyAngularVelocity.Y) * dt
+				if rutsch.gedreht >= math.rad(200) or jetztR - rutsch.start > 2.5 then rutsch.fertig = jetztR end
+				zielDrehung = rutsch.richtung * 5
+				rutschFaktor = 0.06
 				drehSofort = true -- the tyres must not stop the spin
+			else
+				-- 0.5 s to get the grip back, then everything is normal again
+				local f = (jetztR - rutsch.fertig) / 0.5
+				if f >= 1 then
+					_G.Rutschen = nil
+				else
+					zielDrehung = rutsch.richtung * 5 * (1 - f) + zielDrehung * f
+					rutschFaktor = 0.06 + 0.94 * f * f
+					drehSofort = true
+				end
 			end
 		end
 		local w0 = chassis.AssemblyAngularVelocity
 		local neu = w0.Y + (zielDrehung - w0.Y) * (drehSofort and 1 or math.min(1, wert("Lenkdirekt", 14) * dt))
 		chassis.AssemblyAngularVelocity = Vector3.new(w0.X, neu, w0.Z)
+
+		-- UFO beam (chaos event): up into the air, slowly turning, then gently down again
+		local ent = _G.Entfuehrung
+		if ent then
+			local el = os.clock() - ent.start
+			if el > 5.4 then
+				_G.Entfuehrung = nil
+			else
+				local hoch = el < 2.7 and 9 or -9
+				chassis.AssemblyLinearVelocity = Vector3.new(v.X * 0.9, hoch, v.Z * 0.9)
+				chassis.AssemblyAngularVelocity = Vector3.new(0, 1.4, 0)
+				return -- no grip or downforce while flying
+			end
+		end
 
 		-- grip (no sliding sideways), downforce and roll/pitch damping
 		local masse = chassis.AssemblyMass
@@ -10793,7 +10847,7 @@ if RunService:IsStudio() then
 	devGui.Parent = spieler.PlayerGui
 	local leiste = Instance.new("Frame")
 	leiste.AnchorPoint = Vector2.new(0, 0)
-	leiste.Position = UDim2.new(0, 12, 0, 140)
+	leiste.Position = UDim2.new(0, 74, 0, 6) -- right of the game's Menu button, at the top
 	leiste.Size = UDim2.fromOffset(150, 0)
 	leiste.AutomaticSize = Enum.AutomaticSize.Y
 	leiste.BackgroundColor3 = Color3.fromRGB(60, 20, 20)
@@ -10809,18 +10863,20 @@ if RunService:IsStudio() then
 	ll.Padding = UDim.new(0, 4)
 	ll.SortOrder = Enum.SortOrder.LayoutOrder
 	ll.Parent = leiste
-	local ueberschrift = Instance.new("TextLabel")
+	local ueberschrift = Instance.new("TextButton") -- click = fold in / out
+	ueberschrift.Name = "Kopf"
+	ueberschrift.AutoButtonColor = false
 	ueberschrift.Size = UDim2.new(1, 0, 0, 18)
 	ueberschrift.BackgroundTransparency = 1
 	ueberschrift.Font = Enum.Font.GothamBlack
 	ueberschrift.TextSize = 13
 	ueberschrift.TextColor3 = Color3.fromRGB(255, 200, 200)
-	ueberschrift.Text = "TEST MENU (Studio)"
+	ueberschrift.Text = "TEST MENU ▲"
 	ueberschrift.Parent = leiste
 	local function devKnopf(reihenfolge, beschriftung, befehl, nr, art, eltern)
 		local k = Instance.new("TextButton")
 		k.LayoutOrder = reihenfolge
-		k.Size = UDim2.new(1, 0, 0, 26)
+		k.Size = UDim2.new(1, 0, 0, 24)
 		k.BackgroundColor3 = Color3.fromRGB(110, 40, 40)
 		k.Font = Enum.Font.GothamBold
 		k.TextSize = 13
@@ -10846,15 +10902,29 @@ if RunService:IsStudio() then
 	-- chaos events on demand (during a lesson, they appear in front of the car) – second column
 	local chaosLeiste = leiste:Clone()
 	for _, x in chaosLeiste:GetChildren() do
-		if x:IsA("TextButton") then x:Destroy() end
-		if x:IsA("TextLabel") then x.Text = "CHAOS EVENTS" end
+		if x:IsA("TextButton") and x.Name ~= "Kopf" then x:Destroy() end
 	end
-	chaosLeiste.Position = UDim2.new(0, 168, 0, 140)
+	chaosLeiste.Position = UDim2.new(0, 230, 0, 6)
 	chaosLeiste.Parent = devGui
+	-- both columns fold in and out with a click on their title
+	local function klappen(spalte, titel)
+		local kopf = spalte:FindFirstChild("Kopf")
+		local offen = true
+		kopf.Text = titel .. " ▲"
+		kopf.MouseButton1Click:Connect(function()
+			offen = not offen
+			kopf.Text = titel .. (offen and " ▲" or " ▼")
+			for _, x in spalte:GetChildren() do
+				if x:IsA("TextButton") and x ~= kopf then x.Visible = offen end
+			end
+		end)
+	end
 	for i, ev in { { "🍌 Banana", "banane" }, { "🦆 Ducks", "enten" }, { "🐄 Cows", "kuehe" }, { "🐔 Chickens", "huehner" },
 		{ "⭕ Giant tire", "reifen" }, { "🟤 Mud", "pfuetze" }, { "🤡 Clown camera", "clown" }, { "👽 UFO", "ufo" }, { "🎲 Random event", nil } } do
 		devKnopf(20 + i, ev[1], "chaos", nil, ev[2], chaosLeiste)
 	end
+	klappen(leiste, "TEST MENU")
+	klappen(chaosLeiste, "CHAOS EVENTS")
 end
 
 -- Admin money buttons (only visible for the owner of the game; the server checks it again)
@@ -13093,7 +13163,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v42 loading")
+	print("[Driving School] start screen v43 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true

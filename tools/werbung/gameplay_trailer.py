@@ -36,7 +36,7 @@ _bilder = {}
 def bild_laden(name):
     if name not in _bilder:
         if name == "ende":
-            _bilder[name] = Image.open(os.path.join(AUS, "thumbnail.png")).convert("RGB").resize((W, H), Image.LANCZOS)
+            _bilder[name] = Image.open(os.path.join(AUS, "titel_spiel.png")).convert("RGB").resize((W, H), Image.LANCZOS)
         else:
             b = Image.open(os.path.join(QUELLE, name + ".jpg")).convert("RGB")
             # Spielbild über die volle Breite, oben/unten Balken für die Schrift
@@ -106,7 +106,7 @@ def frame(t):
                     dk.rounded_rectangle((6, 6, 634, 144), radius=36, fill=(40, 170, 80), outline=(25, 20, 40), width=8)
                     dk.text((320, 78), "PLAY NOW!", font=ImageFont.truetype(SCHRIFT, 86), fill=(255, 255, 255), anchor="mm",
                             stroke_width=4, stroke_fill=(25, 20, 40))
-                    setzen(img, knopf, 1450, 830, ease_back((lt - 0.6) / 0.3) * (1 + 0.05 * math.sin(lt * 7)), -3)
+                    setzen(img, knopf, 1480, 250, ease_back((lt - 0.6) / 0.3) * (1 + 0.05 * math.sin(lt * 7)), -3)
             else:
                 # bei zwei Bildern: Schnitt in der Mitte (Aufprall)
                 idx = 0 if len(namen) == 1 or lt < dauer * 0.5 else 1
@@ -161,44 +161,64 @@ def ton():
 
     tt = lambda d: np.arange(int(SR * d)) / SR
     rnd = np.random.default_rng(2)
-    takt = 60 / 132
-    t = tt(0.35)
-    kick = np.sin(2 * np.pi * (50 + 120 * np.exp(-t * 30)) * t) * np.exp(-t * 9)
-    t = tt(0.2)
-    snare = (rnd.standard_normal(len(t)) * 0.6 + np.sin(2 * np.pi * 190 * t) * 0.5) * np.exp(-t * 18)
-    t = tt(0.05)
-    hat = rnd.standard_normal(len(t)) * np.exp(-t * 90) * 0.35
-    bass = [55.0, 55.0, 43.65, 43.65, 65.41, 65.41, 49.0, 49.0]
+    from scipy.signal import butter, lfilter
+    # entspannter Lo-Fi-Beat (eigene Akkordfolge): weiche E-Piano-Akkorde, sanfter Kick, Rimshot, leise Hi-Hats, Knistern
+    takt = 60 / 88
+    AKKORDE = [  # Fmaj7, Em7, Dm7, Cmaj7 (eigene Folge, je 4 Schläge)
+        (174.61, 220.0, 261.63, 329.63), (164.81, 196.0, 246.94, 293.66),
+        (146.83, 174.61, 220.0, 261.63), (130.81, 164.81, 196.0, 246.94)]
+    BASS = [87.31, 82.41, 73.42, 65.41]
+
+    def epiano(f, d):
+        t = tt(d)
+        huelle = np.minimum(1, t / 0.015) * np.exp(-t * 1.1)
+        ton = sum(g * np.sin(2 * np.pi * f * k * (1 + 0.0015 * np.sin(2 * np.pi * 5 * t)) * t) for k, g in ((1, 1), (2, 0.25), (3, 0.08)))
+        return ton * huelle
+
+    t = tt(0.4)
+    kick = np.sin(2 * np.pi * (48 + 60 * np.exp(-t * 25)) * t) * np.exp(-t * 7)
+    t = tt(0.08)
+    bb, aa = butter(2, [900 / (SR / 2), 2500 / (SR / 2)], "band")
+    rim = lfilter(bb, aa, rnd.standard_normal(len(t))) * np.exp(-t * 45) * 2.2
+    t = tt(0.04)
+    hb, ha = butter(2, 6000 / (SR / 2), "high")
+    hat = lfilter(hb, ha, rnd.standard_normal(len(t))) * np.exp(-t * 110)
     zeit, schlag = 0.0, 0
-    while zeit < DAUER - 0.5:
-        voll = zeit >= 1.7
-        if voll:
-            dazu(kick, zeit, 0.9)
-            if schlag % 2 == 1:
-                dazu(snare, zeit, 0.5)
-        dazu(hat, zeit, 0.3)
-        dazu(hat, zeit + takt / 2, 0.22)
-        f = bass[(schlag // 2) % len(bass)]
-        t = tt(takt * 0.9)
-        dazu((np.sign(np.sin(2 * np.pi * f * t)) * 0.3 + np.sin(2 * np.pi * f * t)) * np.exp(-t * 2.5), zeit, 0.35 if voll else 0.18)
-        if voll and schlag % 4 == 0:
-            for k, mf in enumerate((440, 523.25, 659.25, 523.25)):
-                t2 = tt(takt * 0.22)
-                dazu(np.sign(np.sin(2 * np.pi * mf * t2)) * np.exp(-t2 * 12) * 0.12, zeit + k * takt / 4)
+    while zeit < DAUER:
+        takt_nr = schlag // 4
+        im_takt = schlag % 4
+        if im_takt == 0:
+            akk = AKKORDE[takt_nr % 4]
+            for i, f in enumerate(akk):
+                dazu(epiano(f, takt * 4.2), zeit + i * 0.012, 0.16)  # leicht gebrochen gespielt
+            t = tt(takt * 3.8)
+            dazu(np.sin(2 * np.pi * BASS[takt_nr % 4] * t) * np.minimum(1, t / 0.02) * np.exp(-t * 0.6), zeit, 0.45)
+        if zeit >= 1.7:
+            if im_takt in (0, 2):
+                dazu(kick, zeit, 0.55)
+            if im_takt in (1, 3):
+                dazu(rim, zeit, 0.25)
+        dazu(hat, zeit, 0.08)
+        dazu(hat, zeit + takt * 0.58, 0.06)  # leicht geswingt
         schlag += 1
         zeit += takt
+    # Platten-Knistern
+    kn = np.zeros(n, np.float32)
+    idx = rnd.integers(0, n, int(DAUER * 18))
+    kn[idx] = rnd.uniform(-0.6, 0.6, len(idx))
+    mix += lfilter(*butter(2, 3000 / (SR / 2), "high")[::1], kn) * 0.05
     from scipy.signal import butter, lfilter
     for start, ende, namen, _, _, g in SCHNITTE:
         tz = start + ((ende - start) * 0.5 if len(namen) == 2 else 0.05)
         if g == "rutschen":
             t = tt(1.2)
             bb, aa = butter(2, [1800 / (SR / 2), 4200 / (SR / 2)], "band")
-            dazu(lfilter(bb, aa, rnd.standard_normal(len(t)) * np.exp(-t * 1.6)) * 2.5, tz, 0.8)
+            dazu(lfilter(bb, aa, rnd.standard_normal(len(t)) * np.exp(-t * 1.6)) * 2.5, tz, 0.3)
         elif g:
-            dazu(wav_laden("DS_Hupe_" + g), tz, 0.7)
+            dazu(wav_laden("DS_Hupe_" + g), tz, 0.32)
     ende = int((DAUER - 0.6) * SR)
     mix[ende:] *= np.linspace(1, 0, n - ende)
-    mix = np.tanh(mix / (np.max(np.abs(mix)) + 1e-9) * 1.4) * 0.9
+    mix = mix / (np.max(np.abs(mix)) + 1e-9) * 0.85
     pfad = os.path.join(AUS, "gameplay_ton.wav")
     with wave.open(pfad, "wb") as w:
         w.setnchannels(1)

@@ -12,6 +12,8 @@ Missionen.ARTEN = {
 	{ id = "tanken", text = "Refuel your car at a gas station", ziele = { 1 }, geld = 100, xp = 40 },
 	{ id = "perfekt", text = "Finish a lesson or test without mistakes", ziele = { 1 }, geld = 200, xp = 80 },
 	{ id = "taxi", text = "Drive %d taxi passengers", ziele = { 2, 3, 4 }, geld = 250, xp = 90 },
+	{ id = "ausweichen", text = "Dodge %d chaos events (cows, ducks, bananas …)", ziele = { 2, 3, 5 }, geld = 250, xp = 90 },
+	{ id = "banane", text = "Spin out on a banana peel", ziele = { 1 }, geld = 150, xp = 50 },
 }
 Missionen.PRO_TAG = 3
 
@@ -37,7 +39,9 @@ local function neueListe(p)
 end
 
 local function aktuell(p)
-	local d = ctx.daten[p]
+	local d = ctx and ctx.daten[p] -- nil while the server is still starting up
+	if not d then return nil end
+	d = ctx.daten[p]
 	if not d then return nil end
 	if not d.missionen or d.missionen.tag ~= heute() then
 		d.missionen = neueListe(p)
@@ -70,6 +74,7 @@ end
 
 function Missionen.status(p)
 	local m = aktuell(p)
+	if not m then return { fehler = "Still loading – try again in a moment.", liste = {} } end
 	local liste = {}
 	for _, mission in m.liste do
 		local a = art(mission.id)

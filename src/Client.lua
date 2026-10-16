@@ -1118,6 +1118,55 @@ local function chaosBanner(info)
 end
 _G.ChaosBanner = chaosBanner
 
+-- 🍌 Banana Launcher (game pass): B or the banana button drops a peel behind your car
+do
+	local UISB = game:GetService("UserInputService")
+	local knopfGui = Instance.new("ScreenGui")
+	knopfGui.Name = "BananenKnopf"
+	knopfGui.ResetOnSpawn = false
+	knopfGui.Parent = spieler.PlayerGui
+	local knopf = Instance.new("TextButton")
+	knopf.AnchorPoint = Vector2.new(1, 0.5)
+	knopf.Position = UDim2.new(1, -16, 0.3, 0) -- above the handbrake / indicator buttons
+	knopf.Size = UDim2.fromOffset(64, 64)
+	knopf.BackgroundColor3 = Color3.fromRGB(255, 205, 40)
+	knopf.Text = "🍌"
+	knopf.TextScaled = true
+	knopf.Visible = false
+	knopf.Parent = knopfGui
+	Instance.new("UICorner", knopf).CornerRadius = UDim.new(1, 0)
+	local taste = Instance.new("TextLabel")
+	taste.AnchorPoint = Vector2.new(0.5, 0)
+	taste.Position = UDim2.new(0.5, 0, 1, 2)
+	taste.Size = UDim2.fromOffset(64, 16)
+	taste.BackgroundTransparency = 1
+	taste.Font = Enum.Font.GothamBold
+	taste.TextSize = 12
+	taste.TextColor3 = Color3.new(1, 1, 1)
+	taste.TextStrokeTransparency = 0.3
+	taste.Text = "B"
+	taste.Parent = knopf
+	local function werfen()
+		local r = frage("bananeWerfen")
+		if r and (r.fehler or r.text) then warnen(r.fehler or r.text, r.fehler and Color3.fromRGB(200, 140, 30) or GRUEN) end
+	end
+	knopf.Activated:Connect(werfen)
+	local function imAuto()
+		local hum = spieler.Character and spieler.Character:FindFirstChildOfClass("Humanoid")
+		return hum and hum.SeatPart and hum.SeatPart:IsA("VehicleSeat")
+	end
+	UISB.InputBegan:Connect(function(eingabe, verarbeitet)
+		if verarbeitet or eingabe.KeyCode ~= Enum.KeyCode.B then return end
+		if imAuto() then werfen() end
+	end)
+	task.spawn(function()
+		while true do
+			knopf.Visible = imAuto() == true and spieler:GetAttribute("BananenWerfer") == true
+			task.wait(0.5)
+		end
+	end)
+end
+
 fahrEvent.OnClientEvent:Connect(function(info)
 	if info.typ == "chaos" then
 		chaosBanner(info)
@@ -3867,11 +3916,20 @@ do
 			end)
 			b.AutoButtonColor = not pass.hat
 		end
+		ueberschrift(liste, "🤪 CHAOS FUN – for the whole server", weiter())
+		for _, pr in info.produkte do
+			if pr.spass then
+				local k = karte(liste, 72, Color3.fromRGB(70, 40, 95), weiter())
+				label(k, pr.name .. (pr.tag and ("   <font color=\"#ffcf4a\" size=\"12\">" .. pr.tag .. "</font>") or ""), 16, nil, { 0, 14 }, { 0, 6 }, { 1, -170 }, { 0, 24 }, true)
+				label(k, pr.text or "", 12, HELL, { 0, 14 }, { 0, 32 }, { 1, -170 }, { 0, 34 })
+				taste(k, preisText(pr), GRUEN, { 1, -146 }, { 0.5, -18 }, { 0, 134 }, { 0, 36 }, function() kaufen("produkt", pr) end)
+			end
+		end
 		ueberschrift(liste, "🪙 COINS & BOOSTS", weiter())
 		for _, pr in info.produkte do
-			if not pr.einmal then
+			if not pr.einmal and not pr.spass then
 				local k = karte(liste, 56, nil, weiter())
-				label(k, (pr.geld and "🪙 " or "⚡ ") .. pr.name .. (pr.tag and ("   <font color=\"#ffcf4a\" size=\"12\">" .. pr.tag .. "</font>") or ""), 16, nil, { 0, 14 }, { 0, 0 }, { 1, -170 }, { 1, 0 }, true)
+				label(k, (pr.spass and "" or pr.geld and "🪙 " or "⚡ ") .. pr.name .. (pr.tag and ("   <font color=\"#ffcf4a\" size=\"12\">" .. pr.tag .. "</font>") or ""), 16, nil, { 0, 14 }, { 0, 0 }, { 1, -170 }, { 1, 0 }, true)
 				taste(k, preisText(pr), GRUEN, { 1, -146 }, { 0.5, -18 }, { 0, 134 }, { 0, 36 }, function() kaufen("produkt", pr) end)
 			end
 		end

@@ -21,6 +21,8 @@ Shop.PASSES = {
 		text = "Exclusive car: midnight black, gold rims, purple underglow, 195 km/h. Only with this pass." },
 	{ key = "garage", id = 0, preis = 199, icon = "🎨", name = "Paint Studio",
 		text = "6 exclusive paint colors for all your cars." },
+	{ key = "banane", id = 0, preis = 149, icon = "🍌", name = "Banana Launcher",
+		text = "Press B (or the 🍌 button) while driving to drop banana peels behind your car. Watch your friends spin out!" },
 }
 
 -- can be bought again and again (except the starter pack)
@@ -28,6 +30,10 @@ Shop.PRODUKTE = {
 	{ key = "starter", id = 0, preis = 99, name = "Starter Pack", geld = 7500, boost = 30, einmal = true,
 		text = "7,500 coins + 30 min 2x coins. Only once per player!" },
 	{ key = "boost", id = 0, preis = 79, name = "2x Coins – 30 min", boost = 30, text = "Double coins for 30 minutes of play." },
+	{ key = "ufo", id = 0, preis = 49, name = "👽 Alien Invasion", chaos = "ufo", tag = "FUN",
+		text = "A UFO beams up EVERY driver on the server – with your name on it!" },
+	{ key = "bananen", id = 0, preis = 29, name = "🍌 Banana Rain", chaos = "bananen", tag = "FUN",
+		text = "Banana peels rain down in front of every driver on the server!" },
 	{ key = "coins1", id = 0, preis = 49, name = "2,500 coins", geld = 2500 },
 	{ key = "coins2", id = 0, preis = 179, name = "10,000 coins", geld = 10000 },
 	{ key = "coins3", id = 0, preis = 449, name = "30,000 coins", geld = 30000, tag = "POPULAR" },
@@ -100,6 +106,7 @@ end
 
 local function attribute(p)
 	p:SetAttribute("VIP", Shop.hat(p, "vip") or nil)
+	p:SetAttribute("BananenWerfer", Shop.hat(p, "banane") or nil)
 	p:SetAttribute("BoostBis", ctx.daten[p] and ctx.daten[p].boostBis or nil)
 	p:SetAttribute("GeldFaktor", Shop.faktor(p, "geld"))
 	p:SetAttribute("XpFaktor", Shop.faktor(p, "xp"))
@@ -194,7 +201,7 @@ function Shop.status(p)
 	end
 	for _, pr in Shop.PRODUKTE do
 		if not (pr.einmal and d.starterGekauft) then
-			table.insert(produkte, { key = pr.key, id = pr.id, name = pr.name, text = pr.text, tag = pr.tag, geld = pr.geld,
+			table.insert(produkte, { key = pr.key, id = pr.id, name = pr.name, text = pr.text, tag = pr.tag, geld = pr.geld, spass = pr.chaos ~= nil,
 				preis = preise[pr.id] or pr.preis, bereit = pr.id ~= 0, einmal = pr.einmal })
 		end
 	end
@@ -213,6 +220,9 @@ local function gewaehren(p, pr)
 		d.boostBis = math.max(os.time(), d.boostBis or 0) + pr.boost * 60
 	end
 	if pr.einmal then d.starterGekauft = true end
+	if pr.chaos and ctx.Chaos then
+		if pr.chaos == "ufo" then ctx.Chaos.alleEntfuehren(p) else ctx.Chaos.bananenRegen(p) end
+	end
 	attribute(p)
 	ctx.geaendert(p)
 	ctx.fahrEvent:FireClient(p, { typ = "belohnung", text = "🛒 Thank you! " .. pr.name .. " received." })

@@ -114,7 +114,9 @@ pruefe("duck family spawned (mum + 5 babies)", #e.tiere == 6 and alleTeileHarmlo
 fahren(198, 100, -545)  -- 25 studs to the side
 pruefe("ducks not hit", not e.getroffen)
 local g = letztes("geld")
-pruefe("dodge bonus paid", g and g.grund == "The ducks made it!" and p:GetAttribute("Geld") > geldVorher)
+local entenGeld = false
+for i = #events, math.max(1, #events - 6), -1 do if events[i].typ == "geld" and events[i].grund == "The ducks made it!" then entenGeld = true end end
+pruefe("dodge bonus paid", entenGeld and p:GetAttribute("Geld") > geldVorher)
 pruefe("praise from the instructor", table.find(st.chaos.lehrer.lob, blase.Text.Text) ~= nil)
 
 -- 4) banana peel: hit it
@@ -161,7 +163,9 @@ print("  chickens hit:", e.getroffen)
 e = neuesEvent("wagen")
 local wz = e.tiere[1].m:GetPivot().Position.Z
 fahren(198, 90, -545)
-pruefe("shopping cart dodged", not e.getroffen and letztes("geld").grund == "Dodged the shopping cart!")
+local wagenGeld = false
+for i = #events, math.max(1, #events - 6), -1 do if events[i].typ == "geld" and events[i].grund == "Dodged the shopping cart!" then wagenGeld = true end end
+pruefe("shopping cart dodged", not e.getroffen and wagenGeld)
 e = neuesEvent("reifen")
 local r0 = e.tiere[1].m:GetPivot().Position
 M.laufen(M.zeit() + 1)
@@ -226,7 +230,7 @@ for _ = 1, 60 do
 end
 M.laufen(M.zeit() + 6)
 pruefe("lesson over", Chaos.ctx.lektionen[p] == nil)
-pruefe("chaos objects removed", #Chaos.ordner:GetChildren() == 0)
+pruefe("chaos objects removed", #Chaos.ordner:GetChildren() == 1 and Chaos.ordner:FindFirstChild("Bananen") ~= nil) -- (empty folder for thrown peels stays)
 local erster = name
 local naechster = Chaos.lehrerWaehlen(p)
 pruefe("next lesson gets another instructor", naechster.name ~= erster)

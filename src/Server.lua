@@ -1368,7 +1368,7 @@ local PIZZA = { name = "Delivery car", ware = "Pizza", item = "Pizza", pakete = 
 local TAXI = { name = "Taxi", ware = "Passengers", item = "Passenger", pakete = 3, lohn = 0, bonus = 60 }
 local TAXI_EINFAHRT = Vector3.new(374, 0, -14)
 local TAXI_MITTE = Vector3.new(374, 0, -50)
-local service = workspace.Karte:WaitForChild("Service", 10)
+local service = workspace.Karte:FindFirstChild("Service") -- (WaitForChild blocked the start for 10 s on maps without it)
 local servicestation = service and service:FindFirstChild("Servicestation")
 local taxiBuchtOrdner = servicestation and servicestation:FindFirstChild("TaxiBuchten")
 local DEPOT_EINFAHRT = Vector3.new(600, 0, 300)
@@ -3048,6 +3048,8 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 		return Missionen.status(p)
 	elseif was == "shop" then
 		return Shop.status(p)
+	elseif was == "bananeWerfen" then
+		return Chaos.bananeWerfen(p)
 	elseif was == "belohnungen" then
 		return Belohnungen.status(p)
 	elseif was == "belohnungAbholen" then
@@ -3284,8 +3286,9 @@ Pflege.starten({
 	geldGeben = geldGeben, geaendert = geaendert, autoWeg = autoWeg, mission = Missionen.fortschritt,
 })
 Missionen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent })
-Shop.starten({ daten = daten, geldGeben = geldGeben, fahrEvent = fahrEvent, geaendert = geaendert, speichernSofort = speichern, Auto = Auto, Pflege = Pflege })
-Chaos.starten({ fahrEvent = fahrEvent, geldGeben = geldGeben, lektionen = lektionen })
+Shop.starten({ daten = daten, geldGeben = geldGeben, fahrEvent = fahrEvent, geaendert = geaendert, speichernSofort = speichern, Auto = Auto, Pflege = Pflege, Chaos = Chaos })
+Chaos.starten({ fahrEvent = fahrEvent, geldGeben = geldGeben, lektionen = lektionen, jobs = jobs, privatAutos = privatAutos,
+	daten = daten, geaendert = geaendert, Shop = Shop, Missionen = Missionen })
 Belohnungen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent, geaendert = geaendert, Shop = Shop })
 
 -- odometer of the bought cars

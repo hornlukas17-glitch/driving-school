@@ -50,7 +50,7 @@ pruefe("tiers shown ahead", km and #km.stufen == 4 and km.abgeholt == 0)
 
 -- shop status
 local s = frage("shop")
-pruefe("shop lists passes and products", #s.passes == 4 and #s.produkte >= 6 and s.geldFaktor == 1)
+pruefe("shop lists passes and products", #s.passes == 5 and #s.produkte >= 6 and s.geldFaktor == 1)
 
 -- VIP: earned coins x2, admin money not
 r = frage("dev", { befehl = "kauf", key = "vip" })

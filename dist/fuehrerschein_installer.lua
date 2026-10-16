@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v43
+--  DRIVER'S LICENSE SYSTEM v44
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -2767,7 +2767,7 @@ local PIZZA = { name = "Delivery car", ware = "Pizza", item = "Pizza", pakete = 
 local TAXI = { name = "Taxi", ware = "Passengers", item = "Passenger", pakete = 3, lohn = 0, bonus = 60 }
 local TAXI_EINFAHRT = Vector3.new(374, 0, -14)
 local TAXI_MITTE = Vector3.new(374, 0, -50)
-local service = workspace.Karte:WaitForChild("Service", 10)
+local service = workspace.Karte:FindFirstChild("Service") -- (WaitForChild blocked the start for 10 s on maps without it)
 local servicestation = service and service:FindFirstChild("Servicestation")
 local taxiBuchtOrdner = servicestation and servicestation:FindFirstChild("TaxiBuchten")
 local DEPOT_EINFAHRT = Vector3.new(600, 0, 300)
@@ -4447,6 +4447,8 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 		return Missionen.status(p)
 	elseif was == "shop" then
 		return Shop.status(p)
+	elseif was == "bananeWerfen" then
+		return Chaos.bananeWerfen(p)
 	elseif was == "belohnungen" then
 		return Belohnungen.status(p)
 	elseif was == "belohnungAbholen" then
@@ -4683,8 +4685,9 @@ Pflege.starten({
 	geldGeben = geldGeben, geaendert = geaendert, autoWeg = autoWeg, mission = Missionen.fortschritt,
 })
 Missionen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent })
-Shop.starten({ daten = daten, geldGeben = geldGeben, fahrEvent = fahrEvent, geaendert = geaendert, speichernSofort = speichern, Auto = Auto, Pflege = Pflege })
-Chaos.starten({ fahrEvent = fahrEvent, geldGeben = geldGeben, lektionen = lektionen })
+Shop.starten({ daten = daten, geldGeben = geldGeben, fahrEvent = fahrEvent, geaendert = geaendert, speichernSofort = speichern, Auto = Auto, Pflege = Pflege, Chaos = Chaos })
+Chaos.starten({ fahrEvent = fahrEvent, geldGeben = geldGeben, lektionen = lektionen, jobs = jobs, privatAutos = privatAutos,
+	daten = daten, geaendert = geaendert, Shop = Shop, Missionen = Missionen })
 Belohnungen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent, geaendert = geaendert, Shop = Shop })
 
 -- odometer of the bought cars
@@ -7135,6 +7138,8 @@ Missionen.ARTEN = {
 	{ id = "tanken", text = "Refuel your car at a gas station", ziele = { 1 }, geld = 100, xp = 40 },
 	{ id = "perfekt", text = "Finish a lesson or test without mistakes", ziele = { 1 }, geld = 200, xp = 80 },
 	{ id = "taxi", text = "Drive %d taxi passengers", ziele = { 2, 3, 4 }, geld = 250, xp = 90 },
+	{ id = "ausweichen", text = "Dodge %d chaos events (cows, ducks, bananas …)", ziele = { 2, 3, 5 }, geld = 250, xp = 90 },
+	{ id = "banane", text = "Spin out on a banana peel", ziele = { 1 }, geld = 150, xp = 50 },
 }
 Missionen.PRO_TAG = 3
 
@@ -7160,7 +7165,9 @@ local function neueListe(p)
 end
 
 local function aktuell(p)
-	local d = ctx.daten[p]
+	local d = ctx and ctx.daten[p] -- nil while the server is still starting up
+	if not d then return nil end
+	d = ctx.daten[p]
 	if not d then return nil end
 	if not d.missionen or d.missionen.tag ~= heute() then
 		d.missionen = neueListe(p)
@@ -7193,6 +7200,7 @@ end
 
 function Missionen.status(p)
 	local m = aktuell(p)
+	if not m then return { fehler = "Still loading – try again in a moment.", liste = {} } end
 	local liste = {}
 	for _, mission in m.liste do
 		local a = art(mission.id)
@@ -7340,6 +7348,8 @@ Shop.PASSES = {
 		text = "Exclusive car: midnight black, gold rims, purple underglow, 195 km/h. Only with this pass." },
 	{ key = "garage", id = 0, preis = 199, icon = "🎨", name = "Paint Studio",
 		text = "6 exclusive paint colors for all your cars." },
+	{ key = "banane", id = 0, preis = 149, icon = "🍌", name = "Banana Launcher",
+		text = "Press B (or the 🍌 button) while driving to drop banana peels behind your car. Watch your friends spin out!" },
 }
 
 -- can be bought again and again (except the starter pack)
@@ -7347,6 +7357,10 @@ Shop.PRODUKTE = {
 	{ key = "starter", id = 0, preis = 99, name = "Starter Pack", geld = 7500, boost = 30, einmal = true,
 		text = "7,500 coins + 30 min 2x coins. Only once per player!" },
 	{ key = "boost", id = 0, preis = 79, name = "2x Coins – 30 min", boost = 30, text = "Double coins for 30 minutes of play." },
+	{ key = "ufo", id = 0, preis = 49, name = "👽 Alien Invasion", chaos = "ufo", tag = "FUN",
+		text = "A UFO beams up EVERY driver on the server – with your name on it!" },
+	{ key = "bananen", id = 0, preis = 29, name = "🍌 Banana Rain", chaos = "bananen", tag = "FUN",
+		text = "Banana peels rain down in front of every driver on the server!" },
 	{ key = "coins1", id = 0, preis = 49, name = "2,500 coins", geld = 2500 },
 	{ key = "coins2", id = 0, preis = 179, name = "10,000 coins", geld = 10000 },
 	{ key = "coins3", id = 0, preis = 449, name = "30,000 coins", geld = 30000, tag = "POPULAR" },
@@ -7419,6 +7433,7 @@ end
 
 local function attribute(p)
 	p:SetAttribute("VIP", Shop.hat(p, "vip") or nil)
+	p:SetAttribute("BananenWerfer", Shop.hat(p, "banane") or nil)
 	p:SetAttribute("BoostBis", ctx.daten[p] and ctx.daten[p].boostBis or nil)
 	p:SetAttribute("GeldFaktor", Shop.faktor(p, "geld"))
 	p:SetAttribute("XpFaktor", Shop.faktor(p, "xp"))
@@ -7513,7 +7528,7 @@ function Shop.status(p)
 	end
 	for _, pr in Shop.PRODUKTE do
 		if not (pr.einmal and d.starterGekauft) then
-			table.insert(produkte, { key = pr.key, id = pr.id, name = pr.name, text = pr.text, tag = pr.tag, geld = pr.geld,
+			table.insert(produkte, { key = pr.key, id = pr.id, name = pr.name, text = pr.text, tag = pr.tag, geld = pr.geld, spass = pr.chaos ~= nil,
 				preis = preise[pr.id] or pr.preis, bereit = pr.id ~= 0, einmal = pr.einmal })
 		end
 	end
@@ -7532,6 +7547,9 @@ local function gewaehren(p, pr)
 		d.boostBis = math.max(os.time(), d.boostBis or 0) + pr.boost * 60
 	end
 	if pr.einmal then d.starterGekauft = true end
+	if pr.chaos and ctx.Chaos then
+		if pr.chaos == "ufo" then ctx.Chaos.alleEntfuehren(p) else ctx.Chaos.bananenRegen(p) end
+	end
 	attribute(p)
 	ctx.geaendert(p)
 	ctx.fahrEvent:FireClient(p, { typ = "belohnung", text = "🛒 Thank you! " .. pr.name .. " received." })
@@ -7683,6 +7701,16 @@ Belohnungen.ERFOLGE = {
 		wert = function(d) return d.login and d.login.beste or 0 end, stufen = { { 3, 500, 50 }, { 7, 1500, 150 }, { 14, 4000, 400 }, { 30, 12000, 1000 } }, badge = 0 },
 	{ id = "freunde", kategorie = "loyal", icon = "🤝", name = "Better together", text = "Minutes played with a friend on the server",
 		wert = function(d) return math.floor((d.freundeSek or 0) / 60) end, stufen = { { 10, 500, 100 }, { 60, 2000, 300 }, { 300, 6000, 800 } }, badge = 0 },
+	{ id = "lehrer", kategorie = "chaos", icon = "🎭", name = "Crazy crew", text = "Drive with different crazy instructors",
+		wert = function(d) local n = 0 for _ in (d.chaos and d.chaos.lehrer) or {} do n += 1 end return n end, stufen = { { 3, 300, 60 }, { 5, 1000, 200 } }, badge = 0 },
+	{ id = "chaosArten", kategorie = "chaos", icon = "🌪", name = "Chaos collector", text = "Experience different chaos events",
+		wert = function(d) local n = 0 for _ in (d.chaos and d.chaos.arten) or {} do n += 1 end return n end, stufen = { { 4, 400, 80 }, { 8, 1500, 250 } }, badge = 0 },
+	{ id = "ausweichen", kategorie = "chaos", icon = "🦆", name = "Dodge master", text = "Dodge chaos events",
+		wert = function(d) return (d.chaos and d.chaos.ausgewichen) or 0 end, stufen = { { 5, 300, 60 }, { 25, 1200, 200 }, { 100, 5000, 600 } }, badge = 0 },
+	{ id = "ufo", kategorie = "chaos", icon = "👽", name = "Frequent flyer", text = "Get beamed up by a UFO",
+		wert = function(d) return (d.chaos and d.chaos.ufo) or 0 end, stufen = { { 1, 300, 60 }, { 10, 1500, 250 } }, badge = 0 },
+	{ id = "bananen", kategorie = "chaos", icon = "🍌", name = "Banana sniper", text = "Other players slip on your banana peels",
+		wert = function(d) return (d.chaos and d.chaos.treffer) or 0 end, stufen = { { 1, 200, 50 }, { 10, 1000, 200 }, { 50, 4000, 500 } }, badge = 0 },
 	{ id = "villa", kategorie = "collection", icon = "🏡", name = "Home owner", text = "Buy a villa",
 		wert = function(d) local n = 0 for _ in d.villen or {} do n += 1 end return n end, stufen = { { 1, 2000, 300 } }, badge = 0 },
 }
@@ -7925,6 +7953,7 @@ neu("ModuleScript", "Chaos", server, [=====[
 -- IMPORTANT: nothing here touches the car physics. All event objects are anchored,
 -- never collide and are only checked by distance (same box test as for pedestrians).
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
 local Chaos = {}
 local ctx -- { fahrEvent, geldGeben }
@@ -8007,6 +8036,25 @@ Chaos.LEHRER = {
 local function zufall(t) return t[math.random(#t)] end
 Chaos.zufall = zufall
 
+-- chaos statistics for achievements (saved in the player data, field "chaos" – new field, default empty)
+local function statistik(p, feld, schluessel)
+	local d = ctx and ctx.daten and ctx.daten[p]
+	if not d then return end
+	d.chaos = d.chaos or {}
+	local c = d.chaos
+	if schluessel then
+		c[feld] = c[feld] or {}
+		c[feld][schluessel] = true
+	else
+		c[feld] = (c[feld] or 0) + 1
+	end
+	if ctx.geaendert then ctx.geaendert(p) end
+end
+Chaos.statistik = statistik
+local function mission(p, id)
+	if ctx and ctx.Missionen then ctx.Missionen.fortschritt(p, id, 1) end
+end
+
 local zuletztLehrer = {} -- player -> last persona id (so you get a different one next time)
 function Chaos.lehrerWaehlen(p)
 	local auswahl = {}
@@ -8066,7 +8114,7 @@ end
 function Chaos.sagen(st, art, text)
 	local c = st.chaos
 	if not c then return nil end
-	local zeile = text or (c.lehrer[art] and zufall(c.lehrer[art]))
+	local zeile = text or (art and c.lehrer[art] and zufall(c.lehrer[art]))
 	if not zeile then return nil end
 	c.zuletztGesagt = os.clock()
 	c.letzteZeile = zeile
@@ -8094,8 +8142,10 @@ end
 
 -- called when a lesson is created
 function Chaos.neu(p, st)
+	local l = Chaos.lehrerWaehlen(p)
+	statistik(p, "lehrer", l.id)
 	st.chaos = {
-		lehrer = Chaos.lehrerWaehlen(p),
+		lehrer = l,
 		naechstesEvent = nil,     -- set when the first gate is sent
 		naechstesGerede = os.clock() + 14,
 		zuletztGesagt = 0,
@@ -8558,8 +8608,10 @@ function Chaos.eventStarten(p, st, art)
 	local c = st.chaos
 	if not c or c.event then return nil end
 	art = art or wuerfeln(st)
+	if art == "gag" and not c.lehrer.gag then art = "banane" end -- no instructor in your own car
 	local ev = EVENTS[art]
 	c.anzahl += 1
+	statistik(p, "arten", art)
 	if ev.ohneObjekt then
 		local g = c.lehrer.gag
 		banner(p, g.titel, g.text, "lila")
@@ -8678,7 +8730,7 @@ end
 local function eventEnde(p, st, e, grund)
 	local c = st.chaos
 	c.event = nil
-	c.naechstesEvent = os.clock() + math.random(30, 45)
+	c.naechstesEvent = os.clock() + (c.frei and math.random(60, 90) or math.random(30, 45))
 	if e.modell then
 		local m = e.modell
 		task.delay(e.art == "ufo" and 0 or 4, function() m:Destroy() end)
@@ -8692,6 +8744,8 @@ local function eventEnde(p, st, e, grund)
 		local texte = { kuehe = "Dodged the cows!", enten = "The ducks made it!", banane = "Dodged the banana!",
 			huehner = "All chickens survived!", wagen = "Dodged the shopping cart!", reifen = "Dodged the giant tire!", pfuetze = "Stayed clean!" }
 		ctx.geldGeben(p, BONUS, texte[e.art] or "Dodged!")
+		statistik(p, "ausgewichen")
+		mission(p, "ausweichen")
 		banner(p, "✨ NICE DODGE!", texte[e.art] or "Dodged!", "gruen")
 		Chaos.sagen(st, "lob")
 	end
@@ -8730,6 +8784,8 @@ function Chaos.tick(p, st, pos, tempo, vorneZ, hintenZ, halbB)
 					if e.art == "banane" then
 						extra.rutschen = math.random() < 0.5 and -1 or 1
 						c.schonzeit = os.clock() + 4 -- a crash while spinning on the banana is not your fault
+						statistik(p, "banane")
+						mission(p, "banane")
 					end
 					if e.art == "pfuetze" then extra.matsch = true extra.wackeln = nil end
 					banner(p, w[1], w[2], "rot", extra)
@@ -8749,6 +8805,7 @@ function Chaos.tick(p, st, pos, tempo, vorneZ, hintenZ, halbB)
 			e.durchStrahl = true
 			c.schonzeit = os.clock() + 8
 			ctx.geldGeben(p, BONUS_UFO, "Alien bonus!")
+			statistik(p, "ufo")
 			banner(p, "👽 BEAMED UP!", "The aliens are taking you for a ride!", "gruen", { entfuehren = true })
 			task.delay(1.5, function() if st.chaos then Chaos.sagen(st, "event") end end)
 		end
@@ -8761,14 +8818,14 @@ function Chaos.tick(p, st, pos, tempo, vorneZ, hintenZ, halbB)
 		return
 	end
 	-- instructor chatter
-	if jetzt > c.naechstesGerede then
+	if c.lehrer.leerlauf and jetzt > c.naechstesGerede then
 		c.naechstesGerede = jetzt + math.random(16, 26)
 		if jetzt - c.zuletztGesagt > 5 then Chaos.sagen(st, "leerlauf") end
 	end
 	-- new event: not while parking, only when driving
 	if c.naechstesEvent and jetzt > c.naechstesEvent and tempo > 10 and not st.parkPhase then
-		local wp = st.lektion.punkte[st.index]
-		if wp and not wp.parken then
+		local wp = st.lektion and st.lektion.punkte[st.index]
+		if not st.lektion or (wp and not wp.parken) then
 			Chaos.eventStarten(p, st)
 		else
 			c.naechstesEvent = jetzt + 5
@@ -8796,15 +8853,222 @@ function Chaos.ende(st)
 	c.naechstesEvent = nil
 end
 
+-- ---------------------------------------------------------------
+-- Every car with a driver (lessons, jobs, own cars)
+-- ---------------------------------------------------------------
+local function fahrzeuge()
+	local liste = {}
+	local function dazu(chassis, sitz, st)
+		if chassis and chassis.Parent and sitz and sitz.Occupant then
+			local f = Players:GetPlayerFromCharacter(sitz.Occupant.Parent)
+			if f then table.insert(liste, { p = f, chassis = chassis, st = st }) end
+		end
+	end
+	for _, st in ctx.lektionen do dazu(st.chassis, st.sitz, st) end
+	for _, j in ctx.jobs or {} do dazu(j.chassis, j.sitz, j) end
+	for _, a in ctx.privatAutos or {} do dazu(a.chassis, a.sitz, a) end
+	return liste
+end
+Chaos.fahrzeuge = fahrzeuge
+
+local function flach(v)
+	local f = Vector3.new(v.X, 0, v.Z)
+	return f.Magnitude > 0.01 and f.Unit or Vector3.new(0, 0, -1)
+end
+
+local function anAlle(titel, text, farbe)
+	for _, sp in Players:GetPlayers() do
+		ctx.fahrEvent:FireClient(sp, { typ = "chaos", titel = titel, text = text, farbe = farbe })
+	end
+end
+
+-- ---------------------------------------------------------------
+-- Chaos in your own car (after the license): an event every 1 – 1.5 minutes, no instructor
+-- ---------------------------------------------------------------
+local function freiTick()
+	for p, a in ctx.privatAutos or {} do
+		local fahrer = a.sitz and a.sitz.Occupant
+		local wer = fahrer and Players:GetPlayerFromCharacter(fahrer.Parent)
+		if wer == p and a.chassis and a.chassis.Parent then
+			if not a.chaos then
+				a.chaos = { lehrer = {}, frei = true, naechstesEvent = os.clock() + math.random(40, 60),
+					naechstesGerede = math.huge, zuletztGesagt = 0, anzahl = 0 }
+			end
+			local d = ctx.daten[p]
+			if not (d and d.einstellungen and d.einstellungen.chaosAus) then
+				Chaos.tick(p, a, a.chassis.Position, a.chassis.AssemblyLinearVelocity.Magnitude, -8.8, 8.8, 4.2)
+			end
+		elseif a.chaos and a.chaos.event then
+			Chaos.ende(a) -- left the car: the event disappears
+			a.chaos.naechstesEvent = os.clock() + 60
+		end
+	end
+end
+Chaos.freiTick = freiTick
+
+-- ---------------------------------------------------------------
+-- Banana peels thrown by players (Banana Launcher pass, Banana Rain product)
+-- ---------------------------------------------------------------
+local bananenOrdner = Instance.new("Folder")
+bananenOrdner.Name = "Bananen"
+bananenOrdner.Parent = ordner
+local schalen = {}       -- { m, pos, besitzer, zeit }
+local letzterWurf = {}
+Chaos.WURF_PAUSE = 5     -- seconds between two throws
+Chaos.SCHALEN_MAX = 5    -- peels per player on the map at the same time
+Chaos.schalen = schalen
+
+local function schaleLegen(besitzer, pos, ohneLimit, ersatzY)
+	local y = Chaos.bodenHoehe(pos) or ersatzY
+	if not y then return nil end
+	local b = banane()
+	b.Name = "Wurfbanane"
+	b:PivotTo(CFrame.new(pos.X, y, pos.Z) * CFrame.Angles(0, math.random() * 6.28, 0))
+	b.Parent = bananenOrdner
+	local s = { m = b, pos = Vector3.new(pos.X, y, pos.Z), besitzer = besitzer, zeit = os.clock() }
+	table.insert(schalen, s)
+	if not ohneLimit then
+		local meine = {}
+		for _, x in schalen do if x.besitzer == besitzer then table.insert(meine, x) end end
+		while #meine > Chaos.SCHALEN_MAX do
+			local alt = table.remove(meine, 1)
+			alt.m:Destroy()
+			table.remove(schalen, table.find(schalen, alt))
+		end
+	end
+	return s
+end
+Chaos.schaleLegen = schaleLegen
+
+function Chaos.bananeWerfen(p)
+	if not (ctx.Shop and ctx.Shop.hat(p, "banane")) then
+		return { fehler = "🍌 Get the Banana Launcher in the 🛒 Shop to drop banana peels behind your car!" }
+	end
+	local rest = Chaos.WURF_PAUSE - (os.clock() - (letzterWurf[p] or -99))
+	if rest > 0 then return { fehler = ("🍌 Reloading… %d s"):format(math.ceil(rest)) } end
+	local f
+	for _, x in fahrzeuge() do if x.p == p then f = x end end
+	if not f then return { fehler = "Get in a car first, then drop banana peels behind you!" } end
+	local cf = f.chassis.CFrame
+	if not schaleLegen(p, cf.Position - flach(cf.LookVector) * 12, false, cf.Position.Y - 2) then return { fehler = "No road behind you." } end
+	letzterWurf[p] = os.clock()
+	return { text = "🍌 Banana peel dropped! Who will slip on it?" }
+end
+
+local function schalenTick()
+	if #schalen == 0 then return end
+	local jetzt = os.clock()
+	local liste = fahrzeuge()
+	for i = #schalen, 1, -1 do
+		local s = schalen[i]
+		local weg = jetzt - s.zeit > 45 or not s.m.Parent
+		if not weg then
+			for _, f in liste do
+				local pos = f.chassis.Position
+				local nah = Vector3.new(pos.X - s.pos.X, 0, pos.Z - s.pos.Z).Magnitude
+				local eigeneFrisch = f.p == s.besitzer and jetzt - s.zeit < 2.5
+				if nah < 4.5 and math.abs(pos.Y - s.pos.Y) < 8 and not eigeneFrisch then
+					weg = true
+					local selbst = f.p == s.besitzer or not s.besitzer.Parent
+					ctx.fahrEvent:FireClient(f.p, { typ = "chaos", titel = "🍌 SLIIIP!", farbe = "rot", wackeln = true,
+						text = selbst and "Whoops, a banana peel!" or (s.besitzer.DisplayName .. " got you with a banana!"),
+						rutschen = math.random() < 0.5 and -1 or 1 })
+					if f.st and f.st.chaos then f.st.chaos.schonzeit = jetzt + 4 end
+					statistik(f.p, "banane")
+					mission(f.p, "banane")
+					if not selbst then
+						statistik(s.besitzer, "treffer")
+						ctx.fahrEvent:FireClient(s.besitzer, { typ = "chaos", titel = "🍌 GOTCHA!", farbe = "gruen",
+							text = f.p.DisplayName .. " slipped on your banana!" })
+					end
+					break
+				end
+			end
+		end
+		if weg then
+			s.m:Destroy()
+			table.remove(schalen, i)
+		end
+	end
+end
+Chaos.schalenTick = schalenTick
+
+-- ---------------------------------------------------------------
+-- Server-wide fun (developer products)
+-- ---------------------------------------------------------------
+-- 👽 Alien Invasion: a UFO beams up every driver on the server
+function Chaos.alleEntfuehren(kaeufer)
+	anAlle("👽 ALIEN INVASION!", kaeufer.DisplayName .. " called the aliens – every driver gets beamed up!", "lila")
+	for _, f in fahrzeuge() do
+		task.spawn(function()
+			local u = ufo()
+			u.Parent = ordner
+			local y0 = Chaos.bodenHoehe(f.chassis.Position) or (f.chassis.Position.Y - 2)
+			ctx.fahrEvent:FireClient(f.p, { typ = "chaos", titel = "👽 BEAMED UP!", text = f.p == kaeufer and "Enjoy your own alien ride!" or ("Thanks, " .. kaeufer.DisplayName .. "! Enjoy the ride!"),
+				farbe = "gruen", entfuehren = true })
+			if f.st and f.st.chaos then f.st.chaos.schonzeit = os.clock() + 8 end
+			statistik(f.p, "ufo")
+			local start = os.clock()
+			while os.clock() - start < 8.5 and f.chassis.Parent do
+				local t = os.clock() - start
+				local pos = f.chassis.Position
+				local hoch = math.max(pos.Y + 12, y0 + 28)
+				if t > 6.5 then hoch += (t - 6.5) ^ 2 * 25 end -- flies away
+				u:PivotTo(CFrame.new(pos.X, hoch, pos.Z) * CFrame.Angles(0, t * 1.5, 0))
+				task.wait()
+			end
+			u:Destroy()
+		end)
+	end
+end
+
+-- 🍌 Banana Rain: banana peels drop in front of every driver
+function Chaos.bananenRegen(kaeufer)
+	anAlle("🍌 BANANA RAIN!", kaeufer.DisplayName .. " made it rain banana peels – drive carefully!", "gelb")
+	for _, f in fahrzeuge() do
+		local cf = f.chassis.CFrame
+		local vor = flach(cf.LookVector)
+		local rechts = Vector3.new(-vor.Z, 0, vor.X)
+		for k = 1, 4 do
+			local pos = cf.Position + vor * (30 + k * 16) + rechts * ((math.random() - 0.5) * 7)
+			local s = schaleLegen(kaeufer, pos, true, cf.Position.Y - 2)
+			if s then
+				-- falls down from the sky
+				local ziel = s.m:GetPivot()
+				s.m:PivotTo(ziel + Vector3.new(0, 25, 0))
+				task.spawn(function()
+					for i = 1, 20 do
+						if not s.m.Parent then return end
+						s.m:PivotTo(ziel + Vector3.new(0, 25 * (1 - i / 20) ^ 2, 0))
+						task.wait(0.03)
+					end
+				end)
+			end
+		end
+	end
+end
+
 function Chaos.starten(k)
 	ctx = k
 	Chaos.ctx = k
 	RunService.Heartbeat:Connect(function()
-		for _, st in ctx.lektionen do
-			local e = st.chaos and st.chaos.event
-			if e and e.modell and e.modell.Parent then
-				Chaos.bewegen(e, os.clock() - e.start)
+		for _, liste in { ctx.lektionen, ctx.privatAutos or {} } do
+			for _, st in liste do
+				local e = st.chaos and st.chaos.event
+				if e and e.modell and e.modell.Parent then
+					Chaos.bewegen(e, os.clock() - e.start)
+				end
 			end
+		end
+	end)
+	-- own cars and thrown banana peels: checked 10 times per second
+	task.spawn(function()
+		while true do
+			task.wait(0.1)
+			local ok, fehler = pcall(freiTick)
+			if not ok then warn("Chaos (own car): " .. tostring(fehler)) end
+			ok, fehler = pcall(schalenTick)
+			if not ok then warn("Chaos (bananas): " .. tostring(fehler)) end
 		end
 	end)
 end
@@ -9245,7 +9509,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v43 loaded")
+print("[Driving School] client v44 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -10358,6 +10622,55 @@ local function chaosBanner(info)
 	end
 end
 _G.ChaosBanner = chaosBanner
+
+-- 🍌 Banana Launcher (game pass): B or the banana button drops a peel behind your car
+do
+	local UISB = game:GetService("UserInputService")
+	local knopfGui = Instance.new("ScreenGui")
+	knopfGui.Name = "BananenKnopf"
+	knopfGui.ResetOnSpawn = false
+	knopfGui.Parent = spieler.PlayerGui
+	local knopf = Instance.new("TextButton")
+	knopf.AnchorPoint = Vector2.new(1, 0.5)
+	knopf.Position = UDim2.new(1, -16, 0.3, 0) -- above the handbrake / indicator buttons
+	knopf.Size = UDim2.fromOffset(64, 64)
+	knopf.BackgroundColor3 = Color3.fromRGB(255, 205, 40)
+	knopf.Text = "🍌"
+	knopf.TextScaled = true
+	knopf.Visible = false
+	knopf.Parent = knopfGui
+	Instance.new("UICorner", knopf).CornerRadius = UDim.new(1, 0)
+	local taste = Instance.new("TextLabel")
+	taste.AnchorPoint = Vector2.new(0.5, 0)
+	taste.Position = UDim2.new(0.5, 0, 1, 2)
+	taste.Size = UDim2.fromOffset(64, 16)
+	taste.BackgroundTransparency = 1
+	taste.Font = Enum.Font.GothamBold
+	taste.TextSize = 12
+	taste.TextColor3 = Color3.new(1, 1, 1)
+	taste.TextStrokeTransparency = 0.3
+	taste.Text = "B"
+	taste.Parent = knopf
+	local function werfen()
+		local r = frage("bananeWerfen")
+		if r and (r.fehler or r.text) then warnen(r.fehler or r.text, r.fehler and Color3.fromRGB(200, 140, 30) or GRUEN) end
+	end
+	knopf.Activated:Connect(werfen)
+	local function imAuto()
+		local hum = spieler.Character and spieler.Character:FindFirstChildOfClass("Humanoid")
+		return hum and hum.SeatPart and hum.SeatPart:IsA("VehicleSeat")
+	end
+	UISB.InputBegan:Connect(function(eingabe, verarbeitet)
+		if verarbeitet or eingabe.KeyCode ~= Enum.KeyCode.B then return end
+		if imAuto() then werfen() end
+	end)
+	task.spawn(function()
+		while true do
+			knopf.Visible = imAuto() == true and spieler:GetAttribute("BananenWerfer") == true
+			task.wait(0.5)
+		end
+	end)
+end
 
 fahrEvent.OnClientEvent:Connect(function(info)
 	if info.typ == "chaos" then
@@ -13108,11 +13421,20 @@ do
 			end)
 			b.AutoButtonColor = not pass.hat
 		end
+		ueberschrift(liste, "🤪 CHAOS FUN – for the whole server", weiter())
+		for _, pr in info.produkte do
+			if pr.spass then
+				local k = karte(liste, 72, Color3.fromRGB(70, 40, 95), weiter())
+				label(k, pr.name .. (pr.tag and ("   <font color=\"#ffcf4a\" size=\"12\">" .. pr.tag .. "</font>") or ""), 16, nil, { 0, 14 }, { 0, 6 }, { 1, -170 }, { 0, 24 }, true)
+				label(k, pr.text or "", 12, HELL, { 0, 14 }, { 0, 32 }, { 1, -170 }, { 0, 34 })
+				taste(k, preisText(pr), GRUEN, { 1, -146 }, { 0.5, -18 }, { 0, 134 }, { 0, 36 }, function() kaufen("produkt", pr) end)
+			end
+		end
 		ueberschrift(liste, "🪙 COINS & BOOSTS", weiter())
 		for _, pr in info.produkte do
-			if not pr.einmal then
+			if not pr.einmal and not pr.spass then
 				local k = karte(liste, 56, nil, weiter())
-				label(k, (pr.geld and "🪙 " or "⚡ ") .. pr.name .. (pr.tag and ("   <font color=\"#ffcf4a\" size=\"12\">" .. pr.tag .. "</font>") or ""), 16, nil, { 0, 14 }, { 0, 0 }, { 1, -170 }, { 1, 0 }, true)
+				label(k, (pr.spass and "" or pr.geld and "🪙 " or "⚡ ") .. pr.name .. (pr.tag and ("   <font color=\"#ffcf4a\" size=\"12\">" .. pr.tag .. "</font>") or ""), 16, nil, { 0, 14 }, { 0, 0 }, { 1, -170 }, { 1, 0 }, true)
 				taste(k, preisText(pr), GRUEN, { 1, -146 }, { 0.5, -18 }, { 0, 134 }, { 0, 36 }, function() kaufen("produkt", pr) end)
 			end
 		end
@@ -13231,7 +13553,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v43 loading")
+	print("[Driving School] start screen v44 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -13432,4 +13754,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v43 installed. Press F5 to test.")
+print("License system v44 installed. Press F5 to test.")

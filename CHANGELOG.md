@@ -1,5 +1,12 @@
 # Changelog
 
+## v44 – Spielbereit: Chaos überall, Spaß-Shop, Fixes
+- **Chaos auch im eigenen Auto** (nach dem Führerschein): etwa alle 1–1,5 min ein Event, ohne Fahrlehrer. Ausweichen gibt Münzen.
+- **Neuer Gamepass „Banana Launcher“ 🍌** (149 R$): mit B oder dem 🍌-Knopf eine Bananenschale hinter das Auto werfen (alle 5 s, max. 5 liegen). Wer drüberfährt – auch Freunde – dreht sich. Der Werfer bekommt „GOTCHA!“.
+- **Neue Spaß-Produkte für den ganzen Server**: „👽 Alien Invasion“ (49 R$, jedes fahrende Auto wird von einem UFO hochgezogen) und „🍌 Banana Rain“ (29 R$, Schalen regnen vor jedem Fahrer herunter). Eigene Rubrik „CHAOS FUN“ im Shop.
+- **Wiederkommen:** 2 neue Tagesmissionen (Events ausweichen, auf einer Banane ausrutschen) und 5 Chaos-Erfolge (verschiedene Fahrlehrer, Event-Sammler, Ausweich-Meister, UFO-Flieger, Bananen-Scharfschütze). Neues Datenfeld `chaos` (Standard leer).
+- **Fixes:** Server wartete beim Start 10 s auf die fehlende Servicestation (Shop/Missionen/Belohnungen waren so lange nicht da, Missionen warf einen Fehler) → kein Warten mehr, Missionen sicher beim Start. In Studio fehlte die Servicestation (Tanken, Werkstatt, Taxistand) und die Tankstelle West ganz → nachgebaut (`studio/service_bauen.lua`).
+
 ## v43 – Chaos nach Lukas' Test
 - Banane: das Auto dreht sich jetzt immer mindestens 180° (dreht weiter, bis 200° erreicht sind, höchstens 2,5 s), danach 0,5 s bis der Grip zurück ist.
 - UFO: Wer in den grünen Strahl fährt, wird mitsamt Auto hochgezogen (2,7 s hoch, langsam drehend) und wieder abgesetzt. Alien-Bonus sofort, keine Fehler während des Flugs.

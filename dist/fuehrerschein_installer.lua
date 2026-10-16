@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v38
+--  DRIVER'S LICENSE SYSTEM v39
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -8012,8 +8012,8 @@ local function blase(st)
 	if not bb then
 		bb = Instance.new("BillboardGui")
 		bb.Name = "Sprechblase"
-		bb.Size = UDim2.fromOffset(250, 74)
-		bb.StudsOffset = Vector3.new(0, 3.2, 0)
+		bb.Size = UDim2.fromOffset(180, 50)
+		bb.StudsOffset = Vector3.new(0, 2.7, 0)
 		bb.AlwaysOnTop = true
 		bb.MaxDistance = 90
 		bb.LightInfluence = 0
@@ -8027,7 +8027,7 @@ local function blase(st)
 		t.TextWrapped = true
 		t.Parent = bb
 		local ecke = Instance.new("UICorner")
-		ecke.CornerRadius = UDim.new(0, 14)
+		ecke.CornerRadius = UDim.new(0, 10)
 		ecke.Parent = t
 		local rand = Instance.new("UIStroke")
 		rand.Thickness = 2
@@ -8035,8 +8035,11 @@ local function blase(st)
 		rand.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		rand.Parent = t
 		local pad = Instance.new("UIPadding")
-		for _, s in { "PaddingLeft", "PaddingRight", "PaddingTop", "PaddingBottom" } do pad[s] = UDim.new(0, 8) end
+		for _, s in { "PaddingLeft", "PaddingRight", "PaddingTop", "PaddingBottom" } do pad[s] = UDim.new(0, 5) end
 		pad.Parent = t
+		local maxText = Instance.new("UITextSizeConstraint")
+		maxText.MaxTextSize = 18
+		maxText.Parent = t
 		bb.Parent = kopf
 	end
 	return bb
@@ -8186,6 +8189,79 @@ local function banane()
 	return m
 end
 
+local function huhn()
+	local m = modell("Huhn")
+	block(m, "Koerper", Vector3.new(0.9, 0.9, 1.2), WEISS, CFrame.new(0, 0.9, 0))
+	block(m, "Kopf", Vector3.new(0.55, 0.6, 0.55), WEISS, CFrame.new(0, 1.55, -0.5))
+	block(m, "Kamm", Vector3.new(0.15, 0.3, 0.45), Color3.fromRGB(220, 30, 30), CFrame.new(0, 1.95, -0.5))
+	block(m, "Schnabel", Vector3.new(0.2, 0.15, 0.3), Color3.fromRGB(255, 170, 20), CFrame.new(0, 1.5, -0.9))
+	block(m, "Schwanz", Vector3.new(0.6, 0.6, 0.3), WEISS, CFrame.new(0, 1.3, 0.65))
+	for _, x in { -0.2, 0.2 } do
+		block(m, "Bein", Vector3.new(0.12, 0.45, 0.12), Color3.fromRGB(255, 170, 20), CFrame.new(x, 0.23, 0))
+	end
+	return m
+end
+
+local function einkaufswagen()
+	local m = modell("Einkaufswagen")
+	local metall = Color3.fromRGB(190, 195, 205)
+	block(m, "Boden", Vector3.new(2.2, 0.15, 3.2), metall, CFrame.new(0, 1.2, 0), Enum.Material.Metal)
+	for _, x in { -1.05, 1.05 } do block(m, "Seite", Vector3.new(0.1, 1.6, 3.2), metall, CFrame.new(x, 2.0, 0), Enum.Material.Metal).Transparency = 0.35 end
+	for _, z in { -1.55, 1.55 } do block(m, "Seite", Vector3.new(2.2, 1.6, 0.1), metall, CFrame.new(0, 2.0, z), Enum.Material.Metal).Transparency = 0.35 end
+	block(m, "Griff", Vector3.new(2.2, 0.2, 0.2), Color3.fromRGB(220, 40, 40), CFrame.new(0, 3.0, 1.9))
+	for _, x in { -0.9, 0.9 } do
+		for _, z in { -1.3, 1.3 } do
+			block(m, "Rad", Vector3.new(0.3, 0.5, 0.5), SCHWARZ, CFrame.new(x, 0.25, z), nil, Enum.PartType.Cylinder)
+		end
+	end
+	block(m, "Ware", Vector3.new(1.0, 0.8, 0.8), Color3.fromRGB(255, 140, 30), CFrame.new(-0.3, 1.7, -0.5))
+	block(m, "Ware", Vector3.new(0.7, 1.1, 0.7), Color3.fromRGB(60, 160, 255), CFrame.new(0.4, 1.8, 0.6))
+	return m
+end
+
+local function reifen()
+	local m = modell("Riesenreifen")
+	-- axis along X: rolls towards the car (along Z)
+	block(m, "Reifen", Vector3.new(2.6, 6.4, 6.4), Color3.fromRGB(25, 25, 28), CFrame.new(0, 3.2, 0), Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
+	block(m, "Felge", Vector3.new(2.7, 3.4, 3.4), Color3.fromRGB(200, 200, 210), CFrame.new(0, 3.2, 0), Enum.Material.Metal, Enum.PartType.Cylinder)
+	block(m, "Stern", Vector3.new(2.8, 0.5, 3.0), Color3.fromRGB(240, 200, 40), CFrame.new(0, 3.2, 0))
+	return m
+end
+
+local function pfuetze()
+	local m = modell("Matschpfuetze")
+	block(m, "Matsch", Vector3.new(0.12, 8, 8), Color3.fromRGB(95, 65, 35), CFrame.new(0, 0.1, 0) * CFrame.Angles(0, 0, math.rad(90)), Enum.Material.Mud, Enum.PartType.Cylinder)
+	block(m, "Matsch2", Vector3.new(0.14, 4, 4), Color3.fromRGB(80, 55, 30), CFrame.new(2.6, 0.1, 1.5) * CFrame.Angles(0, 0, math.rad(90)), Enum.Material.Mud, Enum.PartType.Cylinder)
+	return m
+end
+
+local function clown()
+	local m = modell("Clown")
+	block(m, "Hose", Vector3.new(1.6, 2.2, 1.0), Color3.fromRGB(40, 120, 230), CFrame.new(0, 1.1, 0))
+	block(m, "Hemd", Vector3.new(1.8, 1.8, 1.1), Color3.fromRGB(250, 220, 40), CFrame.new(0, 3.1, 0))
+	block(m, "Kopf", Vector3.new(1.2, 1.2, 1.2), Color3.fromRGB(250, 235, 225), CFrame.new(0, 4.6, 0))
+	block(m, "Nase", Vector3.new(0.45, 0.45, 0.45), Color3.fromRGB(230, 20, 20), CFrame.new(0, 4.6, -0.65), nil, Enum.PartType.Ball)
+	block(m, "Haare", Vector3.new(1.8, 0.9, 1.3), Color3.fromRGB(255, 90, 20), CFrame.new(0, 5.1, 0.1), Enum.Material.Fabric, Enum.PartType.Ball)
+	for _, x in { -1, 1 } do block(m, "Schuh", Vector3.new(0.8, 0.5, 1.8), Color3.fromRGB(230, 20, 20), CFrame.new(x * 0.5, 0.25, -0.3)) end
+	-- camera on a tripod, pointing at the road
+	block(m, "Stativ", Vector3.new(0.15, 3.4, 0.15), SCHWARZ, CFrame.new(-1.6, 1.7, -0.8))
+	block(m, "Kamera", Vector3.new(1.0, 0.8, 0.9), SCHWARZ, CFrame.new(-1.6, 3.6, -0.8))
+	block(m, "Linse", Vector3.new(0.35, 0.6, 0.6), Color3.fromRGB(120, 200, 255), CFrame.new(-1.6, 3.6, -1.35) * CFrame.Angles(0, math.rad(90), 0), Enum.Material.Glass, Enum.PartType.Cylinder)
+	local schild = block(m, "Schild", Vector3.new(2.6, 1.4, 0.2), WEISS, CFrame.new(1.6, 2.6, -0.4))
+	local g = Instance.new("SurfaceGui")
+	g.Face = Enum.NormalId.Front
+	g.Parent = schild
+	local l = Instance.new("TextLabel")
+	l.Size = UDim2.fromScale(1, 1)
+	l.BackgroundTransparency = 1
+	l.Text = "SPEED CAMERA 📸\n(probably)"
+	l.TextScaled = true
+	l.Font = Enum.Font.FredokaOne
+	l.TextColor3 = Color3.fromRGB(200, 20, 20)
+	l.Parent = g
+	return m
+end
+
 local function ufo()
 	local m = modell("Ufo")
 	block(m, "Scheibe", Vector3.new(2.2, 16, 16), Color3.fromRGB(170, 175, 190), CFrame.Angles(0, 0, math.rad(90)), Enum.Material.Metal, Enum.PartType.Cylinder)
@@ -8292,6 +8368,91 @@ EVENTS.ufo = {
 	tempo = 0,
 }
 
+EVENTS.huehner = {
+	gewicht = 3,
+	banner = { titel = "🐔 CHICKEN CHAOS!", text = "Chickens everywhere – don't hit them!" },
+	aufbauen = function(e)
+		e.tiere = {}
+		for i = 0, 4 do
+			local h = huhn()
+			h.Parent = e.modell
+			local tier = { m = h, seite = -4 - i * 2.3, vor = (i % 2 == 0) and 1.5 or -1.5, r = 0.8, phase = i * 1.3, huhn = true }
+			-- chickens run in a zigzag
+			tier.bewege = function(tier_, t)
+				tier_.aktSeite = tier_.seite + t * 3.2
+				tier_.aktVor = tier_.vor + math.sin(t * 3 + tier_.phase) * 2.5
+				local hopp = math.abs(math.sin(t * 12 + tier_.phase)) * 0.3
+				local blick = math.cos(t * 3 + tier_.phase) > 0 and -60 or -120
+				tier_.m:PivotTo(bodenCF(e, tier_.aktSeite, tier_.aktVor, hopp) * CFrame.Angles(0, math.rad(blick), 0))
+			end
+			table.insert(e.tiere, tier)
+		end
+	end,
+	tempo = 0,
+}
+
+EVENTS.wagen = {
+	gewicht = 2,
+	banner = { titel = "🛒 RUNAWAY SHOPPING CART!", text = "It's rolling across the road – watch out!" },
+	aufbauen = function(e)
+		local w = einkaufswagen()
+		w.Parent = e.modell
+		local tier = { m = w, seite = -16, vor = 0, r = 1.8, phase = 0 }
+		tier.bewege = function(tier_, t)
+			tier_.aktSeite = tier_.seite + t * 6.5
+			tier_.aktVor = tier_.vor
+			tier_.m:PivotTo(bodenCF(e, tier_.aktSeite, tier_.aktVor, 0) * CFrame.Angles(0, math.rad(-90 + math.sin(t * 4) * 12), 0))
+		end
+		e.tiere = { tier }
+	end,
+	tempo = 0,
+}
+
+EVENTS.reifen = {
+	gewicht = 2,
+	banner = { titel = "🛞 GIANT TIRE INCOMING!", text = "A huge tire is rolling at you – swerve!" },
+	aufbauen = function(e)
+		local r = reifen()
+		r.Parent = e.modell
+		local tier = { m = r, seite = 0, vor = -10, r = 2.2, phase = 0 }
+		tier.bewege = function(tier_, t)
+			tier_.aktSeite = tier_.seite + math.sin(t * 0.8) * 1.5
+			tier_.aktVor = tier_.vor + t * 13 -- rolls towards the car
+			local h = math.abs(math.sin(t * 2.5)) * 1.2 -- bounces a bit
+			tier_.m:PivotTo(bodenCF(e, tier_.aktSeite, tier_.aktVor, h) * CFrame.Angles(t * 13 / 3.2, 0, 0))
+		end
+		e.tiere = { tier }
+	end,
+	tempo = 0,
+}
+
+EVENTS.pfuetze = {
+	gewicht = 2,
+	banner = { titel = "🟤 MUD PUDDLE!", text = "Drive around it or get dirty!" },
+	aufbauen = function(e)
+		local m = pfuetze()
+		m.Parent = e.modell
+		local seite = (math.random() - 0.5) * 3
+		m:PivotTo(bodenCF(e, seite, 0))
+		e.tiere = { { m = m, seite = seite, vor = 0, r = 3.2, fest = true } }
+	end,
+	tempo = 0,
+}
+
+EVENTS.clown = {
+	gewicht = 2,
+	banner = { titel = "🤡 SPEED CAMERA?!", text = "A clown with a camera at the side of the road..." },
+	aufbauen = function(e)
+		local m = clown()
+		m.Parent = e.modell
+		-- at the right edge of the road, looking at the traffic (towards the car)
+		m:PivotTo(bodenCF(e, 8.5, 0) * CFrame.Angles(0, math.rad(180), 0))
+		e.tiere = {}
+		e.clown = true
+	end,
+	tempo = 0,
+}
+
 EVENTS.gag = {
 	gewicht = 2,
 	ohneObjekt = true,
@@ -8308,6 +8469,23 @@ local function wuerfeln(st)
 	return "kuehe"
 end
 Chaos.EVENTS = EVENTS
+
+-- a cloud of feathers when a chicken gets hit
+function Chaos.federn(m)
+	local wurzel = m.PrimaryPart
+	if not wurzel then return end
+	local pe = Instance.new("ParticleEmitter")
+	pe.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	pe.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255))
+	pe.Size = NumberSequence.new(0.6, 0.2)
+	pe.Lifetime = NumberRange.new(1, 1.8)
+	pe.Speed = NumberRange.new(6, 12)
+	pe.SpreadAngle = Vector2.new(180, 180)
+	pe.Acceleration = Vector3.new(0, -6, 0)
+	pe.Rate = 0
+	pe.Parent = wurzel
+	pe:Emit(40)
+end
 
 local function banner(p, titel, text, farbe, extra)
 	local info = { typ = "chaos", titel = titel, text = text, farbe = farbe }
@@ -8383,9 +8561,11 @@ function Chaos.bewegen(e, t)
 		if tier.fliegt then
 			-- hit: flies away spinning (only looks, nothing physical)
 			local ft = t - tier.fliegt
-			local cf = bodenCF(e, tier.seite + ft * 6, tier.vor + ft * 4, ft * 14 - ft * ft * 2)
+			local cf = bodenCF(e, (tier.aktSeite or tier.seite) + ft * 6, (tier.aktVor or tier.vor) + ft * 4, ft * 14 - ft * ft * 2)
 			tier.m:PivotTo(cf * CFrame.Angles(ft * 7, ft * 5, ft * 3))
 			if ft > 3 then tier.m.Parent = nil end
+		elseif tier.bewege then
+			tier.bewege(tier, t)
 		elseif not tier.fest then
 			local seite = tier.seite + t * ev.tempo
 			tier.aktSeite = seite
@@ -8412,7 +8592,7 @@ local function trefferPunkte(e)
 	local liste = {}
 	for _, tier in e.tiere or {} do
 		if not tier.fliegt and tier.m.Parent then
-			local p = bodenCF(e, tier.aktSeite or tier.seite, tier.vor, 0).Position
+			local p = bodenCF(e, tier.aktSeite or tier.seite, tier.aktVor or tier.vor, 0).Position
 			table.insert(liste, { pos = p, r = tier.r, tier = tier })
 		end
 	end
@@ -8434,8 +8614,11 @@ local function eventEnde(p, st, e, grund)
 			banner(p, "👽 BEAMED!", "The aliens liked your car. Alien bonus!", "gruen")
 			Chaos.sagen(st, "lob")
 		end
+	elseif e.clown then
+		return -- the clown only takes a photo
 	elseif not e.getroffen and e.naechster < 40 then
-		local texte = { kuehe = "Dodged the cows!", enten = "The ducks made it!", banane = "Dodged the banana!" }
+		local texte = { kuehe = "Dodged the cows!", enten = "The ducks made it!", banane = "Dodged the banana!",
+			huehner = "All chickens survived!", wagen = "Dodged the shopping cart!", reifen = "Dodged the giant tire!", pfuetze = "Stayed clean!" }
 		ctx.geldGeben(p, BONUS, texte[e.art] or "Dodged!")
 		banner(p, "✨ NICE DODGE!", texte[e.art] or "Dodged!", "gruen")
 		Chaos.sagen(st, "lob")
@@ -8461,15 +8644,30 @@ function Chaos.tick(p, st, pos, tempo, vorneZ, hintenZ, halbB)
 				if math.abs(lp.X) < halbB + pt.r and lp.Z > vorneZ - pt.r and lp.Z < hintenZ + pt.r and lp.Y > -4 and lp.Y < 8 then
 					e.getroffen = true
 					if not pt.tier.fest then pt.tier.fliegt = t end
+					if pt.tier.huhn then Chaos.federn(pt.tier.m) end
 					local was = { kuehe = { "💥 MOOOO!", "You bumped a cow. It's fine... probably." },
 						enten = { "🦆 QUAAACK!", "A duck went flying! It's okay, ducks can fly." },
-						banane = { "🍌 SLIIIP!", "You drove over the banana peel! Whoooa!" } }
+						banane = { "🍌 SLIIIP!", "You drove over the banana peel! Whoooa!" },
+						huehner = { "🐔 BAWK BAWK!", "Feathers everywhere!" },
+						wagen = { "🛒 CLAAANG!", "You hit a runaway shopping cart!" },
+						reifen = { "🛞 BOOOING!", "The giant tire bounced off your car!" },
+						pfuetze = { "🟤 SPLAAASH!", "Mud everywhere! Can you still see?" } }
 					local w = was[e.art] or { "💥 BONK!", "" }
-					banner(p, w[1], w[2], "rot", { wackeln = true })
+					local extra = { wackeln = true }
+					-- the banana makes you spin (Lukas: "über Bananenschalen fahren -> ins Rutschen kommen")
+					if e.art == "banane" then extra.rutschen = math.random() < 0.5 and -1 or 1 end
+					if e.art == "pfuetze" then extra.matsch = true extra.wackeln = nil end
+					banner(p, w[1], w[2], "rot", extra)
 					Chaos.sagen(st, "unfall")
 					break
 				end
 			end
+		end
+		if e.clown and not e.geblitzt and d < 16 then
+			e.geblitzt = true
+			ctx.geldGeben(p, 10, "Photo of the year!")
+			banner(p, "📸 SAY CHEESE!", "The clown took a photo of you. What a face!", "lila", { blitz = true })
+			task.delay(1, function() if st.chaos then Chaos.sagen(st, "event") end end)
 		end
 		if e.ufo and not e.durchStrahl and t < 16 and d < e.strahlR then
 			e.durchStrahl = true
@@ -8962,7 +9160,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v38 loaded")
+print("[Driving School] client v39 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -10019,6 +10217,42 @@ local function chaosBanner(info)
 	task.delay(3.2, function()
 		if chaosNr == nr then chaosBox.Visible = false end
 	end)
+	if info.rutschen then
+		-- banana peel: the car spins for a moment (only this event; normal driving stays exactly the same)
+		_G.Rutschen = { start = os.clock(), dauer = 1.6, richtung = info.rutschen }
+	end
+	if info.matsch then
+		-- mud puddle: brown splats on the screen that drip away
+		for i = 1, 9 do
+			local f = Instance.new("Frame")
+			local g = math.random(90, 200)
+			f.Size = UDim2.fromOffset(g, g * (0.7 + math.random() * 0.5))
+			f.AnchorPoint = Vector2.new(0.5, 0.5)
+			local fx, fy = 0.1 + math.random() * 0.8, 0.15 + math.random() * 0.7
+			f.Position = UDim2.fromScale(fx, fy)
+			f.BackgroundColor3 = Color3.fromRGB(math.random(80, 110), math.random(55, 70), 30)
+			f.BackgroundTransparency = 0.05
+			f.BorderSizePixel = 0
+			f.Parent = chaosGui
+			Instance.new("UICorner", f).CornerRadius = UDim.new(1, 0)
+			local TS = game:GetService("TweenService")
+			task.delay(1.2 + math.random() * 0.8, function()
+				TS:Create(f, TweenInfo.new(1.6), { BackgroundTransparency = 1, Position = UDim2.new(fx, 0, fy, 60) }):Play()
+				task.delay(1.7, function() f:Destroy() end)
+			end)
+		end
+	end
+	if info.blitz then
+		-- camera flash
+		local f = Instance.new("Frame")
+		f.Size = UDim2.fromScale(1, 1)
+		f.BackgroundColor3 = Color3.new(1, 1, 1)
+		f.BackgroundTransparency = 0
+		f.BorderSizePixel = 0
+		f.Parent = chaosGui
+		game:GetService("TweenService"):Create(f, TweenInfo.new(0.7), { BackgroundTransparency = 1 }):Play()
+		task.delay(0.8, function() f:Destroy() end)
+	end
 	if info.wackeln then
 		-- camera shake only (CameraOffset), the car itself is not touched
 		task.spawn(function()
@@ -10268,6 +10502,18 @@ local function fahrenStarten(sitz, hum)
 		-- direct steering: the car turns exactly as fast as a real car with this
 		-- steering angle would (speed x tan(angle) / wheelbase), no floaty delay
 		local zielDrehung = -tempo * math.tan(math.rad(einschlag)) / wert("Radstand", 9.6)
+		-- banana peel (chaos event): a short spin with almost no grip, then normal again
+		local rutsch = _G.Rutschen
+		local rutschFaktor = 1
+		if rutsch then
+			local anteil = (os.clock() - rutsch.start) / rutsch.dauer
+			if anteil >= 1 then
+				_G.Rutschen = nil
+			else
+				zielDrehung = rutsch.richtung * 4.5 * (1 - anteil)
+				rutschFaktor = 0.06 + 0.94 * anteil * anteil
+			end
+		end
 		local w0 = chassis.AssemblyAngularVelocity
 		local neu = w0.Y + (zielDrehung - w0.Y) * math.min(1, wert("Lenkdirekt", 14) * dt)
 		chassis.AssemblyAngularVelocity = Vector3.new(w0.X, neu, w0.Z)
@@ -10276,7 +10522,7 @@ local function fahrenStarten(sitz, hum)
 		local masse = chassis.AssemblyMass
 		local quer = v:Dot(cf.RightVector)
 		-- rain makes the road slippery, the handbrake lets the rear slide (drift)
-		local griff = wert("Grip", 14) * (ordner:GetAttribute("Wetter") == "Rain" and 0.7 or 1) * (_G.Handbremse and 0.35 or 1)
+		local griff = wert("Grip", 14) * (ordner:GetAttribute("Wetter") == "Rain" and 0.7 or 1) * (_G.Handbremse and 0.35 or 1) * rutschFaktor
 		chassis:ApplyImpulse(-cf.RightVector * quer * masse * math.min(1, griff * dt))
 		chassis:ApplyImpulse(-cf.UpVector * masse * wert("Anpressdruck", 60) * dt)
 		local w = chassis.AssemblyAngularVelocity
@@ -12842,7 +13088,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v38 loading")
+	print("[Driving School] start screen v39 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -13043,4 +13289,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v38 installed. Press F5 to test.")
+print("License system v39 installed. Press F5 to test.")

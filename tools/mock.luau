@@ -507,6 +507,7 @@ function methoden.InvokeServer(o, ...)
 	if f then return f(M.spieler, ...) end
 end
 function methoden.Raycast() return nil end
+function methoden.Emit() end
 function methoden.GetPartBoundsInBox() return {} end
 function methoden.GetPartBoundsInRadius() return {} end
 function methoden.BulkMoveTo(ws, teile, cfs) for i, t in teile do t.CFrame = cfs[i] end end

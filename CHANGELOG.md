@@ -1,5 +1,10 @@
 # Changelog
 
+## v39 – Mehr Chaos
+- **Bananenschale lässt dich jetzt wirklich rutschen** (Lukas' Wunsch): kurze Drehung mit fast keinem Grip (1,6 s), danach fährt das Auto wieder ganz normal. Nur bei diesem Event – das normale Fahrgefühl bleibt gleich.
+- 5 neue Events: 🐔 Hühner rennen im Zickzack über die Straße (Federwolke beim Treffer), 🛒 ein Einkaufswagen rollt quer über die Straße, 🛞 ein Riesenreifen rollt dir entgegen, 🟤 Matschpfütze (Matschflecken auf dem Bildschirm), 🤡 Clown mit „Blitzer“-Kamera (Blitzlicht + 10 Münzen „Photo of the year“).
+- Sprechblasen der Fahrlehrer kleiner (180 × 50 statt 250 × 74, max. Schriftgröße 18) und näher am Kopf.
+
 ## v38 – In Studio getestet: Fahrschulauto breiter, Events früher sichtbar
 - Neues Fahrschulauto im Spiel 15 % breiter: vorher ragten die Arme von Fahrer und Fahrlehrer durch Türen und Scheiben. Sitze, Räder und Kollision bleiben exakt gleich (nur die Optik wird gestreckt, kein neuer OBJ-Import nötig).
 - Startbildschirm: Titel, Untertitel, PLAY und SETTINGS überlappten auf niedrigen Bildschirmen (Handy quer, kleines Studio-Fenster) – jetzt feste Abstände von der Bildschirmmitte aus.

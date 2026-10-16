@@ -1061,6 +1061,42 @@ local function chaosBanner(info)
 	task.delay(3.2, function()
 		if chaosNr == nr then chaosBox.Visible = false end
 	end)
+	if info.rutschen then
+		-- banana peel: the car spins for a moment (only this event; normal driving stays exactly the same)
+		_G.Rutschen = { start = os.clock(), dauer = 1.6, richtung = info.rutschen }
+	end
+	if info.matsch then
+		-- mud puddle: brown splats on the screen that drip away
+		for i = 1, 9 do
+			local f = Instance.new("Frame")
+			local g = math.random(90, 200)
+			f.Size = UDim2.fromOffset(g, g * (0.7 + math.random() * 0.5))
+			f.AnchorPoint = Vector2.new(0.5, 0.5)
+			local fx, fy = 0.1 + math.random() * 0.8, 0.15 + math.random() * 0.7
+			f.Position = UDim2.fromScale(fx, fy)
+			f.BackgroundColor3 = Color3.fromRGB(math.random(80, 110), math.random(55, 70), 30)
+			f.BackgroundTransparency = 0.05
+			f.BorderSizePixel = 0
+			f.Parent = chaosGui
+			Instance.new("UICorner", f).CornerRadius = UDim.new(1, 0)
+			local TS = game:GetService("TweenService")
+			task.delay(1.2 + math.random() * 0.8, function()
+				TS:Create(f, TweenInfo.new(1.6), { BackgroundTransparency = 1, Position = UDim2.new(fx, 0, fy, 60) }):Play()
+				task.delay(1.7, function() f:Destroy() end)
+			end)
+		end
+	end
+	if info.blitz then
+		-- camera flash
+		local f = Instance.new("Frame")
+		f.Size = UDim2.fromScale(1, 1)
+		f.BackgroundColor3 = Color3.new(1, 1, 1)
+		f.BackgroundTransparency = 0
+		f.BorderSizePixel = 0
+		f.Parent = chaosGui
+		game:GetService("TweenService"):Create(f, TweenInfo.new(0.7), { BackgroundTransparency = 1 }):Play()
+		task.delay(0.8, function() f:Destroy() end)
+	end
 	if info.wackeln then
 		-- camera shake only (CameraOffset), the car itself is not touched
 		task.spawn(function()
@@ -1310,6 +1346,18 @@ local function fahrenStarten(sitz, hum)
 		-- direct steering: the car turns exactly as fast as a real car with this
 		-- steering angle would (speed x tan(angle) / wheelbase), no floaty delay
 		local zielDrehung = -tempo * math.tan(math.rad(einschlag)) / wert("Radstand", 9.6)
+		-- banana peel (chaos event): a short spin with almost no grip, then normal again
+		local rutsch = _G.Rutschen
+		local rutschFaktor = 1
+		if rutsch then
+			local anteil = (os.clock() - rutsch.start) / rutsch.dauer
+			if anteil >= 1 then
+				_G.Rutschen = nil
+			else
+				zielDrehung = rutsch.richtung * 4.5 * (1 - anteil)
+				rutschFaktor = 0.06 + 0.94 * anteil * anteil
+			end
+		end
 		local w0 = chassis.AssemblyAngularVelocity
 		local neu = w0.Y + (zielDrehung - w0.Y) * math.min(1, wert("Lenkdirekt", 14) * dt)
 		chassis.AssemblyAngularVelocity = Vector3.new(w0.X, neu, w0.Z)
@@ -1318,7 +1366,7 @@ local function fahrenStarten(sitz, hum)
 		local masse = chassis.AssemblyMass
 		local quer = v:Dot(cf.RightVector)
 		-- rain makes the road slippery, the handbrake lets the rear slide (drift)
-		local griff = wert("Grip", 14) * (ordner:GetAttribute("Wetter") == "Rain" and 0.7 or 1) * (_G.Handbremse and 0.35 or 1)
+		local griff = wert("Grip", 14) * (ordner:GetAttribute("Wetter") == "Rain" and 0.7 or 1) * (_G.Handbremse and 0.35 or 1) * rutschFaktor
 		chassis:ApplyImpulse(-cf.RightVector * quer * masse * math.min(1, griff * dt))
 		chassis:ApplyImpulse(-cf.UpVector * masse * wert("Anpressdruck", 60) * dt)
 		local w = chassis.AssemblyAngularVelocity

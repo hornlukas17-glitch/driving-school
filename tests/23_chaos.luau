@@ -125,6 +125,44 @@ local bz = e.tiere[1].m:GetPivot().Position.Z
 fahren(198, 100, bz)
 pruefe("banana slip", e.getroffen and letztes("chaos").titel:find("SLI") ~= nil)
 pruefe("still no mistakes", st.fehler == fehlerVorher)
+pruefe("banana makes the car spin (client)", letztes("chaos").rutschen ~= nil and _G.Rutschen ~= nil)
+
+-- new events: chickens, shopping cart, giant tire, mud puddle, clown camera
+local function neuesEvent(art)
+	setzen(200, -520)
+	M.laufen(M.zeit() + 0.3)
+	local ev = Chaos.eventStarten(p, st, art)
+	pruefe(art .. " spawned and harmless", ev ~= nil and alleTeileHarmlos(ev.modell))
+	return ev
+end
+e = neuesEvent("huehner")
+pruefe("5 chickens", #e.tiere == 5)
+M.laufen(M.zeit() + 0.5)
+local h1 = e.tiere[1]
+fahren(198, 90, h1.m:GetPivot().Position.Z)
+print("  chickens hit:", e.getroffen)
+e = neuesEvent("wagen")
+local wz = e.tiere[1].m:GetPivot().Position.Z
+fahren(198, 90, -545)
+pruefe("shopping cart dodged", not e.getroffen and letztes("geld").grund == "Dodged the shopping cart!")
+e = neuesEvent("reifen")
+local r0 = e.tiere[1].m:GetPivot().Position
+M.laufen(M.zeit() + 1)
+pruefe("giant tire rolls towards the car", e.tiere[1].m:GetPivot().Position.X > r0.X + 5)
+fahren(198, 90, e.tiere[1].m:GetPivot().Position.Z)
+pruefe("giant tire hit", e.getroffen and letztes("chaos").titel:find("BOOOING") ~= nil)
+e = neuesEvent("pfuetze")
+local pz, flecken = e.tiere[1].m:GetPivot().Position.Z, 0
+for x = 198, 90, -2 do
+	setzen(x, pz)
+	M.laufen(M.zeit() + 0.11)
+	if e.getroffen and flecken == 0 then flecken = #p.PlayerGui.ChaosBanner:GetChildren() - 1 end
+end
+pruefe("mud splash on the screen", e.getroffen and letztes("chaos").matsch == true and flecken >= 5)
+local geld3 = p:GetAttribute("Geld")
+e = neuesEvent("clown")
+fahren(198, 90, -520)
+pruefe("clown photo: flash + coins", e.geblitzt and letztes("chaos").blitz == true and p:GetAttribute("Geld") > geld3)
 
 -- 5) UFO: drive through the beam -> alien bonus
 setzen(200, -520)

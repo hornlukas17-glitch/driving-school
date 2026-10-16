@@ -482,6 +482,8 @@ function methoden.LoadAnimation(o, a)
 	return spur
 end
 function methoden.IsStudio() return true end
+function methoden.WorldToViewportPoint(o, pos) return V.new(400, 300, 10), true end
+function methoden.WorldToScreenPoint(o, pos) return V.new(400, 300, 10), true end
 function methoden.IsServer() return M.istServer end
 function methoden.IsClient() return not M.istServer end
 function methoden.GetService(o, n)

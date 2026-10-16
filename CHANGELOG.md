@@ -1,5 +1,11 @@
 # Changelog
 
+## v47 – Neues Cockpit, mph, Pfeil zum Auto, Gameplay-Trailer
+- **Pfeil zum Fahrschulauto:** Sobald dein Fahrstunden-Auto (oder der Lkw) wartet, hüpft ein grüner Pfeil „YOUR CAR · E“ über der Fahrertür, eine leuchtende Linie führt von dir zum Auto, und am Bildschirmrand zeigt ein Pfeil die Richtung, wenn das Auto hinter dir steht. Verschwindet beim Einsteigen.
+- **Neues HUD unten rechts:** runder Tacho mit Lichterring (grün → gelb → orange, rot beim Rasen), roter Strich = Tempolimit, Tempolimit-Schild pulsiert beim Rasen, Status-Leiste darunter, runde Knöpfe. Alles skaliert auf kleinen Bildschirmen. Anweisungs-Box mit gelbem Akzent.
+- **km/h ⇄ mph:** Tippen auf die Einheit im Tacho schaltet um (oder Einstellungen). Dann zeigen Tacho, Tempolimit-Schild, Warnungen, Blitzer-Texte, Anweisungen des Fahrlehrers, Autohaus und „My Cars“ alles in mph (Limits auf runde Werte: 30 → 20, 50 → 30, 100 → 60, 130 → 80).
+- 15-Sekunden-Trailer aus echten Spielszenen (`tools/werbung/gameplay_trailer.py`, Bilder in `tools/werbung/gameplay/`). Test 26.
+
 ## v46 – Neuer Name: Crazy Driving School 🍌
 - Startbildschirm und Begrüßung heißen jetzt „Crazy Driving School 🍌“, mit kleinem roten „BETA“-Schild (in Client.lua `SPIEL_PHASE = nil` setzen, wenn das Spiel fertig ist). Untertitel „Get your license. Survive the chaos.“
 - Icon und Thumbnail mit dem neuen Namen, dazu ein fertiger 32-Sekunden-Trailer (`python3 tools/werbung/trailer.py` → `dist/werbung/trailer.mp4`, alles selbst gezeichnet und vertont).

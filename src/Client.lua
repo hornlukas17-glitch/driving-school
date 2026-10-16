@@ -115,8 +115,27 @@ local function schliessen()
 end
 zu.MouseButton1Click:Connect(schliessen)
 
+-- km/h -> mph in every text the player reads (setting "Speed unit"); speed limits are rounded to nice mph values
+local GRENZEN = { [10] = true, [20] = true, [30] = true, [40] = true, [50] = true, [60] = true, [70] = true, [80] = true, [100] = true, [120] = true, [130] = true }
+local function inMph(kmh, istGrenze)
+	local m = kmh * 0.621
+	if istGrenze then return math.floor(m / 5 + 0.5) * 5 end
+	return math.floor(m + 0.5)
+end
+local function einh(t)
+	if type(t) ~= "string" or not (_G.Einstellungen and _G.Einstellungen.mph) then return t end
+	t = t:gsub("(%d+) km/h", function(n)
+		n = tonumber(n)
+		return inMph(n, GRENZEN[n]) .. " mph"
+	end)
+	t = t:gsub("in a (%d+) zone", function(n) return "in a " .. inMph(tonumber(n), true) .. " mph zone" end)
+	return t
+end
+_G.EinheitText = einh
+
 local function zeige(t, inhalt, buttons, neuerModus)
 	titel.Text = t
+	inhalt = einh(inhalt)
 	text.Text = inhalt
 	for _, k in knoepfe:GetChildren() do
 		if k:IsA("TextButton") then k:Destroy() end
@@ -618,7 +637,7 @@ local function autohausDialog(info)
 		d2.TextColor3 = Color3.fromRGB(180, 185, 195)
 		d2.TextXAlignment = Enum.TextXAlignment.Left
 		d2.TextYAlignment = Enum.TextYAlignment.Top
-		d2.Text = ("%d km/h  ·  %s"):format(a.tempo, a.beschreibung or "")
+		d2.Text = einh(("%d km/h  ·  %s"):format(a.tempo, a.beschreibung or ""))
 		d2.Parent = karte2
 		local k = Instance.new("TextButton")
 		k.AnchorPoint = Vector2.new(1, 0.5)
@@ -733,9 +752,25 @@ local anweisung = Instance.new("Frame")
 anweisung.AnchorPoint = Vector2.new(0.5, 0)
 anweisung.Position = UDim2.new(0.5, 0, 0, 6)
 anweisung.Size = UDim2.new(0.7, 0, 0, 58)
-anweisung.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
-anweisung.BackgroundTransparency = 0.1
+anweisung.BackgroundColor3 = Color3.fromRGB(20, 24, 34)
+anweisung.BackgroundTransparency = 0.08
 anweisung.Parent = hud
+do
+	-- yellow accent on the left + thin light border (same look as the speedometer)
+	local akzent = Instance.new("Frame")
+	akzent.Size = UDim2.new(0, 5, 1, -12)
+	akzent.Position = UDim2.fromOffset(0, 6)
+	akzent.BackgroundColor3 = Color3.fromRGB(255, 205, 40)
+	akzent.BorderSizePixel = 0
+	akzent.Parent = anweisung
+	Instance.new("UICorner", akzent).CornerRadius = UDim.new(1, 0)
+	local r = Instance.new("UIStroke")
+	r.Color = Color3.new(1, 1, 1)
+	r.Transparency = 0.82
+	r.Thickness = 1.5
+	r.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	r.Parent = anweisung
+end
 local ag = Instance.new("UISizeConstraint")
 ag.MaxSize = Vector2.new(470, 58)
 ag.Parent = anweisung
@@ -743,18 +778,18 @@ Instance.new("UICorner", anweisung).CornerRadius = UDim.new(0, 10)
 
 local lektionTitel = Instance.new("TextLabel")
 lektionTitel.BackgroundTransparency = 1
-lektionTitel.Position = UDim2.fromOffset(10, 4)
+lektionTitel.Position = UDim2.fromOffset(14, 4)
 lektionTitel.Size = UDim2.new(1, -20, 0, 14)
 lektionTitel.Font = Enum.Font.GothamBold
 lektionTitel.TextSize = 11
-lektionTitel.TextColor3 = Color3.fromRGB(150, 180, 230)
+lektionTitel.TextColor3 = Color3.fromRGB(255, 205, 40)
 lektionTitel.TextXAlignment = Enum.TextXAlignment.Left
 lektionTitel.Parent = anweisung
 
 local anweisungText = Instance.new("TextLabel")
 anweisungText.BackgroundTransparency = 1
-anweisungText.Position = UDim2.fromOffset(10, 19)
-anweisungText.Size = UDim2.new(1, -20, 1, -22)
+anweisungText.Position = UDim2.fromOffset(14, 19)
+anweisungText.Size = UDim2.new(1, -24, 1, -22)
 anweisungText.Font = Enum.Font.GothamMedium
 anweisungText.TextSize = 14
 anweisungText.TextWrapped = true
@@ -778,43 +813,133 @@ local wg = Instance.new("UISizeConstraint")
 wg.MaxSize = Vector2.new(440, 28)
 wg.Parent = warnText
 
+-- ---------------------------------------------------------------
+-- Cockpit (bottom right): round speedometer with a ring of lights, speed limit sign,
+-- status chip below, indicator / light / handbrake buttons above. Scales down on small screens.
+-- ---------------------------------------------------------------
+local DUNKEL_HUD = Color3.fromRGB(20, 24, 34)
+local function rand(o, transparenz, dicke)
+	local r = Instance.new("UIStroke")
+	r.Color = Color3.new(1, 1, 1)
+	r.Transparency = transparenz or 0.82
+	r.Thickness = dicke or 1.5
+	r.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	r.Parent = o
+	return r
+end
+local cockpit = Instance.new("Frame")
+cockpit.Name = "Cockpit"
+cockpit.AnchorPoint = Vector2.new(1, 1)
+cockpit.Position = UDim2.new(1, -16, 1, -16)
+cockpit.Size = UDim2.fromOffset(180, 262)
+cockpit.BackgroundTransparency = 1
+cockpit.Parent = hud
+local cockpitSkala = Instance.new("UIScale")
+cockpitSkala.Parent = cockpit
+local function cockpitPassen()
+	local kamera = workspace.CurrentCamera
+	local gr = kamera and kamera.ViewportSize
+	local h = (gr and gr.Y > 0) and gr.Y or 700
+	cockpitSkala.Scale = math.clamp(h / 640, 0.72, 1.1)
+end
+cockpitPassen()
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(cockpitPassen)
+
 local tacho = Instance.new("Frame")
-tacho.AnchorPoint = Vector2.new(1, 1)
-tacho.Position = UDim2.new(1, -16, 1, -16)
-tacho.Size = UDim2.fromOffset(170, 110)
-tacho.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
-tacho.BackgroundTransparency = 0.1
-tacho.Parent = hud
-Instance.new("UICorner", tacho).CornerRadius = UDim.new(0, 10)
+tacho.Name = "Tacho"
+tacho.Position = UDim2.fromOffset(0, 88)
+tacho.Size = UDim2.fromOffset(180, 174)
+tacho.BackgroundTransparency = 1
+tacho.Parent = cockpit
+
+local scheibe = Instance.new("Frame")
+scheibe.Name = "Scheibe"
+scheibe.AnchorPoint = Vector2.new(0.5, 0)
+scheibe.Position = UDim2.new(0.5, 0, 0, 0)
+scheibe.Size = UDim2.fromOffset(150, 150)
+scheibe.BackgroundColor3 = DUNKEL_HUD
+scheibe.BackgroundTransparency = 0.08
+scheibe.Parent = tacho
+Instance.new("UICorner", scheibe).CornerRadius = UDim.new(1, 0)
+rand(scheibe, 0.8, 2)
+do
+	local v = Instance.new("UIGradient")
+	v.Rotation = 90
+	v.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(170, 175, 190))
+	v.Parent = scheibe
+end
+
+-- ring of lights: 27 segments over 270°, gap at the bottom
+local RING_N, RING_R = 27, 62
+local ringTeile = {}
+for i = 1, RING_N do
+	local w = math.rad(135 + (i - 0.5) * 270 / RING_N)
+	local t = Instance.new("Frame")
+	t.AnchorPoint = Vector2.new(0.5, 0.5)
+	t.Position = UDim2.fromOffset(75 + math.cos(w) * RING_R, 75 + math.sin(w) * RING_R)
+	t.Size = UDim2.fromOffset(4, 12)
+	t.Rotation = math.deg(w) + 90
+	t.BorderSizePixel = 0
+	t.BackgroundColor3 = Color3.fromRGB(70, 76, 92)
+	t.Parent = scheibe
+	Instance.new("UICorner", t).CornerRadius = UDim.new(1, 0)
+	ringTeile[i] = t
+end
+local grenzMarke = Instance.new("Frame")
+grenzMarke.Name = "Grenze"
+grenzMarke.AnchorPoint = Vector2.new(0.5, 0.5)
+grenzMarke.Size = UDim2.fromOffset(4, 22)
+grenzMarke.BorderSizePixel = 0
+grenzMarke.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+grenzMarke.ZIndex = 2
+grenzMarke.Parent = scheibe
+Instance.new("UICorner", grenzMarke).CornerRadius = UDim.new(1, 0)
 
 local tempoText = Instance.new("TextLabel")
+tempoText.AnchorPoint = Vector2.new(0.5, 0.5)
 tempoText.BackgroundTransparency = 1
-tempoText.Position = UDim2.fromOffset(10, 8)
-tempoText.Size = UDim2.fromOffset(95, 50)
+tempoText.Position = UDim2.fromOffset(75, 70)
+tempoText.Size = UDim2.fromOffset(110, 52)
 tempoText.Font = Enum.Font.GothamBlack
-tempoText.TextSize = 40
+tempoText.TextSize = 50
 tempoText.TextColor3 = Color3.new(1, 1, 1)
 tempoText.Text = "0"
-tempoText.Parent = tacho
+tempoText.ZIndex = 2
+tempoText.Parent = scheibe
 
-local einheit = Instance.new("TextLabel")
-einheit.BackgroundTransparency = 1
-einheit.Position = UDim2.fromOffset(10, 56)
-einheit.Size = UDim2.fromOffset(95, 16)
-einheit.Font = Enum.Font.Gotham
+-- unit: tap to switch km/h <-> mph
+local einheit = Instance.new("TextButton")
+einheit.AnchorPoint = Vector2.new(0.5, 0)
+einheit.Position = UDim2.fromOffset(75, 98)
+einheit.Size = UDim2.fromOffset(70, 22)
+einheit.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+einheit.BackgroundTransparency = 0.88
+einheit.AutoButtonColor = true
+einheit.Font = Enum.Font.GothamBold
 einheit.TextSize = 13
-einheit.TextColor3 = Color3.fromRGB(180, 185, 195)
+einheit.TextColor3 = Color3.fromRGB(200, 205, 215)
 einheit.Text = "km/h"
-einheit.Parent = tacho
+einheit.ZIndex = 2
+einheit.Parent = scheibe
+Instance.new("UICorner", einheit).CornerRadius = UDim.new(1, 0)
+einheit.MouseButton1Click:Connect(function()
+	if not _G.Einstellungen then return end
+	_G.Einstellungen.mph = not _G.Einstellungen.mph
+	task.spawn(frage, "einstellungen", _G.Einstellungen)
+end)
 
+-- speed limit sign, top right of the dial
 local schild = Instance.new("TextLabel")
-schild.Position = UDim2.fromOffset(112, 12)
-schild.Size = UDim2.fromOffset(48, 48)
+schild.Name = "Tempolimit"
+schild.AnchorPoint = Vector2.new(0.5, 0.5)
+schild.Position = UDim2.fromOffset(152, 18)
+schild.Size = UDim2.fromOffset(46, 46)
 schild.BackgroundColor3 = Color3.new(1, 1, 1)
 schild.Font = Enum.Font.GothamBlack
-schild.TextSize = 18
+schild.TextSize = 19
 schild.TextColor3 = Color3.new(0, 0, 0)
 schild.Text = "50"
+schild.ZIndex = 3
 schild.Parent = tacho
 Instance.new("UICorner", schild).CornerRadius = UDim.new(1, 0)
 local schildRand = Instance.new("UIStroke")
@@ -822,27 +947,46 @@ schildRand.Color = ROT
 schildRand.Thickness = 5
 schildRand.Parent = schild
 
+-- status chip below the dial (mistakes in a lesson, fuel / condition / points in your own car)
 local fehlerText = Instance.new("TextLabel")
-fehlerText.BackgroundTransparency = 1
-fehlerText.Position = UDim2.fromOffset(10, 80)
-fehlerText.Size = UDim2.new(1, -20, 0, 20)
+fehlerText.AnchorPoint = Vector2.new(0.5, 1)
+fehlerText.Position = UDim2.new(0.5, 0, 1, 0)
+fehlerText.Size = UDim2.fromOffset(180, 26)
+fehlerText.BackgroundColor3 = DUNKEL_HUD
+fehlerText.BackgroundTransparency = 0.08
 fehlerText.Font = Enum.Font.GothamBold
-fehlerText.TextSize = 14
-fehlerText.TextColor3 = Color3.fromRGB(255, 200, 120)
-fehlerText.TextXAlignment = Enum.TextXAlignment.Left
+fehlerText.TextSize = 13
+fehlerText.TextColor3 = Color3.fromRGB(255, 205, 120)
 fehlerText.Text = "Mistakes: 0"
 fehlerText.Parent = tacho
+Instance.new("UICorner", fehlerText).CornerRadius = UDim.new(1, 0)
+rand(fehlerText)
 
--- Indicator buttons above the speedometer (also work on phones)
+-- buttons above the dial (also for phones): indicators, hazard lights, headlights, handbrake
+local function rundKnopf(eltern, text, breite)
+	local k = Instance.new("TextButton")
+	k.Size = UDim2.fromOffset(breite, 38)
+	k.BackgroundColor3 = DUNKEL_HUD
+	k.BackgroundTransparency = 0.08
+	k.AutoButtonColor = false
+	k.Font = Enum.Font.GothamBold
+	k.TextSize = 14
+	k.TextColor3 = Color3.new(1, 1, 1)
+	k.Text = text
+	k.Parent = eltern
+	Instance.new("UICorner", k).CornerRadius = UDim.new(1, 0)
+	rand(k)
+	return k
+end
 local blinkerModus = "aus"
 local blinkLeiste = Instance.new("Frame")
-blinkLeiste.AnchorPoint = Vector2.new(1, 1)
-blinkLeiste.Position = UDim2.new(1, -16, 1, -132)
-blinkLeiste.Size = UDim2.fromOffset(170, 36)
+blinkLeiste.Position = UDim2.fromOffset(0, 44)
+blinkLeiste.Size = UDim2.fromOffset(180, 38)
 blinkLeiste.BackgroundTransparency = 1
-blinkLeiste.Parent = hud
+blinkLeiste.Parent = cockpit
 local blinkLayout = Instance.new("UIListLayout")
 blinkLayout.FillDirection = Enum.FillDirection.Horizontal
+blinkLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 blinkLayout.Padding = UDim.new(0, 6)
 blinkLayout.Parent = blinkLeiste
 local blinkKnoepfe = {}
@@ -852,50 +996,25 @@ local function blinkerSetzen(modus)
 	blinkerEvent:FireServer(modus)
 end
 for i, b in { { "links", "◀ Y" }, { "warn", "⚠ X" }, { "rechts", "C ▶" } } do
-	local k = Instance.new("TextButton")
+	local k = rundKnopf(blinkLeiste, b[2], 56)
 	k.LayoutOrder = i
-	k.Size = UDim2.fromOffset(52, 36)
-	k.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
-	k.BackgroundTransparency = 0.1
-	k.Font = Enum.Font.GothamBold
-	k.TextSize = 14
-	k.TextColor3 = Color3.new(1, 1, 1)
-	k.Text = b[2]
-	k.Parent = blinkLeiste
-	Instance.new("UICorner", k)
 	k.MouseButton1Click:Connect(function() blinkerSetzen(b[1]) end)
 	blinkKnoepfe[b[1]] = k
 end
 
--- second row (also for phones): headlights and handbrake
 do
 	local reihe2 = Instance.new("Frame")
-	reihe2.AnchorPoint = Vector2.new(1, 1)
-	reihe2.Position = UDim2.new(1, -16, 1, -174)
-	reihe2.Size = UDim2.fromOffset(170, 36)
+	reihe2.Size = UDim2.fromOffset(180, 38)
 	reihe2.BackgroundTransparency = 1
-	reihe2.Parent = hud
+	reihe2.Parent = cockpit
 	local l2 = Instance.new("UIListLayout")
 	l2.FillDirection = Enum.FillDirection.Horizontal
-	l2.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	l2.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	l2.Padding = UDim.new(0, 6)
 	l2.Parent = reihe2
-	local function knopf(text, breite)
-		local k = Instance.new("TextButton")
-		k.Size = UDim2.fromOffset(breite, 36)
-		k.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
-		k.BackgroundTransparency = 0.1
-		k.Font = Enum.Font.GothamBold
-		k.TextSize = 14
-		k.TextColor3 = Color3.new(1, 1, 1)
-		k.Text = text
-		k.Parent = reihe2
-		Instance.new("UICorner", k)
-		return k
-	end
-	local licht = knopf("💡 L", 52)
+	local licht = rundKnopf(reihe2, "💡 L", 56)
 	licht.MouseButton1Click:Connect(function() blinkerEvent:FireServer("licht") end)
-	local hb = knopf("Handbrake ⇧", 110)
+	local hb = rundKnopf(reihe2, "Handbrake ⇧", 118)
 	hb.InputBegan:Connect(function(e)
 		if e.UserInputType == Enum.UserInputType.Touch or e.UserInputType == Enum.UserInputType.MouseButton1 then _G.Handbremse = true end
 	end)
@@ -906,8 +1025,41 @@ do
 	RunService.RenderStepped:Connect(function()
 		if _G.Handbremse == hbVorher then return end
 		hbVorher = _G.Handbremse
-		hb.BackgroundColor3 = _G.Handbremse and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(25, 30, 40)
+		hb.BackgroundColor3 = _G.Handbremse and Color3.fromRGB(200, 50, 50) or DUNKEL_HUD
 	end)
+end
+
+-- speedometer drawing (called 20 times per second by the HUD loop)
+local function tachoZeichnen(tempo, limit, maxTempo)
+	local mph = _G.Einstellungen and _G.Einstellungen.mph
+	local skala = math.max(60, math.ceil(maxTempo * 1.1 / 20) * 20)
+	local anteil = math.clamp(tempo / skala, 0, 1)
+	local an = math.floor(anteil * RING_N + 0.5)
+	local zuSchnell = tempo > limit + 3
+	for i, t in ringTeile do
+		if i <= an then
+			local f = (i - 1) / (RING_N - 1)
+			t.BackgroundColor3 = zuSchnell and Color3.fromRGB(255, 70, 70)
+				or (f < 0.5 and Color3.fromRGB(80, 230, 120):Lerp(Color3.fromRGB(255, 215, 50), f * 2) or Color3.fromRGB(255, 215, 50):Lerp(Color3.fromRGB(255, 140, 40), (f - 0.5) * 2))
+		else
+			t.BackgroundColor3 = Color3.fromRGB(70, 76, 92)
+		end
+	end
+	local w = math.rad(135 + math.clamp(limit / skala, 0, 1) * 270)
+	grenzMarke.Position = UDim2.fromOffset(75 + math.cos(w) * RING_R, 75 + math.sin(w) * RING_R)
+	grenzMarke.Rotation = math.deg(w) + 90
+	tempoText.TextColor3 = zuSchnell and Color3.fromRGB(255, 90, 90) or Color3.new(1, 1, 1)
+	if mph then
+		tempoText.Text = tostring(inMph(tempo))
+		schild.Text = tostring(inMph(limit, true))
+		einheit.Text = "mph ⇄"
+	else
+		tempoText.Text = tostring(tempo)
+		schild.Text = tostring(limit)
+		einheit.Text = "km/h ⇄"
+	end
+	-- the sign pulses when you are too fast
+	schildRand.Thickness = zuSchnell and (5 + math.abs(math.sin(os.clock() * 8)) * 3) or 5
 end
 
 -- Markers in the world (only visible to this player): green gates across the road + parking bays
@@ -990,6 +1142,7 @@ end
 
 local warnBis = 0
 local function warnen(t, farbe)
+	t = einh(t)
 	warnText.Text = t
 	warnText.BackgroundColor3 = farbe or ROT
 	warnText.Visible = true
@@ -1290,13 +1443,13 @@ fahrEvent.OnClientEvent:Connect(function(info)
 		hud.Enabled = true
 		fehlerGrenze = info.grenze
 		lektionTitel.Text = info.titel
-		anweisungText.Text = (info.sprecher or "Instructor") .. ": " .. info.text
+		anweisungText.Text = (info.sprecher or "Instructor") .. ": " .. einh(info.text)
 		fehlerText.Text = info.status or ("Mistakes: 0/%d"):format(fehlerGrenze or 9)
 		schliessen()
 	elseif info.typ == "ziel" then
 		lektionAktiv = true
 		hud.Enabled = true
-		anweisungText.Text = (info.sprecher or "Instructor") .. ": " .. info.text
+		anweisungText.Text = (info.sprecher or "Instructor") .. ": " .. einh(info.text)
 		lektionTitel.Text = lektionTitel.Text:gsub("  %(.*%)$", "") .. ("  (%d/%d)"):format(info.nr, info.gesamt)
 		if info.status then fehlerText.Text = info.status end
 		markerWeg()
@@ -1410,21 +1563,12 @@ RunService.RenderStepped:Connect(function()
 	local an = (os.clock() % 0.8) < 0.4
 	for modus, k in blinkKnoepfe do
 		local aktiv = blinkerModus == "warn" or blinkerModus == modus
-		k.BackgroundColor3 = (aktiv and an) and Color3.fromRGB(255, 165, 30) or Color3.fromRGB(25, 30, 40)
+		k.BackgroundColor3 = (aktiv and an) and Color3.fromRGB(255, 165, 30) or DUNKEL_HUD
 	end
 	if sitz and sitz:IsA("VehicleSeat") then
 		local tempo = math.floor(sitz.AssemblyLinearVelocity.Magnitude + 0.5)
 		local limit = Regeln.tempolimit(sitz.Position)
-		tempoText.TextColor3 = tempo > limit + 3 and ROT or Color3.new(1, 1, 1)
-		if _G.Einstellungen and _G.Einstellungen.mph then
-			tempoText.Text = tostring(math.floor(tempo * 0.621 + 0.5))
-			schild.Text = tostring(math.floor(limit * 0.621 / 5 + 0.5) * 5)
-			einheit.Text = "mph"
-		else
-			tempoText.Text = tostring(tempo)
-			schild.Text = tostring(limit)
-			einheit.Text = "km/h"
-		end
+		tachoZeichnen(tempo, limit, (sitz.Parent and sitz.Parent:GetAttribute("MaxTempo")) or 130)
 		tacho.Visible = true
 	else
 		tacho.Visible = false
@@ -1568,6 +1712,144 @@ local function fahrenStarten(sitz, hum)
 		local rollen = w:Dot(cf.LookVector)
 		local nicken = w:Dot(cf.RightVector)
 		chassis:ApplyAngularImpulse((-cf.LookVector * rollen - cf.RightVector * nicken) * masse * 8 * math.min(1, 6 * dt))
+	end)
+end
+
+-- ---------------------------------------------------------------
+-- Arrow to your driving school car (first time on the server, and whenever you're out of it):
+-- bouncing arrow over the car, a glowing line from you to the driver's door, and an arrow at the
+-- screen edge when the car is behind you
+-- ---------------------------------------------------------------
+do
+	local pfeilGui = Instance.new("ScreenGui")
+	pfeilGui.Name = "AutoPfeil"
+	pfeilGui.ResetOnSpawn = false
+	pfeilGui.IgnoreGuiInset = true
+	pfeilGui.Parent = spieler:WaitForChild("PlayerGui")
+	local rand = Instance.new("TextLabel")
+	rand.Name = "Randpfeil"
+	rand.AnchorPoint = Vector2.new(0.5, 0.5)
+	rand.Size = UDim2.fromOffset(64, 64)
+	rand.BackgroundColor3 = Color3.fromRGB(40, 170, 80)
+	rand.Font = Enum.Font.GothamBlack
+	rand.TextSize = 34
+	rand.TextColor3 = Color3.new(1, 1, 1)
+	rand.Text = "▶"
+	rand.Visible = false
+	rand.Parent = pfeilGui
+	Instance.new("UICorner", rand).CornerRadius = UDim.new(1, 0)
+	local rs = Instance.new("UIStroke")
+	rs.Color = Color3.new(1, 1, 1)
+	rs.Thickness = 3
+	rs.Parent = rand
+
+	local ordnerP = Instance.new("Folder")
+	ordnerP.Name = "AutoPfeil"
+	local bb, beam, a0, a1, auto
+	local function weg()
+		if bb then bb:Destroy() bb = nil end
+		if beam then beam:Destroy() beam = nil end
+		if a0 then a0:Destroy() a0 = nil end
+		if a1 then a1:Destroy() a1 = nil end
+		auto = nil
+		rand.Visible = false
+	end
+	local function bauen(m, tuer)
+		weg()
+		auto = m
+		ordnerP.Parent = workspace
+		bb = Instance.new("BillboardGui")
+		bb.Name = "AutoPfeil"
+		bb.Size = UDim2.fromOffset(150, 120)
+		bb.StudsOffset = Vector3.new(0, 10, 0)
+		bb.AlwaysOnTop = true
+		bb.LightInfluence = 0
+		bb.Adornee = tuer
+		bb.Parent = ordnerP
+		local schrift = Instance.new("TextLabel")
+		schrift.Size = UDim2.new(1, 0, 0, 30)
+		schrift.BackgroundColor3 = Color3.fromRGB(40, 170, 80)
+		schrift.Font = Enum.Font.GothamBlack
+		schrift.TextSize = 17
+		schrift.TextColor3 = Color3.new(1, 1, 1)
+		schrift.Text = "YOUR CAR · E"
+		schrift.Parent = bb
+		Instance.new("UICorner", schrift).CornerRadius = UDim.new(1, 0)
+		local pfeil = Instance.new("TextLabel")
+		pfeil.Name = "Pfeil"
+		pfeil.Position = UDim2.fromOffset(0, 30)
+		pfeil.Size = UDim2.new(1, 0, 0, 90)
+		pfeil.BackgroundTransparency = 1
+		pfeil.Font = Enum.Font.GothamBlack
+		pfeil.TextSize = 80
+		pfeil.TextColor3 = Color3.fromRGB(70, 235, 110)
+		pfeil.TextStrokeTransparency = 0
+		pfeil.Text = "▼"
+		pfeil.Parent = bb
+		a1 = Instance.new("Attachment")
+		a1.Name = "AutoPfeilZiel"
+		a1.Parent = tuer
+	end
+	local naechste = 0
+	RunService.RenderStepped:Connect(function()
+		local jetzt = os.clock()
+		if bb then bb.StudsOffset = Vector3.new(0, 9.5 + math.abs(math.sin(jetzt * 3)) * 2, 0) end
+		if beam then beam.Transparency = NumberSequence.new(0.25 + math.abs(math.sin(jetzt * 4)) * 0.35) end
+		if jetzt >= naechste then
+			naechste = jetzt + 0.3
+			local m = workspace:FindFirstChild("Fahrschulauto_" .. spieler.Name) or workspace:FindFirstChild("Fahrschul_Lkw_" .. spieler.Name)
+			local tuer = m and (m:FindFirstChild("Fahrersitz") or m:FindFirstChildWhichIsA("VehicleSeat", true))
+			local hum = spieler.Character and spieler.Character:FindFirstChildOfClass("Humanoid")
+			local wurzel = spieler.Character and spieler.Character:FindFirstChild("HumanoidRootPart")
+			local drin = hum and tuer and hum.SeatPart == tuer
+			if not (m and tuer and wurzel) or drin then
+				if auto then weg() end
+			else
+				if auto ~= m then bauen(m, tuer) end
+				if not a0 or a0.Parent ~= wurzel then
+					if a0 then a0:Destroy() end
+					a0 = Instance.new("Attachment")
+					a0.Name = "AutoPfeilStart"
+					a0.Position = Vector3.new(0, -2.5, 0)
+					a0.Parent = wurzel
+					if beam then beam:Destroy() end
+					beam = Instance.new("Beam")
+					beam.Attachment0, beam.Attachment1 = a0, a1
+					beam.Color = ColorSequence.new(Color3.fromRGB(70, 235, 110))
+					beam.LightEmission = 1
+					beam.LightInfluence = 0
+					beam.Width0, beam.Width1 = 0.9, 0.9
+					beam.FaceCamera = true
+					beam.Segments = 12
+					beam.CurveSize0, beam.CurveSize1 = 4, -4
+					beam.Parent = ordnerP
+				end
+				-- line only while you're further away than a few steps
+				beam.Enabled = (wurzel.Position - tuer.Position).Magnitude > 9
+			end
+		end
+		-- arrow at the screen edge when the car is not on screen
+		if auto and a1 and a1.Parent then
+			local kamera = workspace.CurrentCamera
+			local p, sichtbar = kamera:WorldToViewportPoint(a1.WorldPosition)
+			local gr = kamera.ViewportSize
+			if not (p and gr) then return end
+			if sichtbar and p.X > 0 and p.X < gr.X and p.Y > 0 and p.Y < gr.Y then
+				rand.Visible = false
+			else
+				local mitte = gr / 2
+				local richtung = Vector2.new(p.X, p.Y) - mitte
+				if p.Z < 0 then richtung = -richtung end
+				if richtung.Magnitude < 1 then richtung = Vector2.new(0, 1) end
+				richtung = richtung.Unit
+				local rx, ry = gr.X / 2 - 50, gr.Y / 2 - 50
+				local k = math.min(rx / math.max(math.abs(richtung.X), 1e-3), ry / math.max(math.abs(richtung.Y), 1e-3))
+				local pos = mitte + richtung * k
+				rand.Position = UDim2.fromOffset(pos.X, pos.Y)
+				rand.Rotation = math.deg(math.atan2(richtung.Y, richtung.X))
+				rand.Visible = true
+			end
+		end
 	end)
 end
 
@@ -3768,7 +4050,7 @@ do
 				zeile.TextSize = 15
 				zeile.TextColor3 = Color3.new(1, 1, 1)
 				zeile.TextXAlignment = Enum.TextXAlignment.Left
-				zeile.Text = ("   %s  ·  %d km/h  ·  %.1f km driven     ▶ Get it"):format(a.name, a.tempo, (r.km and r.km[a.typ]) or 0)
+				zeile.Text = einh(("   %s  ·  %d km/h  ·  %.1f km driven     ▶ Get it"):format(a.name, a.tempo, (r.km and r.km[a.typ]) or 0))
 				zeile.Parent = liste2
 				Instance.new("UICorner", zeile)
 				zeile.MouseButton1Click:Connect(function()

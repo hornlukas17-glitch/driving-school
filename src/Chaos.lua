@@ -588,9 +588,20 @@ local function banner(p, titel, text, farbe, extra)
 end
 
 local function boden(st, punkt)
+	-- only the map counts as ground (not players, cars or the chaos props)
 	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { st.model, ordner }
+	local karte = workspace:FindFirstChild("Karte")
+	if karte then
+		params.FilterType = Enum.RaycastFilterType.Include
+		params.FilterDescendantsInstances = { karte, workspace.Terrain }
+	else
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		local weg = { st.model, ordner }
+		for _, sp in game:GetService("Players"):GetPlayers() do
+			if sp.Character then table.insert(weg, sp.Character) end
+		end
+		params.FilterDescendantsInstances = weg
+	end
 	local ok, treffer = pcall(function()
 		return workspace:Raycast(punkt + Vector3.new(0, 25, 0), Vector3.new(0, -60, 0), params)
 	end)
@@ -749,7 +760,10 @@ function Chaos.tick(p, st, pos, tempo, vorneZ, hintenZ, halbB)
 					local w = was[e.art] or { "💥 BONK!", "" }
 					local extra = { wackeln = true }
 					-- the banana makes you spin (Lukas: "über Bananenschalen fahren -> ins Rutschen kommen")
-					if e.art == "banane" then extra.rutschen = math.random() < 0.5 and -1 or 1 end
+					if e.art == "banane" then
+						extra.rutschen = math.random() < 0.5 and -1 or 1
+						c.schonzeit = os.clock() + 4 -- a crash while spinning on the banana is not your fault
+					end
 					if e.art == "pfuetze" then extra.matsch = true extra.wackeln = nil end
 					banner(p, w[1], w[2], "rot", extra)
 					Chaos.sagen(st, "unfall")
@@ -788,6 +802,11 @@ function Chaos.tick(p, st, pos, tempo, vorneZ, hintenZ, halbB)
 			c.naechstesEvent = jetzt + 5
 		end
 	end
+end
+
+-- true while a chaos event (banana spin) is to blame for what the car does
+function Chaos.schonzeit(st)
+	return st.chaos ~= nil and (st.chaos.schonzeit or 0) > os.clock()
 end
 
 -- the first gate was sent: chaos may start soon

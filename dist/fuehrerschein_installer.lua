@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v39
+--  DRIVER'S LICENSE SYSTEM v40
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -2473,7 +2473,7 @@ RunService.Heartbeat:Connect(function(dt)
 		if lektionen[p] ~= st then continue end
 
 		-- Crashing into another car of the NPC traffic costs 3 points
-		if Verkehr.fahrzeuge and os.clock() - st.letzterUnfall > 5 then
+		if Verkehr.fahrzeuge and os.clock() - st.letzterUnfall > 5 and not Chaos.schonzeit(st) then
 			local cfFlach = st.chassis.CFrame
 			for _, f in Verkehr.fahrzeuge do
 				local rel = Vector3.new(pos.X - f.pos.X, 0, pos.Z - f.pos.Z)
@@ -4527,7 +4527,19 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 			return { fehler = "Only available in Studio." }
 		end
 		local befehl = type(eingabe) == "table" and eingabe.befehl or nil
-		if befehl == "theorie" then
+		if befehl == "chaos" then
+			-- start one chaos event in the running lesson (e.g. { befehl = "chaos", art = "banane" })
+			local st = lektionen[p]
+			if not st or not st.chaos then return { fehler = "Start a lesson first." } end
+			local alt = st.chaos.event
+			if alt then
+				if alt.modell then alt.modell:Destroy() end
+				st.chaos.event = nil
+			end
+			local art = type(eingabe.art) == "string" and Chaos.EVENTS[eingabe.art] and eingabe.art or nil
+			local e = Chaos.eventStarten(p, st, art)
+			return e and { text = "Chaos event: " .. tostring(e.art) } or { fehler = "Could not start (drive a bit faster / on a road)." }
+		elseif befehl == "theorie" then
 			d.angemeldet, d.unterricht, d.theorie = true, true, true
 			geaendert(p)
 			return { text = "Theory skipped. Talk to Anna to start a driving lesson." }
@@ -8494,9 +8506,20 @@ local function banner(p, titel, text, farbe, extra)
 end
 
 local function boden(st, punkt)
+	-- only the map counts as ground (not players, cars or the chaos props)
 	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { st.model, ordner }
+	local karte = workspace:FindFirstChild("Karte")
+	if karte then
+		params.FilterType = Enum.RaycastFilterType.Include
+		params.FilterDescendantsInstances = { karte, workspace.Terrain }
+	else
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		local weg = { st.model, ordner }
+		for _, sp in game:GetService("Players"):GetPlayers() do
+			if sp.Character then table.insert(weg, sp.Character) end
+		end
+		params.FilterDescendantsInstances = weg
+	end
 	local ok, treffer = pcall(function()
 		return workspace:Raycast(punkt + Vector3.new(0, 25, 0), Vector3.new(0, -60, 0), params)
 	end)
@@ -8655,7 +8678,10 @@ function Chaos.tick(p, st, pos, tempo, vorneZ, hintenZ, halbB)
 					local w = was[e.art] or { "💥 BONK!", "" }
 					local extra = { wackeln = true }
 					-- the banana makes you spin (Lukas: "über Bananenschalen fahren -> ins Rutschen kommen")
-					if e.art == "banane" then extra.rutschen = math.random() < 0.5 and -1 or 1 end
+					if e.art == "banane" then
+						extra.rutschen = math.random() < 0.5 and -1 or 1
+						c.schonzeit = os.clock() + 4 -- a crash while spinning on the banana is not your fault
+					end
 					if e.art == "pfuetze" then extra.matsch = true extra.wackeln = nil end
 					banner(p, w[1], w[2], "rot", extra)
 					Chaos.sagen(st, "unfall")
@@ -8694,6 +8720,11 @@ function Chaos.tick(p, st, pos, tempo, vorneZ, hintenZ, halbB)
 			c.naechstesEvent = jetzt + 5
 		end
 	end
+end
+
+-- true while a chaos event (banana spin) is to blame for what the car does
+function Chaos.schonzeit(st)
+	return st.chaos ~= nil and (st.chaos.schonzeit or 0) > os.clock()
 end
 
 -- the first gate was sent: chaos may start soon
@@ -9160,7 +9191,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v39 loaded")
+print("[Driving School] client v40 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -10504,18 +10535,19 @@ local function fahrenStarten(sitz, hum)
 		local zielDrehung = -tempo * math.tan(math.rad(einschlag)) / wert("Radstand", 9.6)
 		-- banana peel (chaos event): a short spin with almost no grip, then normal again
 		local rutsch = _G.Rutschen
-		local rutschFaktor = 1
+		local rutschFaktor, drehSofort = 1, false
 		if rutsch then
 			local anteil = (os.clock() - rutsch.start) / rutsch.dauer
 			if anteil >= 1 then
 				_G.Rutschen = nil
 			else
-				zielDrehung = rutsch.richtung * 4.5 * (1 - anteil)
+				zielDrehung = rutsch.richtung * 4 * (1 - anteil) -- about half a turn in total
 				rutschFaktor = 0.06 + 0.94 * anteil * anteil
+				drehSofort = true -- the tyres must not stop the spin
 			end
 		end
 		local w0 = chassis.AssemblyAngularVelocity
-		local neu = w0.Y + (zielDrehung - w0.Y) * math.min(1, wert("Lenkdirekt", 14) * dt)
+		local neu = w0.Y + (zielDrehung - w0.Y) * (drehSofort and 1 or math.min(1, wert("Lenkdirekt", 14) * dt))
 		chassis.AssemblyAngularVelocity = Vector3.new(w0.X, neu, w0.Z)
 
 		-- grip (no sliding sideways), downforce and roll/pitch damping
@@ -13088,7 +13120,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v39 loading")
+	print("[Driving School] start screen v40 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -13289,4 +13321,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v39 installed. Press F5 to test.")
+print("License system v40 installed. Press F5 to test.")

@@ -1074,7 +1074,7 @@ RunService.Heartbeat:Connect(function(dt)
 		if lektionen[p] ~= st then continue end
 
 		-- Crashing into another car of the NPC traffic costs 3 points
-		if Verkehr.fahrzeuge and os.clock() - st.letzterUnfall > 5 then
+		if Verkehr.fahrzeuge and os.clock() - st.letzterUnfall > 5 and not Chaos.schonzeit(st) then
 			local cfFlach = st.chassis.CFrame
 			for _, f in Verkehr.fahrzeuge do
 				local rel = Vector3.new(pos.X - f.pos.X, 0, pos.Z - f.pos.Z)
@@ -3128,7 +3128,19 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 			return { fehler = "Only available in Studio." }
 		end
 		local befehl = type(eingabe) == "table" and eingabe.befehl or nil
-		if befehl == "theorie" then
+		if befehl == "chaos" then
+			-- start one chaos event in the running lesson (e.g. { befehl = "chaos", art = "banane" })
+			local st = lektionen[p]
+			if not st or not st.chaos then return { fehler = "Start a lesson first." } end
+			local alt = st.chaos.event
+			if alt then
+				if alt.modell then alt.modell:Destroy() end
+				st.chaos.event = nil
+			end
+			local art = type(eingabe.art) == "string" and Chaos.EVENTS[eingabe.art] and eingabe.art or nil
+			local e = Chaos.eventStarten(p, st, art)
+			return e and { text = "Chaos event: " .. tostring(e.art) } or { fehler = "Could not start (drive a bit faster / on a road)." }
+		elseif befehl == "theorie" then
 			d.angemeldet, d.unterricht, d.theorie = true, true, true
 			geaendert(p)
 			return { text = "Theory skipped. Talk to Anna to start a driving lesson." }

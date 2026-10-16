@@ -126,6 +126,13 @@ fahren(198, 100, bz)
 pruefe("banana slip", e.getroffen and letztes("chaos").titel:find("SLI") ~= nil)
 pruefe("still no mistakes", st.fehler == fehlerVorher)
 pruefe("banana makes the car spin (client)", letztes("chaos").rutschen ~= nil and _G.Rutschen ~= nil)
+pruefe("crashes while spinning on the banana don't count", Chaos.schonzeit(st))
+-- test menu command starts a chosen event (Studio only)
+local rc = frage("dev", { befehl = "chaos", art = "kuehe" })
+pruefe("dev command starts an event", rc.text == "Chaos event: kuehe" and st.chaos.event and st.chaos.event.art == "kuehe")
+Chaos.eventStarten(p, st, "kuehe") -- (no second event while one runs)
+st.chaos.event.modell:Destroy()
+st.chaos.event = nil
 
 -- new events: chickens, shopping cart, giant tire, mud puddle, clown camera
 local function neuesEvent(art)

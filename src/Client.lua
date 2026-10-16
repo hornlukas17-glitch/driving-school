@@ -1348,18 +1348,19 @@ local function fahrenStarten(sitz, hum)
 		local zielDrehung = -tempo * math.tan(math.rad(einschlag)) / wert("Radstand", 9.6)
 		-- banana peel (chaos event): a short spin with almost no grip, then normal again
 		local rutsch = _G.Rutschen
-		local rutschFaktor = 1
+		local rutschFaktor, drehSofort = 1, false
 		if rutsch then
 			local anteil = (os.clock() - rutsch.start) / rutsch.dauer
 			if anteil >= 1 then
 				_G.Rutschen = nil
 			else
-				zielDrehung = rutsch.richtung * 4.5 * (1 - anteil)
+				zielDrehung = rutsch.richtung * 4 * (1 - anteil) -- about half a turn in total
 				rutschFaktor = 0.06 + 0.94 * anteil * anteil
+				drehSofort = true -- the tyres must not stop the spin
 			end
 		end
 		local w0 = chassis.AssemblyAngularVelocity
-		local neu = w0.Y + (zielDrehung - w0.Y) * math.min(1, wert("Lenkdirekt", 14) * dt)
+		local neu = w0.Y + (zielDrehung - w0.Y) * (drehSofort and 1 or math.min(1, wert("Lenkdirekt", 14) * dt))
 		chassis.AssemblyAngularVelocity = Vector3.new(w0.X, neu, w0.Z)
 
 		-- grip (no sliding sideways), downforce and roll/pitch damping

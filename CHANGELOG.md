@@ -1,5 +1,11 @@
 # Changelog
 
+## v40 – Bananen in Studio getestet
+- Bananenschale dreht das Auto jetzt richtig (vorher nur ~30°, die Reifen haben die Drehung gebremst): bei ~60 km/h etwa 130° Dreher mit Rutschen zur Seite, danach normal weiter.
+- Unfälle mit anderen Autos in den 4 s nach der Banane zählen nicht als Fehler (nicht deine Schuld).
+- Fix: Events wurden manchmal nicht gestartet, weil die Boden-Prüfung den eigenen Avatar statt der Straße traf.
+- Testmenü-Befehl (nur Studio): `dev` → `{ befehl = "chaos", art = "banane" }` startet ein bestimmtes Event in der laufenden Fahrstunde.
+
 ## v39 – Mehr Chaos
 - **Bananenschale lässt dich jetzt wirklich rutschen** (Lukas' Wunsch): kurze Drehung mit fast keinem Grip (1,6 s), danach fährt das Auto wieder ganz normal. Nur bei diesem Event – das normale Fahrgefühl bleibt gleich.
 - 5 neue Events: 🐔 Hühner rennen im Zickzack über die Straße (Federwolke beim Treffer), 🛒 ein Einkaufswagen rollt quer über die Straße, 🛞 ein Riesenreifen rollt dir entgegen, 🟤 Matschpfütze (Matschflecken auf dem Bildschirm), 🤡 Clown mit „Blitzer“-Kamera (Blitzlicht + 10 Münzen „Photo of the year“).

@@ -245,7 +245,7 @@ function pkwMenue(r)
 	local summe = 0
 	for i = 1, n do summe += (s.sterne and s.sterne[tostring(i)]) or 0 end
 	local liste = "Here is everything you need to do:\n\n" .. schritte({
-		{ s.fahrstunden >= n, ("Driving lessons with Mike (%d/%d)  ⭐ %d/%d"):format(math.min(s.fahrstunden, n), n, summe, n * 3) },
+		{ s.fahrstunden >= n, ("Driving lessons (%d/%d)  ⭐ %d/%d"):format(math.min(s.fahrstunden, n), n, summe, n * 3) },
 		{ s.unterricht, "Theory lesson at the <b>whiteboard</b> (classroom)" },
 		{ s.theorie, "Theory test at an <b>exam desk</b> (17 of 20 correct)" },
 		{ s.fuehrerschein, "Practical driving test (max 3 mistakes)" },
@@ -263,7 +263,7 @@ function pkwMenue(r)
 	end
 	local text
 	if s.fahrstunden < n then
-		text = r.naechste and ("Next lesson: <b>%s</b>\nMike is waiting in the car on the parking lot."):format(r.naechste) or ""
+		text = r.naechste and ("Next lesson: <b>%s</b>\nYour instructor is waiting in the car on the parking lot. Who will it be this time?"):format(r.naechste) or ""
 		if not s.unterricht then text ..= "\n<font size=\"15\" color=\"#9aa4b5\">You can do the theory (classroom) any time in between.</font>" end
 		lektionKnopf()
 	elseif not s.unterricht then
@@ -271,7 +271,7 @@ function pkwMenue(r)
 	elseif not s.theorie then
 		text = "Next: sit down at one of the <b>exam desks</b> in the classroom to start your theory test."
 	elseif not s.fuehrerschein then
-		text = "Your examiner Mr. Becker rides in the back, Mike sits next to you. The route is random – hitting a pedestrian counts as 3 mistakes!"
+		text = "Your examiner Mr. Becker rides in the back, a (crazy) instructor sits next to you. The route is random – hitting a pedestrian counts as 3 mistakes!"
 		table.insert(knoepfe, { text = "Start the driving test", farbe = GRUEN, klick = function()
 			local a = frage("pruefungStarten")
 			if a.fehler then
@@ -1004,8 +1004,84 @@ local function hudAus()
 	if _G.MinimapRoute then _G.MinimapRoute(nil) end
 	markerWeg()
 end
+-- Chaos events: big banner in the middle of the screen (+ a little camera shake when you hit something)
+local chaosGui = Instance.new("ScreenGui")
+chaosGui.Name = "ChaosBanner"
+chaosGui.ResetOnSpawn = false
+chaosGui.IgnoreGuiInset = true
+chaosGui.DisplayOrder = 5
+chaosGui.Parent = spieler.PlayerGui
+local chaosBox = Instance.new("Frame")
+chaosBox.Name = "Box"
+chaosBox.AnchorPoint = Vector2.new(0.5, 0.5)
+chaosBox.Position = UDim2.fromScale(0.5, 0.27)
+chaosBox.Size = UDim2.new(0.8, 0, 0, 96)
+chaosBox.BackgroundTransparency = 1
+chaosBox.Visible = false
+chaosBox.Parent = chaosGui
+local chaosGroesse = Instance.new("UISizeConstraint")
+chaosGroesse.MaxSize = Vector2.new(620, 96)
+chaosGroesse.Parent = chaosBox
+local chaosSkala = Instance.new("UIScale")
+chaosSkala.Parent = chaosBox
+local chaosTitel = Instance.new("TextLabel")
+chaosTitel.Name = "Titel"
+chaosTitel.Size = UDim2.new(1, 0, 0, 58)
+chaosTitel.BackgroundTransparency = 1
+chaosTitel.Font = Enum.Font.FredokaOne
+chaosTitel.TextScaled = true
+chaosTitel.TextColor3 = Color3.fromRGB(255, 255, 255)
+chaosTitel.TextStrokeTransparency = 0
+chaosTitel.TextStrokeColor3 = Color3.fromRGB(20, 20, 30)
+chaosTitel.Parent = chaosBox
+local chaosText = Instance.new("TextLabel")
+chaosText.Name = "Text"
+chaosText.Position = UDim2.new(0, 0, 0, 60)
+chaosText.Size = UDim2.new(1, 0, 0, 30)
+chaosText.BackgroundTransparency = 1
+chaosText.Font = Enum.Font.GothamBold
+chaosText.TextScaled = true
+chaosText.TextColor3 = Color3.fromRGB(255, 255, 255)
+chaosText.TextStrokeTransparency = 0.2
+chaosText.Parent = chaosBox
+local CHAOS_FARBEN = {
+	gelb = Color3.fromRGB(255, 210, 40), rot = Color3.fromRGB(255, 70, 70),
+	gruen = Color3.fromRGB(90, 235, 110), lila = Color3.fromRGB(205, 120, 255),
+}
+local chaosNr = 0
+local function chaosBanner(info)
+	chaosNr += 1
+	local nr = chaosNr
+	chaosTitel.Text = info.titel or ""
+	chaosTitel.TextColor3 = CHAOS_FARBEN[info.farbe] or CHAOS_FARBEN.gelb
+	chaosText.Text = info.text or ""
+	chaosBox.Visible = true
+	chaosSkala.Scale = 0.4
+	game:GetService("TweenService"):Create(chaosSkala, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	task.delay(3.2, function()
+		if chaosNr == nr then chaosBox.Visible = false end
+	end)
+	if info.wackeln then
+		-- camera shake only (CameraOffset), the car itself is not touched
+		task.spawn(function()
+			local hum = spieler.Character and spieler.Character:FindFirstChildOfClass("Humanoid")
+			if not hum then return end
+			local ende = os.clock() + 0.8
+			while os.clock() < ende do
+				local s = (ende - os.clock()) * 0.9
+				hum.CameraOffset = Vector3.new((math.random() - 0.5) * s, (math.random() - 0.5) * s, 0)
+				task.wait(0.03)
+			end
+			hum.CameraOffset = Vector3.new()
+		end)
+	end
+end
+_G.ChaosBanner = chaosBanner
+
 fahrEvent.OnClientEvent:Connect(function(info)
-	if info.typ == "blinker" then
+	if info.typ == "chaos" then
+		chaosBanner(info)
+	elseif info.typ == "blinker" then
 		blinkerModus = info.modus
 	elseif info.typ == "start" then
 		blinkerModus = "aus"
@@ -2113,7 +2189,7 @@ _G.Cutscene = function(info)
 		kamera.CFrame = CFrame.lookAt(auge, ziel)
 	end)
 	task.wait(3.2)
-	untertitel.Text = info.lkw and "Mike (Instructor): Your license now also shows class C. Go and earn some coins!" or "Mike (Instructor): Great job! Here is your driver's license."
+	untertitel.Text = info.lkw and "Your instructor: Your license now also shows class C. Go and earn some coins!" or "Your instructor: Great job! Here is your driver's license."
 	task.wait(3.3)
 	fahrt:Disconnect()
 	TweenService:Create(schwarz, TweenInfo.new(0.6), { BackgroundTransparency = 0.25 }):Play()
@@ -3928,7 +4004,7 @@ do
 			if r.fehler or not r.status or r.status.angemeldet or r.status.fahrstunden > 0 or r.lektionLaeuft then return end
 			local a = frage("ersteFahrt")
 			if a.fehler then return end
-			zeige("Welcome to Driving School! 🚗", "Let's drive right away!\n\nYour instructor <b>Mike</b> is waiting in the car on the parking lot right in front of you. Walk to the <b>driver's door</b> and press <b>E</b> (on a phone: tap the button) to get in.\n\n<font size=\"15\" color=\"#9aa4b5\">The theory comes later – Anna at the reception shows you every step.</font>", {
+			zeige("Welcome to Driving School! 🚗", "Let's drive right away!\n\nYour (slightly crazy) instructor is waiting in the car on the parking lot right in front of you. Walk to the <b>driver's door</b> and press <b>E</b> (on a phone: tap the button) to get in.\n\n<font size=\"15\" color=\"#9aa4b5\">The theory comes later – Anna at the reception shows you every step.</font>", {
 				{ text = "Let's go!", farbe = GRUEN, klick = schliessen },
 			}, "dialog")
 		end)

@@ -19,6 +19,7 @@ local Pflege = require(script:WaitForChild("Fahrzeugpflege"))
 local Missionen = require(script:WaitForChild("Missionen"))
 local Shop = require(script:WaitForChild("Shop"))
 local Belohnungen = require(script:WaitForChild("Belohnungen"))
+local Chaos = require(script:WaitForChild("Chaos"))
 local Verkehr = require(ordner:WaitForChild("Verkehr"))
 local verkehrEvent = ordner:WaitForChild("VerkehrDaten")
 
@@ -238,7 +239,7 @@ local function npcAussehen(desc, stil)
 	local frau = fest.frau
 	if frau == nil then frau = math.random() < 0.5 end
 	local k = fest.kopf or zufall(frau and NPC_LOOK.koepfeFrau or NPC_LOOK.koepfeMann)
-	if stil ~= "uniform" then
+	if stil ~= "uniform" and not fest.uniform then
 		desc.Shirt = fest.shirt or zufall(NPC_LOOK.shirts)
 		desc.Pants = fest.pants or zufall(NPC_LOOK.pants)
 	end
@@ -528,6 +529,8 @@ local function lektionBeenden(p, erfolg, text)
 	local st = lektionen[p]
 	if not st then return end
 	lektionen[p] = nil
+	Chaos.reaktion(p, st, erfolg and "ende_gut" or "ende_schlecht")
+	Chaos.ende(st)
 	local d = daten[p]
 	if st.pruefung and erfolg and d then
 		-- passed the driving test: license, cutscene, item
@@ -618,7 +621,7 @@ local function zielSenden(p, st)
 		text = wp.t,
 		nr = st.index,
 		gesamt = #st.lektion.punkte,
-		sprecher = st.pruefung and "Examiner" or "Instructor",
+		sprecher = st.pruefung and "Examiner" or (st.chaos and st.chaos.lehrer.name) or "Instructor",
 	}
 	-- the green gate: after a turn it stands on the new road in the right lane
 	local torPos, torDir, breite, radius = Regeln.tor(st.lektion.punkte, st.index, st.startPos)
@@ -635,6 +638,7 @@ local function zielSenden(p, st)
 		end
 	end
 	st.zielAktiv = true
+	Chaos.losgehen(st)
 	fahrEvent:FireClient(p, info)
 end
 
@@ -642,6 +646,7 @@ local function warnung(p, st, text, punkte)
 	st.fehler += punkte or 1
 	st.letzteWarnung = os.clock()
 	fahrEvent:FireClient(p, { typ = "warnung", text = text, fehler = st.fehler, grenze = st.erlaubt })
+	Chaos.reaktion(p, st, (punkte or 1) >= 3 and "unfall" or "fehler")
 	if st.fehler > st.erlaubt then
 		if st.pruefung then
 			lektionBeenden(p, false, ("You made %d mistakes, but only %d are allowed. You failed the driving test. Talk to Anna to try again."):format(st.fehler, st.erlaubt))
@@ -690,9 +695,9 @@ local function freieLkwBucht()
 end
 
 -- Instructor / examiner sitting in a vehicle
-local function mitfahrer(modell, name, anzeige, haut, oberteil, hose, platz)
+local function mitfahrer(modell, name, anzeige, haut, oberteil, hose, platz, stil)
 	task.spawn(function()
-		local figur, hum = npc(name, anzeige, haut, oberteil, hose, "uniform")
+		local figur, hum = npc(name, anzeige, haut, oberteil, hose, stil or "uniform")
 		if not figur or not modell.Parent then return end
 		for _, teilchen in figur:GetDescendants() do
 			if teilchen:IsA("BasePart") then
@@ -820,8 +825,9 @@ local function lektionStarten(p, art, wiederholNr)
 	}
 	lektionen[p] = st
 
-	-- Instructor in the passenger seat, examiner in the back (or in the middle of the truck cab)
-	mitfahrer(modell, "Fahrlehrer", "Mike (Instructor)", Color3.fromRGB(205, 160, 125), Color3.fromRGB(255, 255, 255), Color3.fromRGB(60, 60, 70), beifahrer)
+	-- Instructor in the passenger seat (a random crazy one, see Chaos.lua), examiner in the back (or in the middle of the truck cab)
+	local lehrer = Chaos.neu(p, st)
+	mitfahrer(modell, "Fahrlehrer", lehrer.name .. " (Instructor)", lehrer.haut, lehrer.oberteil, lehrer.hose, beifahrer, { uniform = true, frau = lehrer.frau == true })
 	if pruefung then
 		mitfahrer(modell, "Pruefer", "Mr. Becker (Examiner)", Color3.fromRGB(225, 185, 150), Color3.fromRGB(45, 50, 65), Color3.fromRGB(45, 50, 65), ruecksitz)
 	end
@@ -840,7 +846,10 @@ local function lektionStarten(p, art, wiederholNr)
 			if not st.gestartet then
 				st.gestartet = true
 				if st.nr == 1 and not pruefung then funnel(p, 2) end
-				fahrEvent:FireClient(p, { typ = "start", titel = lektion.titel, text = lektion.intro, sprecher = pruefung and "Examiner" or "Instructor", grenze = st.erlaubt })
+				fahrEvent:FireClient(p, { typ = "start", titel = lektion.titel, text = lektion.intro, sprecher = pruefung and "Examiner" or lehrer.name, grenze = st.erlaubt, lehrer = lehrer.name })
+				task.delay(1.5, function()
+					if lektionen[p] == st then Chaos.sagen(st, "start") end
+				end)
 				task.delay(6, function()
 					if lektionen[p] == st then zielSenden(p, st) end
 				end)
@@ -855,7 +864,7 @@ local function lektionStarten(p, art, wiederholNr)
 		fahrEvent:FireClient(p, { typ = "weg", pos = cf.Position })
 		return { text = "Your truck test starts now! The driving school truck is waiting at the Parcel Express depot, south of the neighbourhood (follow the green line on your minimap). Press E at the driver's door to get in." }
 	elseif pruefung then
-		return { text = "Your driving test starts now! Mike and your examiner Mr. Becker are waiting in the car on the parking lot. Press E at the driver's door to get in." }
+		return { text = "Your driving test starts now! Your instructor and the examiner Mr. Becker are waiting in the car on the parking lot. Press E at the driver's door to get in." }
 	end
 	return { text = ("Your car for %s is waiting on the parking lot. Walk to the driver's door and press E to get in."):format(lektion.titel) }
 end
@@ -1029,6 +1038,7 @@ RunService.Heartbeat:Connect(function(dt)
 	for p, st in lektionen do
 		if not p.Parent or not st.model.Parent then
 			lektionen[p] = nil
+			Chaos.ende(st)
 			if st.model then st.model:Destroy() end
 			continue
 		end
@@ -1089,6 +1099,9 @@ RunService.Heartbeat:Connect(function(dt)
 			end
 		end
 		if lektionen[p] ~= st then continue end
+
+		-- Chaos: instructor chatter and random events (cows, ducks, banana, UFO) – never touches the car physics
+		Chaos.tick(p, st, pos, tempo, vorneZ, hintenZ, halbB)
 
 		-- Speeding (more than 8 over the limit for 1.5 s)
 		local limit = Regeln.tempolimit(pos)
@@ -1260,6 +1273,7 @@ RunService.Heartbeat:Connect(function(dt)
 			else
 				st.index += 1
 				st.stoppHinweis = false
+				Chaos.reaktion(p, st, "lob")
 				if st.index > #st.lektion.punkte then
 					local text = st.fehler == 0 and "Excellent, no mistakes! Lesson complete." or ("Lesson complete with %d mistake(s). Keep practising!"):format(st.fehler)
 					lektionBeenden(p, true, text)
@@ -3254,6 +3268,7 @@ Pflege.starten({
 })
 Missionen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent })
 Shop.starten({ daten = daten, geldGeben = geldGeben, fahrEvent = fahrEvent, geaendert = geaendert, speichernSofort = speichern, Auto = Auto, Pflege = Pflege })
+Chaos.starten({ fahrEvent = fahrEvent, geldGeben = geldGeben, lektionen = lektionen })
 Belohnungen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent, geaendert = geaendert, Shop = Shop })
 
 -- odometer of the bought cars

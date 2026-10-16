@@ -1,5 +1,12 @@
 # Changelog
 
+## v37 – Chaos-Fahrschule (Teil 1: verrückte Fahrlehrer + Chaos-Events)
+- **5 verrückte Fahrlehrer** statt Mike, pro Fahrstunde zufällig (nie zweimal hintereinander derselbe): Panic Pete, Sleepy Sam, Grandma Gerti, Coach Kevin, DJ Dina – mit eigener Kleidung und Sprechblase über dem Kopf (für alle sichtbar). Sie reagieren auf Start, Fehler, Unfälle, geschaffte Tore, das Ende und quatschen zwischendurch.
+- **Chaos-Events** während der Fahrstunden (alle 30–45 s, nicht beim Einparken): Kuhherde über die Straße, Entenfamilie, Bananenschale, UFO mit Traktorstrahl, Fahrlehrer-Gags (Papiertüte, Pfannkuchen im Schlaf, Stricken, Protein-Shake, Radio auf 200 %). Großes Banner auf dem Bildschirm.
+- Ausweichen = 15 Münzen, durch den UFO-Strahl fahren = 25 Münzen. Treffer: Kuh/Ente fliegt weg, Bildschirm wackelt kurz, Fahrlehrer schreit – zählt aber **nie** als Fehler.
+- Fahrgefühl unverändert: alle Event-Objekte sind verankert, ohne Kollision, Treffer nur per Abstand (Test 23 prüft das).
+- Texte ohne „Mike“.
+
 ## v36 – Neues Fahrschulauto
 - **Neue Karosserie fürs Fahrschulauto** aus Lukas' Modell: kompakter Fünftürer in Weiß mit rot-blauen Streifen an den Seiten und auf der Haube, Dachschild „DRIVING SCHOOL“ (blaues Feld, weiße Schrift), eigene Scheinwerfer, Rücklichter, Blinker vorne/hinten/im Spiegel.
 - Fahrverhalten, Räder, Sitze und Kollision sind exakt gleich wie vorher – nur die Optik wechselt (Test prüft das).

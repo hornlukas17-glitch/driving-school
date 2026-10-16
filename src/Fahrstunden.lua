@@ -26,7 +26,7 @@ local LEKTIONEN = {
 	-- v31: short first drive (about 1-2 minutes) so new players are driving right after PLAY
 	{
 		titel = "Lesson 1: First Drive",
-		intro = "Hi, I'm Mike! A short first drive around the block. W/S = gas and brake, A/D = steering (on a phone: the pedals on the screen). Just drive through the green gates!",
+		intro = "A short first drive around the block. W/S = gas and brake, A/D = steering (on a phone: the pedals on the screen). Just drive through the green gates!",
 		punkte = {
 			{ x = 550, z = 40, t = "Drive out of the parking bay onto the street, then turn right." },
 			{ x = 600, z = 40, t = "Residential area: 30 km/h. Turn right at the next intersection." },

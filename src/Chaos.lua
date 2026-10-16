@@ -587,6 +587,19 @@ local function banner(p, titel, text, farbe, extra)
 	ctx.fahrEvent:FireClient(p, info)
 end
 
+-- ground height at a point (map only), used by walking animals
+function Chaos.bodenHoehe(punkt)
+	local karte = workspace:FindFirstChild("Karte")
+	if not karte then return nil end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { karte, workspace.Terrain }
+	local ok, treffer = pcall(function()
+		return workspace:Raycast(punkt + Vector3.new(0, 8, 0), Vector3.new(0, -16, 0), params)
+	end)
+	return ok and treffer and treffer.Position.Y or nil
+end
+
 local function boden(st, punkt)
 	-- only the map counts as ground (not players, cars or the chaos props)
 	local params = RaycastParams.new()
@@ -669,14 +682,25 @@ function Chaos.bewegen(e, t)
 			local cf = bodenCF(e, (tier.aktSeite or tier.seite) + ft * 6, (tier.aktVor or tier.vor) + ft * 4, ft * 14 - ft * ft * 2)
 			tier.m:PivotTo(cf * CFrame.Angles(ft * 7, ft * 5, ft * 3))
 			if ft > 3 then tier.m.Parent = nil end
-		elseif tier.bewege then
-			tier.bewege(tier, t)
-		elseif not tier.fest then
-			local seite = tier.seite + t * ev.tempo
-			tier.aktSeite = seite
-			local hopp = math.abs(math.sin(t * 7 + tier.phase)) * (tier.ente and 0.25 or 0.15)
-			-- walk across the road towards +X (the car's right)
-			tier.m:PivotTo(bodenCF(e, seite, tier.vor, hopp) * CFrame.Angles(0, math.rad(-90), 0))
+		elseif tier.m.Parent and (tier.bewege or not tier.fest) then
+			if tier.bewege then
+				tier.bewege(tier, t)
+			else
+				local seite = tier.seite + t * ev.tempo
+				tier.aktSeite = seite
+				local hopp = math.abs(math.sin(t * 7 + tier.phase)) * (tier.ente and 0.25 or 0.15)
+				-- walk across the road towards +X (the car's right)
+				tier.m:PivotTo(bodenCF(e, seite, tier.vor, hopp) * CFrame.Angles(0, math.rad(-90), 0))
+			end
+			-- follow the ground (kerbs, pavements) instead of sinking into it
+			if not tier.hoeheZeit or t - tier.hoeheZeit > 0.3 then
+				tier.hoeheZeit = t
+				local y = Chaos.bodenHoehe(bodenCF(e, tier.aktSeite or tier.seite, tier.aktVor or tier.vor, 0).Position)
+				tier.dy = y and (y - e.mitte.Y) or 0
+			end
+			if tier.dy and tier.dy ~= 0 then tier.m:PivotTo(tier.m:GetPivot() + Vector3.new(0, tier.dy, 0)) end
+			-- across the road: they walk off and disappear (instead of walking into houses)
+			if (tier.aktSeite or 0) > 15 then tier.m.Parent = nil end
 		else
 			tier.aktSeite = tier.seite
 		end

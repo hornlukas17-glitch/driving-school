@@ -1,5 +1,9 @@
 # Changelog
 
+## v41 – Enten und Banane in Studio nachgebessert
+- Tiere (Enten, Kühe, Hühner, Einkaufswagen) laufen jetzt auf dem echten Boden mit (Bordstein/Gehweg) statt darin zu versinken, und verschwinden auf der anderen Straßenseite, statt in Häuser zu laufen.
+- Banane: In den 4 s nach dem Ausrutscher gibt es gar keine Fehler mehr (vorher z. B. „You turned left without signalling“ durch den Dreher).
+
 ## v40 – Bananen in Studio getestet
 - Bananenschale dreht das Auto jetzt richtig (vorher nur ~30°, die Reifen haben die Drehung gebremst): bei ~60 km/h etwa 130° Dreher mit Rutschen zur Seite, danach normal weiter.
 - Unfälle mit anderen Autos in den 4 s nach der Banane zählen nicht als Fehler (nicht deine Schuld).

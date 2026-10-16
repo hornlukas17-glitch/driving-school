@@ -643,6 +643,11 @@ local function zielSenden(p, st)
 end
 
 local function warnung(p, st, text, punkte)
+	if Chaos.schonzeit(st) then
+		-- spinning on a banana peel: turns, speed or bumps right now are not your fault
+		st.drehSumme = 0
+		return
+	end
 	st.fehler += punkte or 1
 	st.letzteWarnung = os.clock()
 	fahrEvent:FireClient(p, { typ = "warnung", text = text, fehler = st.fehler, grenze = st.erlaubt })

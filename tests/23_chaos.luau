@@ -127,6 +127,16 @@ pruefe("banana slip", e.getroffen and letztes("chaos").titel:find("SLI") ~= nil)
 pruefe("still no mistakes", st.fehler == fehlerVorher)
 pruefe("banana makes the car spin (client)", letztes("chaos").rutschen ~= nil and _G.Rutschen ~= nil)
 pruefe("crashes while spinning on the banana don't count", Chaos.schonzeit(st))
+-- warnings right after the banana (e.g. "turned without signalling" while spinning) are ignored
+local f0 = st.fehler
+st.chaos.schonzeit = os.clock() + 4
+for _ = 1, 25 do
+	chassis.AssemblyLinearVelocity = Vector3.new(-200, 0, 0) -- way too fast
+	M.laufen(M.zeit() + 0.1)
+end
+pruefe("no mistakes while spinning", st.fehler == f0)
+st.chaos.schonzeit = 0
+setzen(200, -520)
 -- test menu command starts a chosen event (Studio only)
 local rc = frage("dev", { befehl = "chaos", art = "kuehe" })
 pruefe("dev command starts an event", rc.text == "Chaos event: kuehe" and st.chaos.event and st.chaos.event.art == "kuehe")

@@ -1,5 +1,8 @@
 # Changelog
 
+## v49 – Hupen mit Ton
+- Die 5 Hupen-Sounds sind hochgeladen und eingetragen (`tools/sound/ids.json` → `src/Hupen.lua`). In Studio geprüft: alle 5 laden und spielen (Classic, Clown, Ente, Lufthorn, Fanfare).
+
 ## v48 – „Ride along“ nur auf dem Parkplatz
 - Der „Ride along“-Hinweis an der Rückbank des Fahrstunden-Autos verschwindet, sobald das Auto den Fahrschul-Parkplatz verlassen hat (> 45 Studs vom Start), und der Fahrer selbst sieht ihn gar nicht mehr (nur Freunde). Test 25 erweitert.
 

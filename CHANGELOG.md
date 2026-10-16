@@ -1,5 +1,10 @@
 # Changelog
 
+## v38 – In Studio getestet: Fahrschulauto breiter, Events früher sichtbar
+- Neues Fahrschulauto im Spiel 15 % breiter: vorher ragten die Arme von Fahrer und Fahrlehrer durch Türen und Scheiben. Sitze, Räder und Kollision bleiben exakt gleich (nur die Optik wird gestreckt, kein neuer OBJ-Import nötig).
+- Startbildschirm: Titel, Untertitel, PLAY und SETTINGS überlappten auf niedrigen Bildschirmen (Handy quer, kleines Studio-Fenster) – jetzt feste Abstände von der Bildschirmmitte aus.
+- Chaos-Events erscheinen jetzt etwa 3 Sekunden vor dem Auto (je nach Tempo 60–150 Studs). Auf der Autobahn kam die Bananenschale vorher nur 1,5 s vor dem Aufprall.
+
 ## v37 – Chaos-Fahrschule (Teil 1: verrückte Fahrlehrer + Chaos-Events)
 - **5 verrückte Fahrlehrer** statt Mike, pro Fahrstunde zufällig (nie zweimal hintereinander derselbe): Panic Pete, Sleepy Sam, Grandma Gerti, Coach Kevin, DJ Dina – mit eigener Kleidung und Sprechblase über dem Kopf (für alle sichtbar). Sie reagieren auf Start, Fehler, Unfälle, geschaffte Tore, das Ende und quatschen zwischendurch.
 - **Chaos-Events** während der Fahrstunden (alle 30–45 s, nicht beim Einparken): Kuhherde über die Straße, Entenfamilie, Bananenschale, UFO mit Traktorstrahl, Fahrlehrer-Gags (Papiertüte, Pfannkuchen im Schlaf, Stricken, Protein-Shake, Radio auf 200 %). Großes Banner auf dem Bildschirm.

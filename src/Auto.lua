@@ -377,7 +377,7 @@ function Auto.bauen(cf, farbe, dachText)
 	local dach
 	if ds then
 		-- on the new roof exactly where Lukas' model has its sign: white box, blue panel, white letters
-		dach = k("Dachschild", V3(ds.breite, 1.15, ds.tiefe), at(0, ds.y + 0.575, ds.z), dachText and Color3.fromRGB(245, 205, 40) or Color3.fromRGB(245, 246, 248))
+		dach = k("Dachschild", V3(ds.breite * (neuDef.breite or 1), 1.15, ds.tiefe), at(0, ds.y + 0.575, ds.z), dachText and Color3.fromRGB(245, 205, 40) or Color3.fromRGB(245, 246, 248))
 	else
 		dach = k("Dachschild", V3(3.8, 1.3, 0.9), at(0, 6.7, 1.4), Color3.fromRGB(245, 205, 40))
 	end
@@ -991,6 +991,7 @@ function Auto.rundeKarosserie(m, chassis, cf, rundDef, rundVorlage, farbe, k, zu
 	local function v3(t) return V3(t[1], t[2], t[3]) end
 	local drehung = rundDef.drehung or Auto.MESH_DREHUNG
 	if rundDef.autodrehung then drehung = Auto.drehungErkennen(rundDef, rundVorlage) or drehung end
+	local B = rundDef.breite or 1 -- body stretched sideways (only the looks; e.g. room for wide avatars in the cabin)
 	for name, d in rundDef.mesh do
 		local quelle = not (d.a and ohne[d.a]) and meshTeil(rundVorlage, name)
 		if quelle then
@@ -1000,8 +1001,8 @@ function Auto.rundeKarosserie(m, chassis, cf, rundDef, rundVorlage, farbe, k, zu
 			mp.CanCollide = false
 			mp.CanTouch = false
 			mp.Massless = true
-			mp.Size = v3(d.groesse)
-			mp.CFrame = at(d.mitte[1], d.mitte[2], d.mitte[3]) * CFrame.Angles(0, math.rad(drehung), 0)
+			mp.Size = V3(d.groesse[1] * B, d.groesse[2], d.groesse[3])
+			mp.CFrame = at(d.mitte[1] * B, d.mitte[2], d.mitte[3]) * CFrame.Angles(0, math.rad(drehung), 0)
 			for _, kind in mp:GetChildren() do
 				if kind:IsA("SurfaceAppearance") or kind:IsA("Decal") or kind:IsA("Texture") then kind:Destroy() end
 			end
@@ -1053,7 +1054,7 @@ function Auto.rundeKarosserie(m, chassis, cf, rundDef, rundVorlage, farbe, k, zu
 		for _, s in (t.s and { -1, 1 } or { 1 }) do
 			local name = t.n
 			if t.a == "blinker" then name = s < 0 and "BlinkerL" or "BlinkerR" end
-			local lage = at(s * t.p[1], t.p[2], t.p[3])
+			local lage = at(s * t.p[1] * B, t.p[2], t.p[3])
 			if t.r then lage *= CFrame.Angles(math.rad(t.r[1]), math.rad(s * t.r[2]), math.rad(s * t.r[3])) end
 			if t.d then -- line along the body (panel gaps)
 				local richtung = cf:VectorToWorldSpace(Vector3.new(s * t.d[1], t.d[2], t.d[3]))

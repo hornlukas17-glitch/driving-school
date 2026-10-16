@@ -438,7 +438,9 @@ function Chaos.eventStarten(p, st, art)
 	local vor = Vector3.new(cf.LookVector.X, 0, cf.LookVector.Z)
 	if vor.Magnitude < 0.1 then return nil end
 	vor = vor.Unit
-	local abstand = art == "ufo" and 70 or 60
+	-- far enough ahead to see it coming: about 3 seconds at the current speed
+	local tempo = st.chassis.AssemblyLinearVelocity.Magnitude
+	local abstand = math.clamp(tempo * 3, 60, 150) + (art == "ufo" and 10 or 0)
 	local mitte = st.chassis.Position + vor * abstand
 	local y = boden(st, mitte)
 	local yAuto = boden(st, st.chassis.Position)

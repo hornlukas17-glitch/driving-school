@@ -64,7 +64,8 @@ pruefe("old colliding parts stay (invisible)", neu:FindFirstChild("Haube") ~= ni
 pruefe("trunk lid kept for the pizza job", neu:FindFirstChild("Kofferraumdeckel") ~= nil and neu.Kofferraumdeckel.Transparency == 1)
 pruefe("interior stays", sichtbar(neu, "Lenkrad") == 1 and sichtbar(neu, "Armaturenbrett") == 1)
 local rel = neu.Chassis.CFrame:ToObjectSpace(neu.Dachschild.CFrame)
-pruefe("roof sign sits where the model had it", math.abs(rel.Z - K.dachschild.z) < 0.01 and math.abs(neu.Dachschild.Size.X - K.dachschild.breite) < 0.01)
+pruefe("roof sign sits where the model had it", math.abs(rel.Z - K.dachschild.z) < 0.01 and math.abs(neu.Dachschild.Size.X - K.dachschild.breite * K.breite) < 0.01)
+pruefe("body is stretched sideways (room for wide avatars)", K.breite == 1.15 and math.abs(neu.Karosserie.Size.X - K.mesh.Karosserie.groesse[1] * 1.15) < 0.01)
 local text = neu.Dachschild:FindFirstChildOfClass("SurfaceGui"):FindFirstChildOfClass("TextLabel").Text
 pruefe("roof sign says DRIVING SCHOOL", text == "DRIVING SCHOOL")
 local plates = 0

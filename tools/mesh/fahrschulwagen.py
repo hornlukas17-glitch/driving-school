@@ -205,4 +205,5 @@ print("Dachschild", dachschild, "Kennzeichen", kennz)
 
 erzeugen("fahrschule", "Fahrschulwagen", "Driving school car body", (RAD_R, SPUR, ACHSE), meshes, anbau, kollision, kennz,
          [round(sch["dach_y"] + 0.3, 3), 5.6, 0.4], normalen=normalen,
-         extra={"dachschild": dachschild, "autodrehung": True})   # das Spiel erkennt selbst, ob der Importer das Modell gedreht hat
+         extra={"dachschild": dachschild, "autodrehung": True,   # das Spiel erkennt selbst, ob der Importer das Modell gedreht hat
+                "breite": 1.15})   # im Spiel 15 % breiter gestreckt: sonst ragen die Arme breiter Avatare durch Türen/Scheiben (Sitze bleiben, wo sie sind)

@@ -28,6 +28,7 @@ return {
 		},
 		dachschild = { z = 2.068, tiefe = 0.991, breite = 5.071, y = 5.935 },
 		autodrehung = true,
+		breite = 1.15,
 		kennzeichen = { vorne = { 1.55, -7.952 }, hinten = { 2.55, 7.449 } },
 		spoiler = { 6.235, 5.6, 0.4 },
 	},

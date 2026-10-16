@@ -3901,9 +3901,10 @@ do
 	sv.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25), NumberSequenceKeypoint.new(1, 1) })
 	sv.Parent = seite
 
+	-- everything is stacked from the middle of the screen with fixed gaps, so nothing overlaps on low screens (phones)
 	local function label(t, y, groesse, schrift, farbe)
 		local l = Instance.new("TextLabel")
-		l.Position = UDim2.new(0.07, 0, y, 0)
+		l.Position = UDim2.new(0.07, 0, 0.5, y)
 		l.Size = UDim2.new(0.6, 0, 0, groesse + 8)
 		l.BackgroundTransparency = 1
 		l.Font = schrift
@@ -3914,12 +3915,12 @@ do
 		l.Parent = menue
 		return l
 	end
-	label("DRIVING SCHOOL", 0.24, 54, Enum.Font.GothamBlack, Color3.new(1, 1, 1))
-	label("Get your license. Hit the road.", 0.33, 22, Enum.Font.GothamMedium, Color3.fromRGB(255, 215, 80))
+	label("DRIVING SCHOOL", -150, 54, Enum.Font.GothamBlack, Color3.new(1, 1, 1))
+	label("Get your license. Hit the road.", -86, 22, Enum.Font.GothamMedium, Color3.fromRGB(255, 215, 80))
 
 	local function grosserKnopf(t, y, farbe)
 		local k = Instance.new("TextButton")
-		k.Position = UDim2.new(0.07, 0, y, 0)
+		k.Position = UDim2.new(0.07, 0, 0.5, y)
 		k.Size = UDim2.fromOffset(260, 56)
 		k.BackgroundColor3 = farbe
 		k.Font = Enum.Font.GothamBlack
@@ -3931,8 +3932,8 @@ do
 		Instance.new("UICorner", k).CornerRadius = UDim.new(0, 12)
 		return k
 	end
-	local spielen = grosserKnopf("PLAY", 0.5, GRUEN)
-	local einst = grosserKnopf("SETTINGS", 0.6, Color3.fromRGB(60, 70, 90))
+	local spielen = grosserKnopf("PLAY", -30, GRUEN)
+	local einst = grosserKnopf("SETTINGS", 38, Color3.fromRGB(60, 70, 90))
 
 	-- these are filled in further down (nothing below may block the buttons)
 	local kamera = workspace.CurrentCamera

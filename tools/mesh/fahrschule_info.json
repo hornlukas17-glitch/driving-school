@@ -260,6 +260,7 @@
    "breite": 5.071,
    "y": 5.935
   },
-  "autodrehung": true
+  "autodrehung": true,
+  "breite": 1.15
  }
 }

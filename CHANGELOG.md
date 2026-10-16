@@ -1,5 +1,12 @@
 # Changelog
 
+## v45 – Mit Freunden: Mitfahren, Hupe, Party-Test, Worst Drivers
+- **Freunde fahren mit:** „Ride along“ an der Beifahrertür eigener Autos und an der Rückbank der Fahrstunden-Autos (nicht in der Prüfung). Mitfahrer sehen die Chaos-Banner, bekommen die Ausweich-Münzen, können hupen und (mit Pass) Bananen werfen.
+- **Hupe 📯** (H oder Knopf, für alle): jeder in der Nähe hört sie und sieht eine „HONK!“-Blase. Neuer Gamepass **„Funny Horn Pack“** (99 R$): Clown, Ente, Lufthorn, Fanfare – Auswahl in den Einstellungen. Alle Hupen selbst erzeugt (`tools/sound/hupen.py`).
+- **🏁 Party-Test für bis zu 4 Spieler:** Knopf „Party“ im Menü, 25 s zum Beitreten, alle fahren dieselbe Prüfungsroute mit doppelt so viel Chaos. Zeit + 5 s pro Fehler, Preise 500/250/120/60 Münzen, Krone „👑 PARTY CHAMP“ für den Sieger, Erfolg „Party champion“.
+- **💥 Worst-Drivers-Bestenliste** (4. Tafel im Park): Crash-Punkte für Treffer bei Events, Ausrutscher, Unfälle und angefahrene Fußgänger.
+- Jeder Fahrlehrer hat jetzt 3 eigene Gags (nie zweimal hintereinander derselbe). Einstellung „Chaos in your own car: On/Off“. Icon + Thumbnail (`tools/werbung/bilder.py`) und Trailer-Plan (`tools/werbung/TRAILER.md`).
+
 ## v44 – Spielbereit: Chaos überall, Spaß-Shop, Fixes
 - **Chaos auch im eigenen Auto** (nach dem Führerschein): etwa alle 1–1,5 min ein Event, ohne Fahrlehrer. Ausweichen gibt Münzen.
 - **Neuer Gamepass „Banana Launcher“ 🍌** (149 R$): mit B oder dem 🍌-Knopf eine Bananenschale hinter das Auto werfen (alle 5 s, max. 5 liegen). Wer drüberfährt – auch Freunde – dreht sich. Der Werfer bekommt „GOTCHA!“.

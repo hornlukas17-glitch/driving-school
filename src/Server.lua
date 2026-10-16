@@ -20,6 +20,8 @@ local Missionen = require(script:WaitForChild("Missionen"))
 local Shop = require(script:WaitForChild("Shop"))
 local Belohnungen = require(script:WaitForChild("Belohnungen"))
 local Chaos = require(script:WaitForChild("Chaos"))
+local Party = require(script:WaitForChild("Party"))
+local Hupen = require(ordner:WaitForChild("Hupen"))
 local Verkehr = require(ordner:WaitForChild("Verkehr"))
 local verkehrEvent = ordner:WaitForChild("VerkehrDaten")
 
@@ -531,6 +533,16 @@ local function lektionBeenden(p, erfolg, text)
 	lektionen[p] = nil
 	Chaos.reaktion(p, st, erfolg and "ende_gut" or "ende_schlecht")
 	Chaos.ende(st)
+	if st.party then
+		-- party test: the race decides (no stars, no license)
+		if p.Parent then fahrEvent:FireClient(p, { typ = "ende", erfolg = erfolg, text = text, fehler = st.fehler, party = true }) end
+		Party.fertig(p, st, erfolg)
+		task.delay(erfolg and 4 or 1, function()
+			aussteigen(st.sitz)
+			if st.model then st.model:Destroy() end
+		end)
+		return
+	end
 	local d = daten[p]
 	if st.pruefung and erfolg and d then
 		-- passed the driving test: license, cutscene, item
@@ -739,6 +751,36 @@ local function einsteigPrompt(p, sitz, objekt)
 	return pp
 end
 
+-- 👥 friends ride along: "Ride along" on a free passenger seat (everybody except the driver/owner)
+local function mitfahrPrompt(besitzer, sitz, modell)
+	local pp = Instance.new("ProximityPrompt")
+	pp.Name = "Mitfahren"
+	pp.ActionText = "Ride along"
+	pp.ObjectText = besitzer.DisplayName .. "'s car"
+	pp.HoldDuration = 0
+	pp.MaxActivationDistance = 12
+	pp.RequiresLineOfSight = false
+	pp.Parent = sitz
+	pp.Triggered:Connect(function(wer)
+		if wer == besitzer or sitz.Occupant or not modell.Parent then return end
+		if lektionen[wer] or jobs[wer] then
+			fahrEvent:FireClient(wer, { typ = "hinweis", text = "Finish your own lesson or job first." })
+			return
+		end
+		local hum = wer.Character and wer.Character:FindFirstChildOfClass("Humanoid")
+		if not hum or hum.SeatPart then return end
+		sitz:Sit(hum)
+		fahrEvent:FireClient(wer, { typ = "chaos", titel = "👥 RIDING ALONG!", text = ("You're in %s's car! H = honk, 🍌 = throw bananas. Jump to get out."):format(besitzer.DisplayName), farbe = "gruen" })
+		if besitzer.Parent then
+			fahrEvent:FireClient(besitzer, { typ = "chaos", titel = "👥 " .. wer.DisplayName:upper() .. " GOT IN!", text = "Your friend is riding along – you both get the dodge coins!", farbe = "gruen" })
+		end
+	end)
+	sitz:GetPropertyChangedSignal("Occupant"):Connect(function()
+		pp.Enabled = sitz.Occupant == nil
+	end)
+	return pp
+end
+
 local function blinkTeileSuchen(modell)
 	local teile = { L = {}, R = {} }
 	for _, t in modell:GetDescendants() do
@@ -748,7 +790,7 @@ local function blinkTeileSuchen(modell)
 	return teile
 end
 
-local function lektionStarten(p, art, wiederholNr)
+local function lektionStarten(p, art, wiederholNr, party)
 	local d = daten[p]
 	local pruefung = art == "pruefung" or art == "lkw"
 	local lkw = art == "lkw"
@@ -759,6 +801,9 @@ local function lektionStarten(p, art, wiederholNr)
 		return { fehler = "Finish or cancel your delivery job first." }
 	end
 	-- v31: drive first, theory later. Lessons are open right away; the theory test is needed for the driving test.
+	if not d then
+		return { fehler = "Still loading – try again in a moment." }
+	end
 	if pruefung and not d.theorie then
 		return { fehler = "You need to pass the theory test first: theory lesson at the whiteboard, then the test at an exam desk (classroom)." }
 	end
@@ -767,7 +812,11 @@ local function lektionStarten(p, art, wiederholNr)
 		geaendert(p)
 	end
 	local nr, lektion
-	if art == "wiederholen" then
+	if art == "party" then
+		-- 🏁 party test: everybody drives the same exam route, no requirements
+		nr = 0
+		lektion = party.lektion
+	elseif art == "wiederholen" then
 		-- replay a finished lesson to get more stars
 		nr = math.floor(tonumber(wiederholNr) or 0)
 		lektion = LEKTIONEN[nr]
@@ -827,7 +876,9 @@ local function lektionStarten(p, art, wiederholNr)
 		drehSumme = 0, letzteRichtung = nil, geradeSeit = nil, abgebogen = nil,
 		blinkTeile = blinkTeileSuchen(modell), letzterUnfall = 0,
 		pruefung = pruefung, lkw = lkw, erlaubt = pruefung and 3 or (MAX_FEHLER - 1), wiederholung = art == "wiederholen",
+		party = party,
 	}
+	if party then st.erlaubt = 99 end
 	lektionen[p] = st
 
 	-- Instructor in the passenger seat (a random crazy one, see Chaos.lua), examiner in the back (or in the middle of the truck cab)
@@ -837,7 +888,11 @@ local function lektionStarten(p, art, wiederholNr)
 		mitfahrer(modell, "Pruefer", "Mr. Becker (Examiner)", Color3.fromRGB(225, 185, 150), Color3.fromRGB(45, 50, 65), Color3.fromRGB(45, 50, 65), ruecksitz)
 	end
 
-	einsteigPrompt(p, sitz, lkw and "Driving school truck" or "Driving school car")
+	einsteigPrompt(p, sitz, lkw and "Driving school truck" or (party and "Party car" or "Driving school car"))
+	if not pruefung and ruecksitz then
+		-- friends can ride along on the back seat (not in the driving test – the examiner sits there)
+		mitfahrPrompt(p, ruecksitz, modell)
+	end
 	sitz:GetPropertyChangedSignal("Occupant"):Connect(function()
 		if lektionen[p] ~= st then return end
 		local hum = sitz.Occupant
@@ -851,7 +906,7 @@ local function lektionStarten(p, art, wiederholNr)
 			if not st.gestartet then
 				st.gestartet = true
 				if st.nr == 1 and not pruefung then funnel(p, 2) end
-				fahrEvent:FireClient(p, { typ = "start", titel = lektion.titel, text = lektion.intro, sprecher = pruefung and "Examiner" or lehrer.name, grenze = st.erlaubt, lehrer = lehrer.name })
+				fahrEvent:FireClient(p, { typ = "start", titel = party and "🏁 PARTY TEST" or lektion.titel, text = party and "Same route for everybody – first to park wins! Each mistake = +5 s. Watch out for chaos!" or lektion.intro, sprecher = pruefung and "Examiner" or lehrer.name, grenze = st.erlaubt, lehrer = lehrer.name })
 				task.delay(1.5, function()
 					if lektionen[p] == st then Chaos.sagen(st, "start") end
 				end)
@@ -868,6 +923,8 @@ local function lektionStarten(p, art, wiederholNr)
 	if lkw then
 		fahrEvent:FireClient(p, { typ = "weg", pos = cf.Position })
 		return { text = "Your truck test starts now! The driving school truck is waiting at the Parcel Express depot, south of the neighbourhood (follow the green line on your minimap). Press E at the driver's door to get in." }
+	elseif party then
+		return { text = "Party test! Your car is waiting on the driving school parking lot – press E at the driver's door. GO GO GO!" }
 	elseif pruefung then
 		return { text = "Your driving test starts now! Your instructor and the examiner Mr. Becker are waiting in the car on the parking lot. Press E at the driver's door to get in." }
 	end
@@ -1071,6 +1128,7 @@ RunService.Heartbeat:Connect(function(dt)
 				if math.abs(lp.X) < halbB and lp.Z > vorneZ and lp.Z < hintenZ and lp.Y > -2 and lp.Y < 8 then
 					f.getroffen = os.clock()
 					fussgaengerUmwerfen(f, st.chassis.AssemblyLinearVelocity * 0.6)
+					Chaos.crashPunkte(p, 2)
 					warnung(p, st, "You hit a pedestrian! (+3 mistakes)", 3)
 					if lektionen[p] ~= st then break end
 				end
@@ -1097,6 +1155,7 @@ RunService.Heartbeat:Connect(function(dt)
 					end
 					if getroffen then
 						st.letzterUnfall = os.clock()
+						Chaos.crashPunkte(p, 2)
 						warnung(p, st, "You crashed into another vehicle! (+3 mistakes)", 3)
 						break
 					end
@@ -2683,13 +2742,14 @@ local function autoHolen(p, eingabe)
 	end
 	if Auto.MODELLE[typ].festeFarbe then farbe = Auto.MODELLE[typ].festeFarbe end
 	local kennzeichen = (p.Name:sub(1, 2):upper():gsub("[^%u]", "X")) .. "-" .. (p.UserId % 9000 + 1000)
-	local modell, sitz, _, chassis = Auto.bauenPrivat(bester, typ, farbe, kennzeichen)
+	local modell, sitz, beifahrerSitz, chassis = Auto.bauenPrivat(bester, typ, farbe, kennzeichen)
 	modell.Name = "Auto_" .. p.Name
 	modell.Parent = workspace
 	local a = { model = modell, sitz = sitz, chassis = chassis, blinkTeile = blinkTeileSuchen(modell), typ = typ, letztePos = chassis.Position }
 	Pflege.anwenden(modell, typ, Pflege.daten(d, typ))
 	privatAutos[p] = a
 	einsteigPrompt(p, sitz, Auto.MODELLE[typ].name)
+	if beifahrerSitz then mitfahrPrompt(p, beifahrerSitz, modell) end
 	sitz:GetPropertyChangedSignal("Occupant"):Connect(function()
 		local hum = sitz.Occupant
 		if not hum then return end
@@ -3050,6 +3110,10 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 		return Shop.status(p)
 	elseif was == "bananeWerfen" then
 		return Chaos.bananeWerfen(p)
+	elseif was == "hupen" then
+		return Chaos.hupen(p)
+	elseif was == "partyBeitreten" then
+		return Party.beitreten(p)
 	elseif was == "belohnungen" then
 		return Belohnungen.status(p)
 	elseif was == "belohnungAbholen" then
@@ -3288,7 +3352,13 @@ Pflege.starten({
 Missionen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent })
 Shop.starten({ daten = daten, geldGeben = geldGeben, fahrEvent = fahrEvent, geaendert = geaendert, speichernSofort = speichern, Auto = Auto, Pflege = Pflege, Chaos = Chaos })
 Chaos.starten({ fahrEvent = fahrEvent, geldGeben = geldGeben, lektionen = lektionen, jobs = jobs, privatAutos = privatAutos,
-	daten = daten, geaendert = geaendert, Shop = Shop, Missionen = Missionen })
+	daten = daten, geaendert = geaendert, Shop = Shop, Missionen = Missionen, Hupen = Hupen })
+Party.starten({ fahrEvent = fahrEvent, geldGeben = geldGeben, xpGeben = xpGeben, Chaos = Chaos,
+	beschaeftigt = function(p) return lektionen[p] ~= nil or jobs[p] ~= nil end,
+	zufallsRoute = function() return LEKTIONEN.PRUEFUNGEN[math.random(#LEKTIONEN.PRUEFUNGEN)] end,
+	lektionStarten = function(p, art, nr, party) return lektionStarten(p, art, nr, party) end,
+	lektionAbbrechen = function(p, text) if lektionen[p] then lektionBeenden(p, false, text) end end,
+})
 Belohnungen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent, geaendert = geaendert, Shop = Shop })
 
 -- odometer of the bought cars

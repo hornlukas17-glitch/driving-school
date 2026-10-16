@@ -23,6 +23,8 @@ Shop.PASSES = {
 		text = "6 exclusive paint colors for all your cars." },
 	{ key = "banane", id = 0, preis = 149, icon = "🍌", name = "Banana Launcher",
 		text = "Press B (or the 🍌 button) while driving to drop banana peels behind your car. Watch your friends spin out!" },
+	{ key = "hupen", id = 0, preis = 99, icon = "📯", name = "Funny Horn Pack",
+		text = "4 crazy horns for every car: clown, duck, air horn and fanfare. Press H to honk – everybody hears it!" },
 }
 
 -- can be bought again and again (except the starter pack)
@@ -107,6 +109,7 @@ end
 local function attribute(p)
 	p:SetAttribute("VIP", Shop.hat(p, "vip") or nil)
 	p:SetAttribute("BananenWerfer", Shop.hat(p, "banane") or nil)
+	p:SetAttribute("HupenPack", Shop.hat(p, "hupen") or nil)
 	p:SetAttribute("BoostBis", ctx.daten[p] and ctx.daten[p].boostBis or nil)
 	p:SetAttribute("GeldFaktor", Shop.faktor(p, "geld"))
 	p:SetAttribute("XpFaktor", Shop.faktor(p, "xp"))

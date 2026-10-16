@@ -54,7 +54,7 @@ for _, l in Chaos.LEHRER do
 	for _, pool in { "start", "fehler", "unfall", "lob", "leerlauf", "event", "ende_gut", "ende_schlecht" } do
 		pruefe(l.name .. " has " .. pool .. " lines", #l[pool] > 0)
 	end
-	pruefe(l.name .. " has a gag", l.gag.titel and l.gag.text and l.gag.sagt)
+	pruefe(l.name .. " has 3 gags", #l.gags == 3 and l.gags[1].titel and l.gags[3].sagt)
 end
 
 -- put the car on the motorway, driving west (-X), nothing else around
@@ -200,7 +200,7 @@ pruefe("no mistakes while flying", Chaos.schonzeit(st))
 
 -- 6) gag: banner + instructor line, no objects
 Chaos.eventStarten(p, st, "gag")
-pruefe("gag banner", letztes("chaos").farbe == "lila" and blase.Text.Text == st.chaos.lehrer.gag.sagt)
+pruefe("gag banner", letztes("chaos").farbe == "lila" and blase.Text.Text == st.chaos.letzterGag.sagt)
 
 -- 7) the car was never changed by any event
 local gleich = true

@@ -13,6 +13,7 @@ local blinkerEvent = ordner:WaitForChild("Blinker")
 local Regeln = require(ordner:WaitForChild("Verkehrsregeln"))
 local Verkehr = require(ordner:WaitForChild("Verkehr"))
 local Motorsound = require(ordner:WaitForChild("Motorsound"))
+local Hupen = require(ordner:WaitForChild("Hupen"))
 Motorsound.starten() -- engine sounds for every car (pure sound, the driving is not touched)
 
 local BLAU = Color3.fromRGB(30, 90, 180)
@@ -1152,8 +1153,9 @@ do
 	end
 	knopf.Activated:Connect(werfen)
 	local function imAuto()
+		-- driver or passenger (friends riding along can throw too)
 		local hum = spieler.Character and spieler.Character:FindFirstChildOfClass("Humanoid")
-		return hum and hum.SeatPart and hum.SeatPart:IsA("VehicleSeat")
+		return hum ~= nil and hum.SeatPart ~= nil
 	end
 	UISB.InputBegan:Connect(function(eingabe, verarbeitet)
 		if verarbeitet or eingabe.KeyCode ~= Enum.KeyCode.B then return end
@@ -1167,9 +1169,119 @@ do
 	end)
 end
 
+-- 📯 Horn: H or the horn button in any car (driver or passenger). Everybody nearby hears it.
+local function hupeDef(key)
+	for _, h in Hupen do
+		if h.key == key then return h end
+	end
+	return Hupen[1]
+end
+local function hupeAbspielen(teil, def)
+	if not def or def.id == 0 or not teil then return end
+	local s = Instance.new("Sound")
+	s.SoundId = "rbxassetid://" .. def.id
+	s.Volume = 0.9
+	s.RollOffMaxDistance = 220
+	s.Parent = teil
+	s:Play()
+	task.delay(4, function() s:Destroy() end)
+end
+_G.HupeAbspielen = hupeAbspielen
+do
+	local UISH = game:GetService("UserInputService")
+	local hupGui = Instance.new("ScreenGui")
+	hupGui.Name = "HupenKnopf"
+	hupGui.ResetOnSpawn = false
+	hupGui.Parent = spieler.PlayerGui
+	local knopf = Instance.new("TextButton")
+	knopf.AnchorPoint = Vector2.new(1, 0.5)
+	knopf.Position = UDim2.new(1, -16, 0.3, -76) -- above the banana button
+	knopf.Size = UDim2.fromOffset(56, 56)
+	knopf.BackgroundColor3 = Color3.fromRGB(240, 120, 40)
+	knopf.Text = "📯"
+	knopf.TextScaled = true
+	knopf.Visible = false
+	knopf.Parent = hupGui
+	Instance.new("UICorner", knopf).CornerRadius = UDim.new(1, 0)
+	local taste = Instance.new("TextLabel")
+	taste.AnchorPoint = Vector2.new(0.5, 0)
+	taste.Position = UDim2.new(0.5, 0, 1, 1)
+	taste.Size = UDim2.fromOffset(56, 14)
+	taste.BackgroundTransparency = 1
+	taste.Font = Enum.Font.GothamBold
+	taste.TextSize = 12
+	taste.TextColor3 = Color3.new(1, 1, 1)
+	taste.TextStrokeTransparency = 0.3
+	taste.Text = "H"
+	taste.Parent = knopf
+	local zuletzt = 0
+	local function hupen()
+		if os.clock() - zuletzt < 0.8 then return end
+		zuletzt = os.clock()
+		task.spawn(function()
+			local r = frage("hupen")
+			if r and r.fehler then warnen(r.fehler, Color3.fromRGB(200, 140, 30)) end
+		end)
+	end
+	knopf.Activated:Connect(hupen)
+	local function sitzt()
+		local hum = spieler.Character and spieler.Character:FindFirstChildOfClass("Humanoid")
+		local s = hum and hum.SeatPart
+		return s ~= nil and s:FindFirstAncestorOfClass("Model") ~= nil and s:FindFirstAncestorOfClass("Model"):FindFirstChild("Chassis", true) ~= nil
+	end
+	UISH.InputBegan:Connect(function(eingabe, verarbeitet)
+		if verarbeitet or eingabe.KeyCode ~= Enum.KeyCode.H then return end
+		if sitzt() then hupen() end
+	end)
+	task.spawn(function()
+		while true do
+			knopf.Visible = sitzt()
+			task.wait(0.5)
+		end
+	end)
+end
+
+-- 📯 somebody honked: sound from the car + a "HONK!" bubble over it for everybody nearby
+local function hupeZeigen(info)
+	local m = info.modell
+	if not (m and m.Parent) then return end
+	local teil = m:FindFirstChild("Chassis", true) or m.PrimaryPart or m:FindFirstChildWhichIsA("BasePart", true)
+	if not teil then return end
+	local kamera = workspace.CurrentCamera
+	if kamera and (kamera.CFrame.Position - teil.Position).Magnitude > 260 then return end
+	local def = hupeDef(info.art)
+	hupeAbspielen(teil, def)
+	local bb = Instance.new("BillboardGui")
+	bb.Name = "Hupe"
+	bb.Size = UDim2.fromOffset(170, 40)
+	bb.StudsOffset = Vector3.new(0, 6, 0)
+	bb.AlwaysOnTop = true
+	bb.MaxDistance = 160
+	bb.Adornee = teil
+	bb.Parent = spieler.PlayerGui
+	local t = Instance.new("TextLabel")
+	t.Size = UDim2.fromScale(1, 1)
+	t.BackgroundTransparency = 1
+	t.Font = Enum.Font.FredokaOne
+	t.TextScaled = true
+	t.TextColor3 = Color3.fromRGB(255, 230, 60)
+	t.TextStrokeTransparency = 0
+	t.Text = def and def.text or "📯 HONK!"
+	t.Parent = bb
+	local skala = Instance.new("UIScale")
+	skala.Scale = 0.3
+	skala.Parent = t
+	game:GetService("TweenService"):Create(skala, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	task.delay(1.3, function() bb:Destroy() end)
+end
+
 fahrEvent.OnClientEvent:Connect(function(info)
 	if info.typ == "chaos" then
 		chaosBanner(info)
+	elseif info.typ == "hupe" then
+		hupeZeigen(info)
+	elseif info.typ == "party" then
+		if _G.PartyEvent then _G.PartyEvent(info) end
 	elseif info.typ == "blinker" then
 		blinkerModus = info.modus
 	elseif info.typ == "start" then
@@ -1242,6 +1354,10 @@ fahrEvent.OnClientEvent:Connect(function(info)
 			.. (info.erfolg and "\n\nTalk to Tom at the depot for the next job." or ""), {
 			{ text = "Close", farbe = info.erfolg and GRUEN or GRAU, klick = schliessen },
 		}, "hinweis")
+	elseif info.typ == "ende" and info.party then
+		-- party test: the results window comes when everybody is done
+		hudAus()
+		chaosBanner({ titel = info.erfolg and "🏁 PARKED!" or "🏁 OUT OF THE RACE", text = info.erfolg and ("Mistakes: %d (+%d s). Waiting for the others …"):format(info.fehler or 0, (info.fehler or 0) * 5) or (info.text or ""), farbe = info.erfolg and "gruen" or "rot" })
 	elseif info.typ == "ende" then
 		hudAus()
 		local titelText = info.erfolg and ("Lesson %d/%d complete! 🎉"):format(info.nr, info.gesamt) or (info.pruefung and "Driving test failed" or "Lesson ended")
@@ -3327,9 +3443,36 @@ task.spawn(function()
 end)
 
 -- ---------------------------------------------------------------
+-- 🏁 Party test: up to 4 friends drive the same route, first to park wins
+-- ---------------------------------------------------------------
+do
+	local partyKnopf = leistenKnopf("🏁", "Party", 8, Color3.fromRGB(200, 90, 30))
+	partyKnopf.MouseButton1Click:Connect(function()
+		local r = frage("partyBeitreten")
+		if r and (r.fehler or r.text) then warnen(r.fehler or r.text, r.fehler and Color3.fromRGB(200, 140, 30) or GRUEN) end
+	end)
+	_G.PartyEvent = function(info)
+		if info.phase == "ergebnis" then
+			local zeilen = {}
+			local medaille = { "🥇", "🥈", "🥉", "4." }
+			for _, e in info.liste or {} do
+				local zeit = e.zeit and ("%.1f s"):format(e.zeit) or "did not finish"
+				table.insert(zeilen, ("%s  <b>%s</b>  –  %s%s"):format(medaille[e.platz] or (e.platz .. "."), e.name, zeit,
+					(e.preis or 0) > 0 and ("   <font color=\"#ffd23c\">+%d 🪙</font>"):format(e.preis) or ""))
+			end
+			zeige("🏁 PARTY TEST RESULTS", table.concat(zeilen, "\n") .. "\n\n<font size=\"14\" color=\"#9aa4b5\">Time + 5 s per mistake. Press 🏁 Party for a rematch!</font>", {
+				{ text = "Close", farbe = GRUEN, klick = schliessen },
+			}, "hinweis")
+		else
+			chaosBanner({ titel = info.titel, text = info.text, farbe = (info.phase == "abbruch") and "rot" or (info.phase == "sieger" and "gelb" or "gruen") })
+		end
+	end
+end
+
+-- ---------------------------------------------------------------
 -- Settings (saved on the server) and the start screen
 -- ---------------------------------------------------------------
-_G.Einstellungen = { minimap = true, mph = false, grosseAnzeige = false, ersteP = false, sparmodus = false, sparmodusGewaehlt = false }
+_G.Einstellungen = { minimap = true, mph = false, grosseAnzeige = false, ersteP = false, sparmodus = false, sparmodusGewaehlt = false, chaosAus = false, hupe = "normal" }
 _G.SparmodusAuto() -- phones / tablets: performance mode until the saved settings say otherwise
 
 local function einstellungenAnwenden()
@@ -3357,7 +3500,7 @@ einstellGui.Parent = spieler.PlayerGui
 local einstellRahmen = Instance.new("Frame")
 einstellRahmen.AnchorPoint = Vector2.new(0.5, 0.5)
 einstellRahmen.Position = UDim2.fromScale(0.5, 0.5)
-einstellRahmen.Size = UDim2.fromOffset(380, 384)
+einstellRahmen.Size = UDim2.fromOffset(380, 484)
 einstellRahmen.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
 einstellRahmen.Parent = einstellGui
 Instance.new("UICorner", einstellRahmen).CornerRadius = UDim.new(0, 14)
@@ -3378,6 +3521,7 @@ local OPTIONEN = {
 	{ "grosseAnzeige", "Instruction box", "Large", "Small" },
 	{ "ersteP", "Start in first person", "On", "Off" },
 	{ "sparmodus", "Graphics", "⚡ Fast", "Best" },
+	{ "chaosAus", "Chaos in your own car", "Off", "On" }, -- lessons always have chaos
 }
 local optionKnoepfe = {}
 for i, o in OPTIONEN do
@@ -3412,12 +3556,56 @@ for i, o in OPTIONEN do
 		task.spawn(frage, "einstellungen", _G.Einstellungen)
 	end)
 end
+-- 📯 horn choice: cycles through the horns you own (Funny Horn Pack unlocks the crazy ones)
+local hupZeile = Instance.new("TextLabel")
+hupZeile.Position = UDim2.fromOffset(20, 56 + #OPTIONEN * 50)
+hupZeile.Size = UDim2.fromOffset(200, 40)
+hupZeile.BackgroundTransparency = 1
+hupZeile.Font = Enum.Font.GothamBold
+hupZeile.TextSize = 16
+hupZeile.TextColor3 = Color3.fromRGB(220, 225, 235)
+hupZeile.TextXAlignment = Enum.TextXAlignment.Left
+hupZeile.Text = "Horn (H)"
+hupZeile.Parent = einstellRahmen
+local hupKnopf = Instance.new("TextButton")
+hupKnopf.Position = UDim2.fromOffset(230, 60 + #OPTIONEN * 50)
+hupKnopf.Size = UDim2.fromOffset(130, 32)
+hupKnopf.Font = Enum.Font.GothamBold
+hupKnopf.TextSize = 15
+hupKnopf.TextColor3 = Color3.new(1, 1, 1)
+hupKnopf.BackgroundColor3 = Color3.fromRGB(240, 120, 40)
+hupKnopf.Parent = einstellRahmen
+Instance.new("UICorner", hupKnopf)
+local function hupKnopfText()
+	hupKnopf.Text = "📯 " .. hupeDef(_G.Einstellungen.hupe).name
+end
+hupKnopf.MouseButton1Click:Connect(function()
+	local frei = {}
+	for _, h in Hupen do
+		if not h.pass or spieler:GetAttribute("HupenPack") then table.insert(frei, h) end
+	end
+	if #frei <= 1 then
+		warnen("📯 Get the Funny Horn Pack in the 🛒 Shop: clown, duck, air horn and fanfare!", Color3.fromRGB(200, 140, 30))
+		return
+	end
+	local i = 1
+	for k, h in frei do
+		if h.key == _G.Einstellungen.hupe then i = k end
+	end
+	local neu = frei[i % #frei + 1]
+	_G.Einstellungen.hupe = neu.key
+	hupKnopfText()
+	local hrp = spieler.Character and spieler.Character:FindFirstChild("HumanoidRootPart")
+	hupeAbspielen(hrp, neu) -- preview
+	task.spawn(frage, "einstellungen", _G.Einstellungen)
+end)
 local function knoepfeAktualisieren()
 	for schl, ok in optionKnoepfe do
 		local wert = _G.Einstellungen[schl]
 		ok.knopf.Text = wert and ok.an or ok.aus
 		ok.knopf.BackgroundColor3 = wert and GRUEN or GRAU
 	end
+	hupKnopfText()
 end
 local eZurueck = Instance.new("TextButton")
 eZurueck.AnchorPoint = Vector2.new(0.5, 1)
@@ -4234,7 +4422,7 @@ do
 		local r = frage("status")
 		if r.status and type(r.status.einstellungen) == "table" then
 			for k, v in r.status.einstellungen do
-				if _G.Einstellungen[k] ~= nil and type(v) == "boolean" then _G.Einstellungen[k] = v end
+				if _G.Einstellungen[k] ~= nil and type(v) == type(_G.Einstellungen[k]) then _G.Einstellungen[k] = v end
 			end
 		end
 		if _G.SparmodusAuto then _G.SparmodusAuto() end

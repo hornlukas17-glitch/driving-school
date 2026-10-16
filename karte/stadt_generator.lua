@@ -1413,7 +1413,7 @@ table.insert(belegt, { 140, 310, -500, -470 })
 do
 	local m = modell("Bestenlisten", fService)
 	local px, pz = blockMitte(1), blockMitte(4) -- Stadtpark
-	for i, info in { { "Level", -16 }, { "Km", 0 }, { "Perfekt", 16 } } do
+	for i, info in { { "Level", -24 }, { "Km", -8 }, { "Perfekt", 8 }, { "Chaos", 24 } } do
 		local x = px + info[2]
 		teil("Tafelfuss", V(1, 5, 1), V(x, Y_GEHWEG + 2.5, pz + 30), RGB(60, 62, 66), M.Metal, m)
 		local tafel = teil("Bestenliste", V(14, 12, 0.6), V(x, Y_GEHWEG + 10, pz + 30), RGB(20, 24, 32), M.SmoothPlastic, m)

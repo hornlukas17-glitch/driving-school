@@ -62,6 +62,8 @@ Belohnungen.ERFOLGE = {
 		wert = function(d) return (d.chaos and d.chaos.ufo) or 0 end, stufen = { { 1, 300, 60 }, { 10, 1500, 250 } }, badge = 0 },
 	{ id = "bananen", kategorie = "chaos", icon = "🍌", name = "Banana sniper", text = "Other players slip on your banana peels",
 		wert = function(d) return (d.chaos and d.chaos.treffer) or 0 end, stufen = { { 1, 200, 50 }, { 10, 1000, 200 }, { 50, 4000, 500 } }, badge = 0 },
+	{ id = "party", kategorie = "chaos", icon = "🏁", name = "Party champion", text = "Win party driving tests against other players",
+		wert = function(d) return (d.chaos and d.chaos.partySiege) or 0 end, stufen = { { 1, 300, 60 }, { 10, 1500, 250 }, { 50, 5000, 600 } }, badge = 0 },
 	{ id = "villa", kategorie = "collection", icon = "🏡", name = "Home owner", text = "Buy a villa",
 		wert = function(d) local n = 0 for _ in d.villen or {} do n += 1 end return n end, stufen = { { 1, 2000, 300 } }, badge = 0 },
 }

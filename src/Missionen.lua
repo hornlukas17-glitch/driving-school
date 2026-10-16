@@ -90,6 +90,7 @@ local LISTEN = {
 	Level = { titel = "⭐ TOP LEVEL", wert = function(d) return math.floor(d.xp or 0) end, format = function(w) return ("Lv %d"):format(math.floor(math.sqrt(w / 150)) + 1) end },
 	Km = { titel = "🛣 MOST KM DRIVEN", wert = function(d) return math.floor((d.kmGesamt or 0) * 10) end, format = function(w) return ("%.1f km"):format(w / 10) end },
 	Perfekt = { titel = "🏆 PERFECT TESTS", wert = function(d) return math.floor(d.perfekt or 0) end, format = function(w) return ("%d ×"):format(w) end },
+	Chaos = { titel = "💥 WORST DRIVERS", wert = function(d) return math.floor((d.chaos and d.chaos.punkte) or 0) end, format = function(w) return ("%d 💥"):format(w) end },
 }
 
 function Missionen.starten(c)

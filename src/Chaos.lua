@@ -24,7 +24,11 @@ Chaos.LEHRER = {
 		lob = { "You... did it? WE'RE ALIVE!", "Okay that was good. I'm still shaking.", "No screaming needed! A new record!" },
 		leerlauf = { "Is that a bird? IS IT GOING TO HIT US?", "Do you smell that? Is the car on fire? No? Okay.", "Can we go slower? Can we go backwards?", "I'm fine. Everything is fine. *sweats*" },
 		event = { "WHAT IS THAT?!", "THIS IS NOT IN THE TEXTBOOK!", "I KNEW TODAY WAS CURSED!" },
-		gag = { titel = "🛍️ PANIC ATTACK", text = "Panic Pete is breathing into a paper bag.", sagt = "*huff* *puff* I'm okay... *huff*" },
+		gags = {
+			{ titel = "🛍️ PANIC ATTACK", text = "Panic Pete is breathing into a paper bag.", sagt = "*huff* *puff* I'm okay... *huff*" },
+			{ titel = "🪖 SAFETY FIRST", text = "Panic Pete put on a helmet. And knee pads. And a second helmet.", sagt = "You can never have too many helmets!" },
+			{ titel = "📞 CALLING MOM", text = "Panic Pete is calling his mom to say goodbye.", sagt = "Mom? I love you. Tell the cat too." },
+		},
 		ende_gut = { "We survived! I'm going to lie down now." },
 		ende_schlecht = { "I need a vacation. A LONG one." },
 	},
@@ -37,7 +41,11 @@ Chaos.LEHRER = {
 		lob = { "Nice... *snore*", "Smooth... like a pillow...", "Good... job... Zzz" },
 		leerlauf = { "Zzzzz...", "*snoooooore*", "Mmm... pancakes...", "*mumbles* ...no, the purple llama..." },
 		event = { "...is that real or am I dreaming?", "Zzz... wait, WHAT?", "I dreamed about this once." },
-		gag = { titel = "🥞 SLEEP TALKING", text = "Sleepy Sam is ordering pancakes in his sleep.", sagt = "Twelve pancakes... extra syrup... Zzz" },
+		gags = {
+			{ titel = "🥞 SLEEP TALKING", text = "Sleepy Sam is ordering pancakes in his sleep.", sagt = "Twelve pancakes... extra syrup... Zzz" },
+			{ titel = "😴 SNORE ATTACK", text = "Sleepy Sam snores so loud the windows shake.", sagt = "ZZZZZZRRRRRRRK... *snort*" },
+			{ titel = "🛏️ PILLOW FORT", text = "Sleepy Sam pulled a pillow out of nowhere.", sagt = "Always prepared... for a nap..." },
+		},
 		ende_gut = { "Are we there? Great. *yawn* Good night." },
 		ende_schlecht = { "Let's try again... after my nap." },
 	},
@@ -50,7 +58,11 @@ Chaos.LEHRER = {
 		lob = { "Wonderful, dear! Have a cookie! 🍪", "So proud of you, sweetie!", "Lovely! Just like my late husband Herbert." },
 		leerlauf = { "Did I ever tell you about my cat, Mr. Whiskers?", "You look hungry. Eat something!", "Back in 1962 there were no traffic lights. Only vibes.", "Is it cold in here? Take my scarf, dear." },
 		event = { "Oh look, how lovely!", "Goodness! I have never seen that before. Well, once. In 1974.", "Careful, sweetie!" },
-		gag = { titel = "🧶 KNITTING TIME", text = "Grandma Gerti is knitting a cover for your steering wheel.", sagt = "Hold still, dear, I need to measure your hands!" },
+		gags = {
+			{ titel = "🧶 KNITTING TIME", text = "Grandma Gerti is knitting a cover for your steering wheel.", sagt = "Hold still, dear, I need to measure your hands!" },
+			{ titel = "🍪 COOKIE BREAK", text = "Grandma Gerti is handing out cookies. To you. While you drive.", sagt = "Open wide, sweetie! Here comes the cookie!" },
+			{ titel = "📸 FAMILY PHOTOS", text = "Grandma Gerti is showing you 300 photos of her cat.", sagt = "And this is Mr. Whiskers in 1998. Isn't he cute?" },
+		},
 		ende_gut = { "Well done, sweetie! Cookies for everyone!" },
 		ende_schlecht = { "Oh dear. Let's have some tea and try again." },
 	},
@@ -63,7 +75,11 @@ Chaos.LEHRER = {
 		lob = { "BEAST MODE!", "YEAAAH! High five! ✋", "THAT'S MY CHAMPION!" },
 		leerlauf = { "Steering wheel curls! 1... 2... 3...", "Hydrate or die-drate!", "Feel the burn! The tire burn!", "You know what's heavy? This car. Respect." },
 		event = { "OBSTACLE COURSE! LET'S GO!", "THIS IS YOUR TRAINING, ROOKIE!", "Dodge it like a dodgeball CHAMPION!" },
-		gag = { titel = "🥤 PROTEIN SPILL", text = "Coach Kevin spilled his protein shake all over the dashboard.", sagt = "NOOO! That was my post-workout shake!" },
+		gags = {
+			{ titel = "🥤 PROTEIN SPILL", text = "Coach Kevin spilled his protein shake all over the dashboard.", sagt = "NOOO! That was my post-workout shake!" },
+			{ titel = "💪 PUSH-UPS", text = "Coach Kevin is doing push-ups on the back seat.", sagt = "47... 48... DON'T MIND ME... 49..." },
+			{ titel = "📣 MOTIVATION", text = "Coach Kevin is screaming motivational quotes out of the window.", sagt = "YOU! PEDESTRIAN! YOU CAN DO IT!" },
+		},
 		ende_gut = { "CHAMPION! Now go drink some water!" },
 		ende_schlecht = { "Champions fall. Champions get up. TRY AGAIN!" },
 	},
@@ -76,7 +92,11 @@ Chaos.LEHRER = {
 		lob = { "That turn was a BANGER!", "Smooth like jazz! 🎷", "The crowd goes WILD!" },
 		leerlauf = { "Untz untz untz untz...", "This street needs more bass.", "Next song is dedicated to that traffic light!", "🎵 Drive, drive, drive your car... 🎵" },
 		event = { "Shout-out to the obstacle on the road!", "Plot twist! Drop the beat!", "Okay, THIS is a new track!" },
-		gag = { titel = "🔊 VOLUME 200%", text = "DJ Dina turned the radio up to 200 percent.", sagt = "CAN YOU HEAR ME?! THE BASS IS PERFECT!" },
+		gags = {
+			{ titel = "🔊 VOLUME 200%", text = "DJ Dina turned the radio up to 200 percent.", sagt = "CAN YOU HEAR ME?! THE BASS IS PERFECT!" },
+			{ titel = "🪩 DISCO MODE", text = "DJ Dina installed a disco ball in your car.", sagt = "Every car is a club if you believe!" },
+			{ titel = "🎤 KARAOKE", text = "DJ Dina wants you to sing along. Right now.", sagt = "One, two, three – SING IT WITH ME!" },
+		},
 		ende_gut = { "Show's over! Give it up for my driver! 👏" },
 		ende_schlecht = { "Wrong track. Let's play it again!" },
 	},
@@ -86,7 +106,7 @@ local function zufall(t) return t[math.random(#t)] end
 Chaos.zufall = zufall
 
 -- chaos statistics for achievements (saved in the player data, field "chaos" – new field, default empty)
-local function statistik(p, feld, schluessel)
+local function statistik(p, feld, schluessel, menge)
 	local d = ctx and ctx.daten and ctx.daten[p]
 	if not d then return end
 	d.chaos = d.chaos or {}
@@ -95,7 +115,7 @@ local function statistik(p, feld, schluessel)
 		c[feld] = c[feld] or {}
 		c[feld][schluessel] = true
 	else
-		c[feld] = (c[feld] or 0) + 1
+		c[feld] = (c[feld] or 0) + (menge or 1)
 	end
 	if ctx.geaendert then ctx.geaendert(p) end
 end
@@ -103,6 +123,29 @@ Chaos.statistik = statistik
 local function mission(p, id)
 	if ctx and ctx.Missionen then ctx.Missionen.fortschritt(p, id, 1) end
 end
+
+-- 💥 crash points for the "Worst Drivers" leaderboard (hits, banana slips, crashes in lessons)
+function Chaos.crashPunkte(p, menge)
+	statistik(p, "punkte", nil, menge or 1)
+end
+
+-- which car (lesson / job / own car) a player belongs to right now – for passengers too
+local stVon = setmetatable({}, { __mode = "k" })
+Chaos.stVon = stVon
+
+-- players riding along in a car (everybody in a seat except the driver)
+local function mitfahrerVon(model, fahrer)
+	local liste = {}
+	if not model then return liste end
+	for _, s in model:GetDescendants() do
+		if (s:IsA("Seat") or s:IsA("VehicleSeat")) and s.Occupant then
+			local sp = Players:GetPlayerFromCharacter(s.Occupant.Parent)
+			if sp and sp ~= fahrer then table.insert(liste, sp) end
+		end
+	end
+	return liste
+end
+Chaos.mitfahrerVon = mitfahrerVon
 
 local zuletztLehrer = {} -- player -> last persona id (so you get a different one next time)
 function Chaos.lehrerWaehlen(p)
@@ -193,6 +236,7 @@ end
 function Chaos.neu(p, st)
 	local l = Chaos.lehrerWaehlen(p)
 	statistik(p, "lehrer", l.id)
+	stVon[p] = st
 	st.chaos = {
 		lehrer = l,
 		naechstesEvent = nil,     -- set when the first gate is sent
@@ -200,6 +244,7 @@ function Chaos.neu(p, st)
 		zuletztGesagt = 0,
 		event = nil,
 		anzahl = 0,
+		schnell = st.party ~= nil, -- party test: chaos twice as often
 	}
 	return st.chaos.lehrer
 end
@@ -608,6 +653,13 @@ local function banner(p, titel, text, farbe, extra)
 	local info = { typ = "chaos", titel = titel, text = text, farbe = farbe }
 	for k, v in extra or {} do info[k] = v end
 	ctx.fahrEvent:FireClient(p, info)
+	-- friends riding along see it too (but only the driver's car spins / flies)
+	local st = stVon[p]
+	if st and st.model then
+		local kopie = table.clone(info)
+		kopie.rutschen, kopie.entfuehren = nil, nil
+		for _, mf in mitfahrerVon(st.model, p) do ctx.fahrEvent:FireClient(mf, kopie) end
+	end
 end
 
 -- ground height at a point (map only), used by walking animals
@@ -657,12 +709,16 @@ function Chaos.eventStarten(p, st, art)
 	local c = st.chaos
 	if not c or c.event then return nil end
 	art = art or wuerfeln(st)
-	if art == "gag" and not c.lehrer.gag then art = "banane" end -- no instructor in your own car
+	if art == "gag" and not c.lehrer.gags then art = "banane" end -- no instructor in your own car
 	local ev = EVENTS[art]
 	c.anzahl += 1
 	statistik(p, "arten", art)
 	if ev.ohneObjekt then
-		local g = c.lehrer.gag
+		-- one of the instructor's gags, never the same twice in a row
+		local auswahl = {}
+		for _, x in c.lehrer.gags do if x ~= c.letzterGag then table.insert(auswahl, x) end end
+		local g = zufall(#auswahl > 0 and auswahl or c.lehrer.gags)
+		c.letzterGag = g
 		banner(p, g.titel, g.text, "lila")
 		Chaos.sagen(st, nil, g.sagt)
 		c.naechstesEvent = os.clock() + math.random(28, 40)
@@ -779,7 +835,7 @@ end
 local function eventEnde(p, st, e, grund)
 	local c = st.chaos
 	c.event = nil
-	c.naechstesEvent = os.clock() + (c.frei and math.random(60, 90) or math.random(30, 45))
+	c.naechstesEvent = os.clock() + (c.frei and math.random(60, 90) or c.schnell and math.random(14, 22) or math.random(30, 45))
 	if e.modell then
 		local m = e.modell
 		task.delay(e.art == "ufo" and 0 or 4, function() m:Destroy() end)
@@ -795,6 +851,7 @@ local function eventEnde(p, st, e, grund)
 		ctx.geldGeben(p, BONUS, texte[e.art] or "Dodged!")
 		statistik(p, "ausgewichen")
 		mission(p, "ausweichen")
+		for _, mf in mitfahrerVon(st.model, p) do ctx.geldGeben(mf, BONUS, "Your driver dodged!") end
 		banner(p, "✨ NICE DODGE!", texte[e.art] or "Dodged!", "gruen")
 		Chaos.sagen(st, "lob")
 	end
@@ -820,6 +877,7 @@ function Chaos.tick(p, st, pos, tempo, vorneZ, hintenZ, halbB)
 					e.getroffen = true
 					if not pt.tier.fest then pt.tier.fliegt = t end
 					if pt.tier.huhn then Chaos.federn(pt.tier.m) end
+					Chaos.crashPunkte(p, 1)
 					local was = { kuehe = { "💥 MOOOO!", "You bumped a cow. It's fine... probably." },
 						enten = { "🦆 QUAAACK!", "A duck went flying! It's okay, ducks can fly." },
 						banane = { "🍌 SLIIIP!", "You drove over the banana peel! Whoooa!" },
@@ -890,7 +948,7 @@ end
 -- the first gate was sent: chaos may start soon
 function Chaos.losgehen(st)
 	local c = st.chaos
-	if c and not c.naechstesEvent then c.naechstesEvent = os.clock() + math.random(14, 22) end
+	if c and not c.naechstesEvent then c.naechstesEvent = os.clock() + (c.schnell and math.random(8, 12) or math.random(14, 22)) end
 end
 
 -- lesson over: remove everything
@@ -910,7 +968,7 @@ local function fahrzeuge()
 	local function dazu(chassis, sitz, st)
 		if chassis and chassis.Parent and sitz and sitz.Occupant then
 			local f = Players:GetPlayerFromCharacter(sitz.Occupant.Parent)
-			if f then table.insert(liste, { p = f, chassis = chassis, st = st }) end
+			if f then table.insert(liste, { p = f, chassis = chassis, st = st, model = st and st.model }) end
 		end
 	end
 	for _, st in ctx.lektionen do dazu(st.chassis, st.sitz, st) end
@@ -919,6 +977,18 @@ local function fahrzeuge()
 	return liste
 end
 Chaos.fahrzeuge = fahrzeuge
+
+-- the car a player sits in right now (driver or passenger) -> entry of fahrzeuge(), true if driving
+local function autoVon(p)
+	local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+	local sitz = hum and hum.SeatPart
+	if not sitz then return nil end
+	for _, f in fahrzeuge() do
+		if f.model and sitz:IsDescendantOf(f.model) then return f, f.p == p end
+	end
+	return nil
+end
+Chaos.autoVon = autoVon
 
 local function flach(v)
 	local f = Vector3.new(v.X, 0, v.Z)
@@ -939,6 +1009,7 @@ local function freiTick()
 		local fahrer = a.sitz and a.sitz.Occupant
 		local wer = fahrer and Players:GetPlayerFromCharacter(fahrer.Parent)
 		if wer == p and a.chassis and a.chassis.Parent then
+			stVon[p] = a
 			if not a.chaos then
 				a.chaos = { lehrer = {}, frei = true, naechstesEvent = os.clock() + math.random(40, 60),
 					naechstesGerede = math.huge, zuletztGesagt = 0, anzahl = 0 }
@@ -995,8 +1066,7 @@ function Chaos.bananeWerfen(p)
 	end
 	local rest = Chaos.WURF_PAUSE - (os.clock() - (letzterWurf[p] or -99))
 	if rest > 0 then return { fehler = ("🍌 Reloading… %d s"):format(math.ceil(rest)) } end
-	local f
-	for _, x in fahrzeuge() do if x.p == p then f = x end end
+	local f = autoVon(p) -- driver or passenger: friends in the back can throw too!
 	if not f then return { fehler = "Get in a car first, then drop banana peels behind you!" } end
 	local cf = f.chassis.CFrame
 	if not schaleLegen(p, cf.Position - flach(cf.LookVector) * 12, false, cf.Position.Y - 2) then return { fehler = "No road behind you." } end
@@ -1025,6 +1095,7 @@ local function schalenTick()
 					if f.st and f.st.chaos then f.st.chaos.schonzeit = jetzt + 4 end
 					statistik(f.p, "banane")
 					mission(f.p, "banane")
+					Chaos.crashPunkte(f.p, 1)
 					if not selbst then
 						statistik(s.besitzer, "treffer")
 						ctx.fahrEvent:FireClient(s.besitzer, { typ = "chaos", titel = "🍌 GOTCHA!", farbe = "gruen",
@@ -1041,6 +1112,31 @@ local function schalenTick()
 	end
 end
 Chaos.schalenTick = schalenTick
+
+-- ---------------------------------------------------------------
+-- 📯 Horn (H key / button): everybody nearby hears it, funny horns with the Horn Pack pass
+-- ---------------------------------------------------------------
+local HUP_REAKTION = { "Who are you honking at?!", "HONK HONK! ...why?", "Did you just honk at a cow?", "Easy on the horn!", "Beep beep! Very professional." }
+local letzteHupe = {}
+function Chaos.hupen(p)
+	local f = autoVon(p)
+	if not f then return { fehler = "Get in a car to honk!" } end
+	if os.clock() - (letzteHupe[p] or 0) < 0.8 then return {} end
+	letzteHupe[p] = os.clock()
+	local hupen = ctx.Hupen or {}
+	local d = ctx.daten[p]
+	local wahl = d and d.einstellungen and d.einstellungen.hupe or "normal"
+	local def
+	for _, h in hupen do if h.key == wahl then def = h end end
+	if not def or (def.pass and not (ctx.Shop and ctx.Shop.hat(p, def.pass))) then wahl = "normal" end
+	ctx.fahrEvent:FireAllClients({ typ = "hupe", modell = f.model, art = wahl })
+	-- the instructor has an opinion about it
+	local st = f.st
+	if st and st.chaos and st.chaos.lehrer and st.chaos.lehrer.start and math.random() < 0.5 then
+		Chaos.sagen(st, nil, zufall(HUP_REAKTION))
+	end
+	return {}
+end
 
 -- ---------------------------------------------------------------
 -- Server-wide fun (developer products)

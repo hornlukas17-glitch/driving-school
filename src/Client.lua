@@ -1802,6 +1802,9 @@ do
 			local hum = spieler.Character and spieler.Character:FindFirstChildOfClass("Humanoid")
 			local wurzel = spieler.Character and spieler.Character:FindFirstChild("HumanoidRootPart")
 			local drin = hum and tuer and hum.SeatPart == tuer
+			-- your own car: no "Ride along" for yourself (only friends see it)
+			local eigen = m and m:FindFirstChild("Mitfahren", true)
+			if eigen and eigen.Enabled then eigen.Enabled = false end
 			if not (m and tuer and wurzel) or drin then
 				if auto then weg() end
 			else

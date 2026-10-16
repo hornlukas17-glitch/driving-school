@@ -156,7 +156,13 @@ pruefe("GO banner", letztes(p2, "party", function(i) return i.phase == "start" e
 pruefe("joining during the race is not possible", frage(p, "partyBeitreten").fehler ~= nil)
 -- a friend can ride along on the back seat of a lesson car
 local hinten = L[p].model:FindFirstChild("Ruecksitz")
+local mitfahrPP = hinten and hinten:FindFirstChild("Mitfahren")
 pruefe("lesson car: ride along on the back seat", hinten and hinten:FindFirstChild("Mitfahren") ~= nil)
+L[p].model.Fahrersitz:Sit(p.Character.Humanoid)
+M.laufen(M.zeit() + 7)
+L[p].chassis.CFrame = L[p].chassis.CFrame + Vector3.new(0, 0, -80)
+M.laufen(M.zeit() + 0.5)
+pruefe("ride along prompt gone after leaving the parking lot", L[p].mitfahrPP == nil and mitfahrPP.Parent == nil)
 
 -- results: Fabi parks first with 2 mistakes (+10 s), Lukas second without mistakes, Mia gives up
 local geld = { [p] = d[p].geld, [p2] = d[p2].geld, [p3] = d[p3].geld }

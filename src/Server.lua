@@ -891,7 +891,7 @@ local function lektionStarten(p, art, wiederholNr, party)
 	einsteigPrompt(p, sitz, lkw and "Driving school truck" or (party and "Party car" or "Driving school car"))
 	if not pruefung and ruecksitz then
 		-- friends can ride along on the back seat (not in the driving test – the examiner sits there)
-		mitfahrPrompt(p, ruecksitz, modell)
+		st.mitfahrPP = mitfahrPrompt(p, ruecksitz, modell)
 	end
 	sitz:GetPropertyChangedSignal("Occupant"):Connect(function()
 		if lektionen[p] ~= st then return end
@@ -1112,6 +1112,11 @@ RunService.Heartbeat:Connect(function(dt)
 
 		local pos = st.chassis.Position
 		local tempo = st.chassis.AssemblyLinearVelocity.Magnitude
+		-- "Ride along" only on the driving school parking lot: gone once the car has left it
+		if st.mitfahrPP and st.startPos and (pos - st.startPos).Magnitude > 45 then
+			st.mitfahrPP:Destroy()
+			st.mitfahrPP = nil
+		end
 
 		-- vehicle outline around the chassis (front = -Z)
 		local vorneZ, hintenZ, halbB = -8.8, 8.8, 4.2

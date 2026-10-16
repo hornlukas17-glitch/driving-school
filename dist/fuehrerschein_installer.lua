@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v47
+--  DRIVER'S LICENSE SYSTEM v48
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -2301,7 +2301,7 @@ local function lektionStarten(p, art, wiederholNr, party)
 	einsteigPrompt(p, sitz, lkw and "Driving school truck" or (party and "Party car" or "Driving school car"))
 	if not pruefung and ruecksitz then
 		-- friends can ride along on the back seat (not in the driving test – the examiner sits there)
-		mitfahrPrompt(p, ruecksitz, modell)
+		st.mitfahrPP = mitfahrPrompt(p, ruecksitz, modell)
 	end
 	sitz:GetPropertyChangedSignal("Occupant"):Connect(function()
 		if lektionen[p] ~= st then return end
@@ -2522,6 +2522,11 @@ RunService.Heartbeat:Connect(function(dt)
 
 		local pos = st.chassis.Position
 		local tempo = st.chassis.AssemblyLinearVelocity.Magnitude
+		-- "Ride along" only on the driving school parking lot: gone once the car has left it
+		if st.mitfahrPP and st.startPos and (pos - st.startPos).Magnitude > 45 then
+			st.mitfahrPP:Destroy()
+			st.mitfahrPP = nil
+		end
 
 		-- vehicle outline around the chassis (front = -Z)
 		local vorneZ, hintenZ, halbB = -8.8, 8.8, 4.2
@@ -9875,7 +9880,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v47 loaded")
+print("[Driving School] client v48 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -11673,6 +11678,9 @@ do
 			local hum = spieler.Character and spieler.Character:FindFirstChildOfClass("Humanoid")
 			local wurzel = spieler.Character and spieler.Character:FindFirstChild("HumanoidRootPart")
 			local drin = hum and tuer and hum.SeatPart == tuer
+			-- your own car: no "Ride along" for yourself (only friends see it)
+			local eigen = m and m:FindFirstChild("Mitfahren", true)
+			if eigen and eigen.Enabled then eigen.Enabled = false end
 			if not (m and tuer and wurzel) or drin then
 				if auto then weg() end
 			else
@@ -14389,7 +14397,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v47 loading")
+	print("[Driving School] start screen v48 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -14609,4 +14617,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v47 installed. Press F5 to test.")
+print("License system v48 installed. Press F5 to test.")

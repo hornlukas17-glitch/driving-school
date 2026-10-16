@@ -1,5 +1,8 @@
 # Changelog
 
+## v48 – „Ride along“ nur auf dem Parkplatz
+- Der „Ride along“-Hinweis an der Rückbank des Fahrstunden-Autos verschwindet, sobald das Auto den Fahrschul-Parkplatz verlassen hat (> 45 Studs vom Start), und der Fahrer selbst sieht ihn gar nicht mehr (nur Freunde). Test 25 erweitert.
+
 ## v47 – Neues Cockpit, mph, Pfeil zum Auto, Gameplay-Trailer
 - **Pfeil zum Fahrschulauto:** Sobald dein Fahrstunden-Auto (oder der Lkw) wartet, hüpft ein grüner Pfeil „YOUR CAR · E“ über der Fahrertür, eine leuchtende Linie führt von dir zum Auto, und am Bildschirmrand zeigt ein Pfeil die Richtung, wenn das Auto hinter dir steht. Verschwindet beim Einsteigen.
 - **Neues HUD unten rechts:** runder Tacho mit Lichterring (grün → gelb → orange, rot beim Rasen), roter Strich = Tempolimit, Tempolimit-Schild pulsiert beim Rasen, Status-Leiste darunter, runde Knöpfe. Alles skaliert auf kleinen Bildschirmen. Anweisungs-Box mit gelbem Akzent.

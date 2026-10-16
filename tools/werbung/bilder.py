@@ -16,17 +16,23 @@ SCHRIFT = "/usr/share/fonts/truetype/google-fonts/Poppins-BoldItalic.ttf"
 SCHRIFT2 = "/usr/share/fonts/truetype/google-fonts/Poppins-Bold.ttf"
 
 
-def auto_rendern(azim, elev, B, H, abstand=30):
+_RENDERER = {}
+
+
+def auto_rendern(azim, elev, B, H, abstand=30, farbe="0.96,0.96,0.97"):
     """rendert den Fahrschulwagen mit dem Karosserie-Renderer und gibt ein RGBA-Bild (Hintergrund transparent) zurück"""
     import sys
-    quelle = open(os.path.join(WURZEL, "tools", "mesh", "render.py")).read()
-    quelle = quelle.split("ansichten = [")[0]  # nur die Funktionen, nicht das Speichern
-    alt = sys.argv
-    sys.argv = ["render.py", os.path.join(WURZEL, "dist", "mesh", "Fahrschulwagen.obj"),
-                os.path.join(WURZEL, "tools", "mesh", "fahrschule_info.json"), "-", "0.96,0.96,0.97"]
-    ns = {"__name__": "render"}
-    exec(compile(quelle, "render.py", "exec"), ns)
-    sys.argv = alt
+    ns = _RENDERER.get(farbe)
+    if ns is None:
+        quelle = open(os.path.join(WURZEL, "tools", "mesh", "render.py")).read()
+        quelle = quelle.split("ansichten = [")[0]  # nur die Funktionen, nicht das Speichern
+        alt = sys.argv
+        sys.argv = ["render.py", os.path.join(WURZEL, "dist", "mesh", "Fahrschulwagen.obj"),
+                    os.path.join(WURZEL, "tools", "mesh", "fahrschule_info.json"), "-", farbe]
+        ns = {"__name__": "render"}
+        exec(compile(quelle, "render.py", "exec"), ns)
+        sys.argv = alt
+        _RENDERER[farbe] = ns
     bild = ns["rendern"](azim, elev, B=B, H=H, abstand=abstand)
     hinter = (np.ones((H, B, 3)) * np.linspace(0.93, 0.8, H)[:, None, None] * 255).astype(np.uint8)
     maske = (np.abs(bild.astype(int) - hinter.astype(int)).sum(2) > 0).astype(np.uint8) * 255
@@ -183,6 +189,25 @@ def sprechblase(img, xy, text, schrift, rechts_unten=True):
     d.text((x + w / 2, y + h / 2), text, font=schrift, fill=(25, 25, 35), anchor="mm")
 
 
+def titel(img, pos, f):
+    """Spielname "CRAZY / DRIVING / SCHOOL" mit Banane, oben-mittig an pos (x = Mitte, y = Oberkante), f = Größe"""
+    x, y = pos
+    d = ImageDraw.Draw(img)
+    # "CRAZY" auf einem schrägen roten Band
+    band = Image.new("RGBA", (int(560 * f), int(150 * f)), (0, 0, 0, 0))
+    db = ImageDraw.Draw(band)
+    db.rounded_rectangle((8 * f, 8 * f, band.size[0] - 8 * f, band.size[1] - 8 * f), radius=int(26 * f), fill=(220, 40, 60), outline=(25, 20, 40), width=max(3, int(8 * f)))
+    db.text((band.size[0] / 2, band.size[1] / 2 + 4 * f), "CRAZY", font=ImageFont.truetype(SCHRIFT, int(118 * f)), fill=(255, 255, 255), anchor="mm",
+            stroke_width=max(2, int(5 * f)), stroke_fill=(25, 20, 40))
+    band = band.rotate(4, expand=True, resample=Image.BICUBIC)
+    img.alpha_composite(band, (int(x - band.size[0] / 2), int(y + 10 * f)))
+    b = banane(int(70 * f), -30)
+    img.alpha_composite(b, (int(x + band.size[0] / 2 - 30 * f), int(y + 20 * f)))
+    gross = ImageFont.truetype(SCHRIFT, int(150 * f))
+    text_mit_rand(d, (x, y + 245 * f), "DRIVING", gross, (255, 255, 255), breite=max(3, int(11 * f)))
+    text_mit_rand(d, (x, y + 385 * f), "SCHOOL", gross, (255, 212, 40), breite=max(3, int(11 * f)))
+
+
 def thumbnail(auto):
     B, H = 1920, 1080
     img = strasse(B, H, 470)
@@ -210,14 +235,9 @@ def thumbnail(auto):
     # Sprechblase des Fahrlehrers
     sprechblase(img, (1060, 380), "BANANA!!! BRAKE!", ImageFont.truetype(SCHRIFT2, 52))
     # Titel
-    gross = ImageFont.truetype(SCHRIFT, 170)
-    mittel = ImageFont.truetype(SCHRIFT, 88)
+    titel(img, (560, 0), 1.0)
     klein = ImageFont.truetype(SCHRIFT2, 46)
     d = ImageDraw.Draw(img)
-    text_mit_rand(d, (560, 125), "DRIVING", gross, (255, 255, 255), breite=12)
-    text_mit_rand(d, (560, 280), "SCHOOL", gross, (255, 212, 40), breite=12)
-    d.rounded_rectangle((210, 375, 910, 455), radius=22, fill=(220, 40, 60), outline=(25, 20, 40), width=6)
-    d.text((560, 415), "CHAOS EDITION", font=mittel.font_variant(size=60), fill=(255, 255, 255), anchor="mm")
     # Leiste unten
     leiste = "CRAZY INSTRUCTORS  •  BANANAS  •  UFOs  •  PLAY WITH FRIENDS"
     d.rounded_rectangle((0, 1000, B, H), radius=0, fill=(25, 20, 40, 220))
@@ -238,13 +258,12 @@ def icon(auto):
         a0, a1 = i * 2 * math.pi / 16, (i + 0.5) * 2 * math.pi / 16
         d.polygon([mitte, (mitte[0] + math.cos(a0) * S, mitte[1] + math.sin(a0) * S),
                    (mitte[0] + math.cos(a1) * S, mitte[1] + math.sin(a1) * S)], fill=(255, 230, 90, 90))
-    a = skaliert(auto, 900).rotate(8, expand=True, resample=Image.BICUBIC)
-    pos = (S // 2 - a.size[0] // 2, 380)
+    a = skaliert(auto, 820).rotate(8, expand=True, resample=Image.BICUBIC)
+    pos = (S // 2 - a.size[0] // 2, S - a.size[1] - 10)
     schatten(img, a, pos, 0.45)
     img.alpha_composite(a, pos)
     d = ImageDraw.Draw(img)
-    text_mit_rand(d, (S / 2, 130), "DRIVING", ImageFont.truetype(SCHRIFT, 190), (255, 255, 255), breite=14)
-    text_mit_rand(d, (S / 2, 300), "SCHOOL", ImageFont.truetype(SCHRIFT, 190), (255, 255, 255), rand=(200, 30, 50), breite=14)
+    titel(img, (S / 2, -20), 1.12)
     return img.resize((512, 512), Image.LANCZOS).convert("RGB")
 
 

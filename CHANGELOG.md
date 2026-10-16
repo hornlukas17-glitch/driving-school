@@ -1,5 +1,9 @@
 # Changelog
 
+## v46 – Neuer Name: Crazy Driving School 🍌
+- Startbildschirm und Begrüßung heißen jetzt „Crazy Driving School 🍌“, mit kleinem roten „BETA“-Schild (in Client.lua `SPIEL_PHASE = nil` setzen, wenn das Spiel fertig ist). Untertitel „Get your license. Survive the chaos.“
+- Icon und Thumbnail mit dem neuen Namen, dazu ein fertiger 32-Sekunden-Trailer (`python3 tools/werbung/trailer.py` → `dist/werbung/trailer.mp4`, alles selbst gezeichnet und vertont).
+
 ## v45 – Mit Freunden: Mitfahren, Hupe, Party-Test, Worst Drivers
 - **Freunde fahren mit:** „Ride along“ an der Beifahrertür eigener Autos und an der Rückbank der Fahrstunden-Autos (nicht in der Prüfung). Mitfahrer sehen die Chaos-Banner, bekommen die Ausweich-Münzen, können hupen und (mit Pass) Bananen werfen.
 - **Hupe 📯** (H oder Knopf, für alle): jeder in der Nähe hört sie und sieht eine „HONK!“-Blase. Neuer Gamepass **„Funny Horn Pack“** (99 R$): Clown, Ente, Lufthorn, Fanfare – Auswahl in den Einstellungen. Alle Hupen selbst erzeugt (`tools/sound/hupen.py`).

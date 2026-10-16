@@ -36,7 +36,7 @@ local auto = workspace:FindFirstChild("Fahrschulauto_Lukas")
 pruefe("lesson car waits on the parking lot", auto ~= nil)
 local willkommen = false
 for _, x in p.PlayerGui.LicenseGUI:GetDescendants() do
-	if x.ClassName == "TextLabel" and x.Text:find("Welcome to Driving School", 1, true) then willkommen = true end
+	if x.ClassName == "TextLabel" and x.Text:find("Welcome to Crazy Driving School", 1, true) then willkommen = true end
 end
 pruefe("welcome window", willkommen)
 pruefe("no second first drive", frage("ersteFahrt").fehler ~= nil)

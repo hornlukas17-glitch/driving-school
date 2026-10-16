@@ -23,7 +23,7 @@ local ROT = Color3.fromRGB(200, 50, 50)
 
 -- Theory lesson slides
 local FOLIEN = {
-	{ "Welcome to Driving School!", "Here is how you get your license:\n\n1. Theory lesson (these slides)\n2. Theory test at an exam desk: 20 questions, at least 85 % correct (17 of 20)\n3. Five driving lessons with your instructor\n4. Practical driving test\n\nOnly with a license can you buy and drive your own cars." },
+	{ "Welcome to Crazy Driving School!", "Here is how you get your license:\n\n1. Theory lesson (these slides)\n2. Theory test at an exam desk: 20 questions, at least 85 % correct (17 of 20)\n3. Five driving lessons with your instructor\n4. Practical driving test\n\nOnly with a license can you buy and drive your own cars." },
 	{ "Basics", "• We drive on the <b>right</b> side of the road.\n• Always wear your <b>seatbelt</b>.\n• No phone in your hand while driving.\n• Never drink and drive.\n• Signal <b>early</b> before turning or changing lanes." },
 	{ "Speed Limits", "• Residential areas: <b>30 km/h</b>\n• City: <b>50 km/h</b>\n• Country roads: <b>100 km/h</b>\n• Highway: <b>130 km/h</b>\n\nYour speedometer shows the current limit while driving. In rain or at night, drive slower." },
 	{ "Traffic Lights & Signs", "• <b>Red</b>: stop before the white stop line.\n• <b>Yellow</b>: stop if you can do it safely.\n• <b>Green</b>: go, but let pedestrians cross when turning.\n• <b>STOP</b> sign: complete stop, then give way.\n• <b>YIELD</b> sign (red triangle, point down): slow down, let the main road go first.\n• <b>Yellow diamond</b>: you are on the main road and have priority.\n• <b>No signs</b> at a junction: <b>right before left</b> – approach slowly!" },
@@ -4267,8 +4267,27 @@ do
 		l.Parent = menue
 		return l
 	end
-	label("DRIVING SCHOOL", -150, 54, Enum.Font.GothamBlack, Color3.new(1, 1, 1))
-	label("Get your license. Hit the road.", -86, 22, Enum.Font.GothamMedium, Color3.fromRGB(255, 215, 80))
+	local titel = label("CRAZY DRIVING SCHOOL 🍌", -150, 54, Enum.Font.GothamBlack, Color3.new(1, 1, 1))
+	titel.TextScaled = true -- long name: shrinks on small screens instead of running off
+	local maxTitel = Instance.new("UITextSizeConstraint")
+	maxTitel.MaxTextSize = 54
+	maxTitel.Parent = titel
+	label("Get your license. Survive the chaos.", -86, 22, Enum.Font.GothamMedium, Color3.fromRGB(255, 215, 80))
+	-- test phase: small BETA badge (set SPIEL_PHASE = nil when the game is finished)
+	local SPIEL_PHASE = "BETA"
+	if SPIEL_PHASE then
+		local b = Instance.new("TextLabel")
+		b.AnchorPoint = Vector2.new(0, 1)
+		b.Position = UDim2.new(0.07, 0, 0.5, -152)
+		b.Size = UDim2.fromOffset(64, 22)
+		b.BackgroundColor3 = Color3.fromRGB(220, 40, 60)
+		b.Font = Enum.Font.GothamBlack
+		b.TextSize = 14
+		b.TextColor3 = Color3.new(1, 1, 1)
+		b.Text = SPIEL_PHASE
+		b.Parent = menue
+		Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+	end
 
 	local function grosserKnopf(t, y, farbe)
 		local k = Instance.new("TextButton")
@@ -4357,7 +4376,7 @@ do
 			if r.fehler or not r.status or r.status.angemeldet or r.status.fahrstunden > 0 or r.lektionLaeuft then return end
 			local a = frage("ersteFahrt")
 			if a.fehler then return end
-			zeige("Welcome to Driving School! 🚗", "Let's drive right away!\n\nYour (slightly crazy) instructor is waiting in the car on the parking lot right in front of you. Walk to the <b>driver's door</b> and press <b>E</b> (on a phone: tap the button) to get in.\n\n<font size=\"15\" color=\"#9aa4b5\">The theory comes later – Anna at the reception shows you every step.</font>", {
+			zeige("Welcome to Crazy Driving School! 🍌", "Let's drive right away!\n\nYour (slightly crazy) instructor is waiting in the car on the parking lot right in front of you. Walk to the <b>driver's door</b> and press <b>E</b> (on a phone: tap the button) to get in.\n\n<font size=\"15\" color=\"#9aa4b5\">The theory comes later – Anna at the reception shows you every step.</font>", {
 				{ text = "Let's go!", farbe = GRUEN, klick = schliessen },
 			}, "dialog")
 		end)

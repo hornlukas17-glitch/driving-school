@@ -1,5 +1,8 @@
 # Changelog
 
+## v42 – Chaos-Knöpfe im Testmenü
+- Testmenü (nur Studio) hat jetzt Knöpfe für jedes Chaos-Event (Banane, Enten, Kühe, Hühner, Riesenreifen, Matsch, Clown, UFO, Zufall). In einer Fahrstunde erscheint das Event vor dem Auto.
+
 ## v41 – Enten und Banane in Studio nachgebessert
 - Tiere (Enten, Kühe, Hühner, Einkaufswagen) laufen jetzt auf dem echten Boden mit (Bordstein/Gehweg) statt darin zu versinken, und verschwinden auf der anderen Straßenseite, statt in Häuser zu laufen.
 - Banane: In den 4 s nach dem Ausrutscher gibt es gar keine Fehler mehr (vorher z. B. „You turned left without signalling“ durch den Dreher).

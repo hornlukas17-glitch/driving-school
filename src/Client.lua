@@ -1669,7 +1669,7 @@ if RunService:IsStudio() then
 	ueberschrift.TextColor3 = Color3.fromRGB(255, 200, 200)
 	ueberschrift.Text = "TEST MENU (Studio)"
 	ueberschrift.Parent = leiste
-	local function devKnopf(reihenfolge, beschriftung, befehl, nr)
+	local function devKnopf(reihenfolge, beschriftung, befehl, nr, art, eltern)
 		local k = Instance.new("TextButton")
 		k.LayoutOrder = reihenfolge
 		k.Size = UDim2.new(1, 0, 0, 26)
@@ -1678,10 +1678,10 @@ if RunService:IsStudio() then
 		k.TextSize = 13
 		k.TextColor3 = Color3.new(1, 1, 1)
 		k.Text = beschriftung
-		k.Parent = leiste
+		k.Parent = eltern or leiste
 		Instance.new("UICorner", k)
 		k.MouseButton1Click:Connect(function()
-			local r = frage("dev", { befehl = befehl, nr = nr })
+			local r = frage("dev", { befehl = befehl, nr = nr, art = art })
 			hinweis(r.fehler or r.text or "Done.")
 		end)
 	end
@@ -1695,6 +1695,18 @@ if RunService:IsStudio() then
 	devKnopf(10, "Get truck license", "lkwlizenz")
 	devKnopf(11, "+500 coins", "geld")
 	devKnopf(12, "Reset progress", "reset")
+	-- chaos events on demand (during a lesson, they appear in front of the car) – second column
+	local chaosLeiste = leiste:Clone()
+	for _, x in chaosLeiste:GetChildren() do
+		if x:IsA("TextButton") then x:Destroy() end
+		if x:IsA("TextLabel") then x.Text = "CHAOS EVENTS" end
+	end
+	chaosLeiste.Position = UDim2.new(0, 168, 0, 140)
+	chaosLeiste.Parent = devGui
+	for i, ev in { { "🍌 Banana", "banane" }, { "🦆 Ducks", "enten" }, { "🐄 Cows", "kuehe" }, { "🐔 Chickens", "huehner" },
+		{ "⭕ Giant tire", "reifen" }, { "🟤 Mud", "pfuetze" }, { "🤡 Clown camera", "clown" }, { "👽 UFO", "ufo" }, { "🎲 Random event", nil } } do
+		devKnopf(20 + i, ev[1], "chaos", nil, ev[2], chaosLeiste)
+	end
 end
 
 -- Admin money buttons (only visible for the owner of the game; the server checks it again)

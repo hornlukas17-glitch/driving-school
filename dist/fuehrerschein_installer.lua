@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v41
+--  DRIVER'S LICENSE SYSTEM v42
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -8427,7 +8427,7 @@ EVENTS.wagen = {
 
 EVENTS.reifen = {
 	gewicht = 2,
-	banner = { titel = "🛞 GIANT TIRE INCOMING!", text = "A huge tire is rolling at you – swerve!" },
+	banner = { titel = "⭕ GIANT TIRE INCOMING!", text = "A huge tire is rolling at you – swerve!" },
 	aufbauen = function(e)
 		local r = reifen()
 		r.Parent = e.modell
@@ -8702,7 +8702,7 @@ function Chaos.tick(p, st, pos, tempo, vorneZ, hintenZ, halbB)
 						banane = { "🍌 SLIIIP!", "You drove over the banana peel! Whoooa!" },
 						huehner = { "🐔 BAWK BAWK!", "Feathers everywhere!" },
 						wagen = { "🛒 CLAAANG!", "You hit a runaway shopping cart!" },
-						reifen = { "🛞 BOOOING!", "The giant tire bounced off your car!" },
+						reifen = { "⭕ BOOOING!", "The giant tire bounced off your car!" },
 						pfuetze = { "🟤 SPLAAASH!", "Mud everywhere! Can you still see?" } }
 					local w = was[e.art] or { "💥 BONK!", "" }
 					local extra = { wackeln = true }
@@ -9220,7 +9220,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v41 loaded")
+print("[Driving School] client v42 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -10885,7 +10885,7 @@ if RunService:IsStudio() then
 	ueberschrift.TextColor3 = Color3.fromRGB(255, 200, 200)
 	ueberschrift.Text = "TEST MENU (Studio)"
 	ueberschrift.Parent = leiste
-	local function devKnopf(reihenfolge, beschriftung, befehl, nr)
+	local function devKnopf(reihenfolge, beschriftung, befehl, nr, art, eltern)
 		local k = Instance.new("TextButton")
 		k.LayoutOrder = reihenfolge
 		k.Size = UDim2.new(1, 0, 0, 26)
@@ -10894,10 +10894,10 @@ if RunService:IsStudio() then
 		k.TextSize = 13
 		k.TextColor3 = Color3.new(1, 1, 1)
 		k.Text = beschriftung
-		k.Parent = leiste
+		k.Parent = eltern or leiste
 		Instance.new("UICorner", k)
 		k.MouseButton1Click:Connect(function()
-			local r = frage("dev", { befehl = befehl, nr = nr })
+			local r = frage("dev", { befehl = befehl, nr = nr, art = art })
 			hinweis(r.fehler or r.text or "Done.")
 		end)
 	end
@@ -10911,6 +10911,18 @@ if RunService:IsStudio() then
 	devKnopf(10, "Get truck license", "lkwlizenz")
 	devKnopf(11, "+500 coins", "geld")
 	devKnopf(12, "Reset progress", "reset")
+	-- chaos events on demand (during a lesson, they appear in front of the car) – second column
+	local chaosLeiste = leiste:Clone()
+	for _, x in chaosLeiste:GetChildren() do
+		if x:IsA("TextButton") then x:Destroy() end
+		if x:IsA("TextLabel") then x.Text = "CHAOS EVENTS" end
+	end
+	chaosLeiste.Position = UDim2.new(0, 168, 0, 140)
+	chaosLeiste.Parent = devGui
+	for i, ev in { { "🍌 Banana", "banane" }, { "🦆 Ducks", "enten" }, { "🐄 Cows", "kuehe" }, { "🐔 Chickens", "huehner" },
+		{ "⭕ Giant tire", "reifen" }, { "🟤 Mud", "pfuetze" }, { "🤡 Clown camera", "clown" }, { "👽 UFO", "ufo" }, { "🎲 Random event", nil } } do
+		devKnopf(20 + i, ev[1], "chaos", nil, ev[2], chaosLeiste)
+	end
 end
 
 -- Admin money buttons (only visible for the owner of the game; the server checks it again)
@@ -13149,7 +13161,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v41 loading")
+	print("[Driving School] start screen v42 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -13350,4 +13362,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v41 installed. Press F5 to test.")
+print("License system v42 installed. Press F5 to test.")

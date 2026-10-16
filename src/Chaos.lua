@@ -504,7 +504,7 @@ EVENTS.wagen = {
 
 EVENTS.reifen = {
 	gewicht = 2,
-	banner = { titel = "🛞 GIANT TIRE INCOMING!", text = "A huge tire is rolling at you – swerve!" },
+	banner = { titel = "⭕ GIANT TIRE INCOMING!", text = "A huge tire is rolling at you – swerve!" },
 	aufbauen = function(e)
 		local r = reifen()
 		r.Parent = e.modell
@@ -779,7 +779,7 @@ function Chaos.tick(p, st, pos, tempo, vorneZ, hintenZ, halbB)
 						banane = { "🍌 SLIIIP!", "You drove over the banana peel! Whoooa!" },
 						huehner = { "🐔 BAWK BAWK!", "Feathers everywhere!" },
 						wagen = { "🛒 CLAAANG!", "You hit a runaway shopping cart!" },
-						reifen = { "🛞 BOOOING!", "The giant tire bounced off your car!" },
+						reifen = { "⭕ BOOOING!", "The giant tire bounced off your car!" },
 						pfuetze = { "🟤 SPLAAASH!", "Mud everywhere! Can you still see?" } }
 					local w = was[e.art] or { "💥 BONK!", "" }
 					local extra = { wackeln = true }

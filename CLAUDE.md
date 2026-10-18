@@ -7,6 +7,15 @@ Roblox-Fahrschulspiel von Lukas. Antworten an Lukas auf **Deutsch**, kurz und eh
 - Vor jeder Auslieferung: `./tools/check.sh` muss „ALLES OK“ melden.
 - Bei jeder Auslieferung `VERSION` +1 und `CHANGELOG.md` ergänzen (Skill `release`).
 
+## Arbeitsweise (Lukas, 18.10.)
+- **Kritisch prüfen:** Vorschläge von Lukas konstruktiv hinterfragen (Technik, Komplexität, Sicherheit, Spielspaß), bessere Alternative nennen. Immer kennzeichnen: **Fakt / belegt (mit Quelle) / Einschätzung / ungetestete Hypothese**. Keine erfundenen Studien, Zahlen oder Zitate.
+- **Selbstprüfung nach jeder Änderung:** Logik- und Laufzeitfehler, Kompatibilität, Performance/Speicher, Multiplayer und Server-Client-Sicherheit (Client nie vertrauen, Remotes prüfen), Seiteneffekte/Regressionen, Wartbarkeit.
+- **Testpflicht:** Für wichtige Funktionen Testplan inkl. Grenz-, Fehler- und Multiplayer-Fälle. Beim Melden klar trennen: *theoretisch geprüft* / *lokal im Mock ausgeführt* / *in Studio getestet* / *im echten Mehrspielertest geprüft*.
+- **Kleine Schritte:** Betroffene Dateien, Änderungen, Risiken und Tests nennen. Größere Umbauten erst als Plan vorlegen; unbeteiligte Systeme nicht ohne Zustimmung anfassen.
+- **Eigene Fehler** selbst melden, korrigieren und eine dauerhafte Maßnahme ergänzen (Test, Regel, Doku).
+- **Selbstbewertung nach wichtigen Schritten:** gut gelungen / unsicher / offen / als Nächstes – ehrlich, nichts erfinden, nach Bedeutung sortiert.
+- Werbe-/Konzeptbilder: keine echten Namen von Lukas oder Bekannten, nur ausgedachte Spielernamen.
+
 ## Aufbau
 - `karte/stadt_generator.lua` – Karte, läuft einmal in der Studio-Befehlszeile. Nur neu ausliefern, wenn sich die Karte ändert.
 - `src/` – Spielcode. `tools/build.py` baut daraus `dist/fuehrerschein_installer.lua` (Befehlszeile) und `dist/DrivingSchool_v<N>.rbxmx` (Drag & Drop).

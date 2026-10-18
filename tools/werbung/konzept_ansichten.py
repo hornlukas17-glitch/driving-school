@@ -59,7 +59,7 @@ def fahrer():
     d = ImageDraw.Draw(img)
     pfeil_links(d, 650, 138, 80, GELB)
     text_mit_rand(d, (1040, 112), "LEFT!", fi(120), GELB, breite=8)
-    d.text((1040, 205), "Fabi (Instructor)  ·  in 40 m", font=f(34), fill=(220, 225, 235), anchor="mm")
+    d.text((1040, 205), "Max (Instructor)  ·  in 40 m", font=f(34), fill=(220, 225, 235), anchor="mm")
     # Lautsprecher-Symbol (Ansage wird auch gesprochen)
     d.polygon([(1340, 120), (1360, 120), (1385, 98), (1385, 178), (1360, 156), (1340, 156)], fill=(255, 255, 255))
     for r in (22, 40):
@@ -144,7 +144,7 @@ def fahrlehrer():
         d.text((sx + 22, y + 35), txt, font=f(30), fill=farbe, anchor="lm")
         d.text((sx + 300, y + 35), sek, font=fi(32), fill=(255, 120, 110), anchor="rm")
         y += 86
-    d.text((sx, my1 - 70), "Driver: Lukas", font=f(28), fill=(160, 170, 190))
+    d.text((sx, my1 - 70), "Driver: Leo", font=f(28), fill=(160, 170, 190))
     d.text((sx, my1 - 34), "Mistakes 1  ·  01:12", font=f(28), fill=(220, 225, 235))
     # Schnelltasten unten
     knoepfe = [("LEFT", GELB, "Q"), ("STRAIGHT", (255, 255, 255), "W"), ("RIGHT", GELB, "E"),

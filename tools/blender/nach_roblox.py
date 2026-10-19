@@ -128,11 +128,35 @@ local T = {{
 local ordner = workspace:FindFirstChild("Musterhaeuser") or Instance.new("Folder")
 ordner.Name = "Musterhaeuser"
 ordner.Parent = workspace
+game:GetService("ChangeHistoryService"):SetWaypoint("Vor {name}")
 local alt = ordner:FindFirstChild("{name}")
 if alt then alt:Destroy() end
 local m = Instance.new("Model")
 m.Name = "{name}"
-local basis = CFrame.new({x}, 0, {z}) * CFrame.Angles(0, math.rad({gier}), 0)
+-- ersetzt das Vororte-Haus bei ({x}, {z}): dessen Haupthaus-Teile wandern nach ServerStorage.Musterhaus_Original
+local SS = game:GetService("ServerStorage")
+local lager = SS:FindFirstChild("Musterhaus_Original") or Instance.new("Folder")
+lager.Name = "Musterhaus_Original"
+lager.Parent = SS
+local haus
+for _, h in workspace.Karte.Vororte:GetChildren() do
+	local k = h:FindFirstChild("Koerper")
+	if h.Name == "Haus" and k and math.abs(k.Position.X - {x}) < 1 and math.abs(k.Position.Z - {z}) < 1 then haus = h end
+end
+local alteTeile = lager:FindFirstChild("{x}_{z}")
+local koerper = haus and haus:FindFirstChild("Koerper") or (alteTeile and alteTeile:FindFirstChild("Koerper"))
+assert(koerper, "Haus nicht gefunden")
+local basis = koerper.CFrame * CFrame.new(0, -6, 0) * CFrame.Angles(0, math.rad({gier}), 0)
+if haus and not alteTeile then
+	alteTeile = Instance.new("Model")
+	alteTeile.Name = "{x}_{z}"
+	alteTeile.Parent = lager
+	for _, t in haus:GetChildren() do
+		if t:IsA("BasePart") and (t.Name == "Koerper" or t.Name == "Dach" or t.Name == "Giebel" or t.Name == "Tuer" or t.Name == "Fenster") then
+			t.Parent = alteTeile
+		end
+	end
+end
 for _, t in T do
 	local p = t[2] == "W" and Instance.new("WedgePart") or Instance.new("Part")
 	if t[2] == "C" then p.Shape = Enum.PartType.Cylinder end
@@ -152,6 +176,7 @@ for _, t in T do
 	p.Parent = m
 end
 m.Parent = ordner
+game:GetService("ChangeHistoryService"):SetWaypoint("{name}")
 return "{name}: " .. #m:GetChildren() .. " Teile"
 """
 

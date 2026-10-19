@@ -8,7 +8,6 @@ Missionen.ARTEN = {
 	{ id = "lieferung", text = "Deliver %d packages or pizzas", ziele = { 4, 6, 8 }, geld = 250, xp = 80 },
 	{ id = "jobs", text = "Finish %d delivery or taxi jobs", ziele = { 1, 2, 3 }, geld = 300, xp = 100 },
 	{ id = "km", text = "Drive %d km in your own car", ziele = { 2, 3, 5 }, geld = 200, xp = 80 },
-	{ id = "kontrolle", text = "Pass a police check without a fine", ziele = { 1 }, geld = 150, xp = 60 },
 	{ id = "tanken", text = "Refuel your car at a gas station", ziele = { 1 }, geld = 100, xp = 40 },
 	{ id = "perfekt", text = "Finish a lesson or test without mistakes", ziele = { 1 }, geld = 200, xp = 80 },
 	{ id = "taxi", text = "Drive %d taxi passengers", ziele = { 2, 3, 4 }, geld = 250, xp = 90 },
@@ -38,6 +37,12 @@ local function neueListe(p)
 	return { tag = tag, liste = liste }
 end
 
+local function art(id)
+	for _, a in Missionen.ARTEN do
+		if a.id == id then return a end
+	end
+end
+
 local function aktuell(p)
 	local d = ctx and ctx.daten[p] -- nil while the server is still starting up
 	if not d then return nil end
@@ -46,13 +51,11 @@ local function aktuell(p)
 	if not d.missionen or d.missionen.tag ~= heute() then
 		d.missionen = neueListe(p)
 	end
-	return d.missionen
-end
-
-local function art(id)
-	for _, a in Missionen.ARTEN do
-		if a.id == id then return a end
+	-- v52: a mission type was removed (police check) -> today's list gets rolled again
+	for _, m in d.missionen.liste do
+		if not art(m.id) then d.missionen = neueListe(p) break end
 	end
+	return d.missionen
 end
 
 function Missionen.fortschritt(p, id, menge)

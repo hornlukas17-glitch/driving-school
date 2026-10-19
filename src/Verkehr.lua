@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
 local Verkehr = {}
+Verkehr.POLIZEI = false -- v52: no police cars in the traffic (Lukas)
 
 local SPUR = 5.5          -- lane offset from the road centre
 local SPUR_AUTOBAHN = 10  -- lane offset on the highway
@@ -345,7 +346,7 @@ function Verkehr.starten(optionen)
 				summe += (stadt and ARTEN[a].stadt or ARTEN[a].land) / gesamt
 				if wurf <= summe then art = a break end
 			end
-			if i == 1 and (r == 1 or r == 4) then art = "polizei" end -- two patrol cars
+			if Verkehr.POLIZEI and i == 1 and (r == 1 or r == 4) then art = "polizei" end -- two patrol cars (v52: off)
 			local f = {
 				nr = #fahrzeuge + 1, route = r, spur = spur, art = art,
 				farbe = zufall:NextInteger(1, #FARBEN), firma = zufall:NextInteger(1, #FIRMEN),

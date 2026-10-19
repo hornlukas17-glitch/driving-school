@@ -1,5 +1,10 @@
 # Changelog
 
+## v52 – Keine Polizei mehr
+- Polizeikontrollen, Polizei-Verfolgung und Streifenwagen im Verkehr sind abgeschaltet (`POLIZEI_AKTIV = false` in Server.lua, `Verkehr.POLIZEI = false`). Blitzer, Bußgelder und Punkte bleiben.
+- Tagesmission „Polizeikontrolle“ entfernt; wer sie heute schon hatte, bekommt automatisch eine neue Liste.
+- Test 06 prüft jetzt: keine Polizei, keine Kontrolle; Test 27 prüft die alte Mission.
+
 ## v51 – Auto bleibt bei vielen Fehlern, Minimap lädt wieder
 - Normale Fahrstunden brechen bei 10 Fehlern nicht mehr ab: Man fährt die Route zu Ende, sie zählt dann nur nicht (+10 XP). Hinweis kommt einmal.
 - Nach einer nicht bestandenen Fahrstunde/Prüfung verschwindet das Auto nicht mehr unter einem: Es bleibt, bis man aussteigt (dann 3 s) bzw. max. 45 s. Neuer Knopf „🔁 Try again“ startet dieselbe Lektion/Prüfung sofort neu.

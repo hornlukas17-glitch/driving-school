@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v51
+--  DRIVER'S LICENSE SYSTEM v52
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -160,6 +160,7 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
 local Verkehr = {}
+Verkehr.POLIZEI = false -- v52: no police cars in the traffic (Lukas)
 
 local SPUR = 5.5          -- lane offset from the road centre
 local SPUR_AUTOBAHN = 10  -- lane offset on the highway
@@ -499,7 +500,7 @@ function Verkehr.starten(optionen)
 				summe += (stadt and ARTEN[a].stadt or ARTEN[a].land) / gesamt
 				if wurf <= summe then art = a break end
 			end
-			if i == 1 and (r == 1 or r == 4) then art = "polizei" end -- two patrol cars
+			if Verkehr.POLIZEI and i == 1 and (r == 1 or r == 4) then art = "polizei" end -- two patrol cars (v52: off)
 			local f = {
 				nr = #fahrzeuge + 1, route = r, spur = spur, art = art,
 				farbe = zufall:NextInteger(1, #FARBEN), firma = zufall:NextInteger(1, #FIRMEN),
@@ -3696,7 +3697,10 @@ end
 
 -- ---------------------------------------------------------------
 -- Police: traffic checkpoints (for you and the NPC traffic) and patrol cars that stop speeders
+-- v52: switched OFF (Lukas: no police in the game). Speed cameras, fines and points stay (Strafen.lua).
+-- Set POLIZEI_AKTIV = true (and Verkehr.POLIZEI = true) to bring it back.
 -- ---------------------------------------------------------------
+local POLIZEI_AKTIV = false
 local KONTROLL_PUNKTE = {
 	{ pos = Vector3.new(-450, 0, -5.5), dir = Vector3.new(-1, 0, 0) },   -- country road west
 	{ pos = Vector3.new(-300, 0, 605.5), dir = Vector3.new(1, 0, 0) },   -- south ring
@@ -3818,6 +3822,7 @@ end
 
 -- checkpoints come and go at random places (more often and close to you when you are wanted)
 task.spawn(function()
+	if not POLIZEI_AKTIV then return end
 	task.wait(45)
 	local letzter
 	local zaehler = 0
@@ -3942,6 +3947,7 @@ end
 -- watches all players driving a vehicle
 local polizeiTakt = 0
 RunService.Heartbeat:Connect(function(dt)
+	if not POLIZEI_AKTIV then return end
 	polizeiTakt += dt
 	if polizeiTakt < 0.2 then return end
 	polizeiTakt = 0
@@ -7265,7 +7271,6 @@ Missionen.ARTEN = {
 	{ id = "lieferung", text = "Deliver %d packages or pizzas", ziele = { 4, 6, 8 }, geld = 250, xp = 80 },
 	{ id = "jobs", text = "Finish %d delivery or taxi jobs", ziele = { 1, 2, 3 }, geld = 300, xp = 100 },
 	{ id = "km", text = "Drive %d km in your own car", ziele = { 2, 3, 5 }, geld = 200, xp = 80 },
-	{ id = "kontrolle", text = "Pass a police check without a fine", ziele = { 1 }, geld = 150, xp = 60 },
 	{ id = "tanken", text = "Refuel your car at a gas station", ziele = { 1 }, geld = 100, xp = 40 },
 	{ id = "perfekt", text = "Finish a lesson or test without mistakes", ziele = { 1 }, geld = 200, xp = 80 },
 	{ id = "taxi", text = "Drive %d taxi passengers", ziele = { 2, 3, 4 }, geld = 250, xp = 90 },
@@ -7295,6 +7300,12 @@ local function neueListe(p)
 	return { tag = tag, liste = liste }
 end
 
+local function art(id)
+	for _, a in Missionen.ARTEN do
+		if a.id == id then return a end
+	end
+end
+
 local function aktuell(p)
 	local d = ctx and ctx.daten[p] -- nil while the server is still starting up
 	if not d then return nil end
@@ -7303,13 +7314,11 @@ local function aktuell(p)
 	if not d.missionen or d.missionen.tag ~= heute() then
 		d.missionen = neueListe(p)
 	end
-	return d.missionen
-end
-
-local function art(id)
-	for _, a in Missionen.ARTEN do
-		if a.id == id then return a end
+	-- v52: a mission type was removed (police check) -> today's list gets rolled again
+	for _, m in d.missionen.liste do
+		if not art(m.id) then d.missionen = neueListe(p) break end
 	end
+	return d.missionen
 end
 
 function Missionen.fortschritt(p, id, menge)
@@ -9925,7 +9934,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v51 loaded")
+print("[Driving School] client v52 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -10147,7 +10156,7 @@ function dialog()
 				if a.fehler then hinweis(a.fehler) return end
 				local seiten = {
 					{ "Retraining course", "Speeding is the most common cause of accidents.\n\n• Always watch the speed limit sign on your speedometer.\n• Speed cameras measure in <b>both directions</b>.\n• Every offence brings <b>penalty points</b>; at <b>8 points</b> the license is gone again." },
-					{ "Retraining course", "• Red light = stop. Always.\n• Stop for the police when they signal you.\n• Points expire over time if you drive safely.\n\nNow book your new driving test with Anna!" },
+					{ "Retraining course", "• Red light = stop. Always.\n• Speed cameras are everywhere – watch the limit.\n• Points expire over time if you drive safely.\n\nNow book your new driving test with Anna!" },
 				}
 				local i = 1
 				local function seite()
@@ -14453,7 +14462,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v51 loading")
+	print("[Driving School] start screen v52 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -14673,4 +14682,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v51 installed. Press F5 to test.")
+print("License system v52 installed. Press F5 to test.")

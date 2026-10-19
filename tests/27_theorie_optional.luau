@@ -34,4 +34,8 @@ d.fahrstunden = anzahl - 1 -- status returns the live table on the server in the
 r = frage("pruefungStarten")
 pruefe("driving test needs all lessons: " .. tostring(r.fehler), r.fehler ~= nil and r.fehler:find("lessons", 1, true) ~= nil)
 -- a truck test is not affected by the lesson rule (it needs the car license, checked elsewhere)
+-- v52: a saved daily mission of a removed type (police check) does not break the mission list
+d.missionen = { tag = os.date("!%Y-%m-%d"), liste = { { id = "kontrolle", ziel = 1, stand = 0, fertig = false } } }
+local ok, m = pcall(function() return frage("missionen") end)
+pruefe("old police mission is replaced: " .. tostring(m), ok and d.missionen.liste[1].id ~= "kontrolle")
 print("theory optional ok")

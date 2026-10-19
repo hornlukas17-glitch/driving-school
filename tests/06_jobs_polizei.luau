@@ -89,40 +89,20 @@ print("door open:", villa.VillaTuer.CanCollide == false)
 workspace.Karte.Villen.Villa2.VillaTuer.ProximityPrompt.Triggered:Fire(p)
 M.laufen(M.zeit() + 6)
 
-print("== police checkpoint")
+print("== v52: no police")
 local r2 = frage("pizzaStarten")
 local auto2 = workspace:FindFirstChild("Pizza_Auto_Lukas")
 auto2.Fahrersitz:Sit(hum)
-while not workspace.Polizei:FindFirstChild("Verkehrskontrolle") do M.laufen(M.zeit() + 1) end
-local km = workspace.Polizei.Verkehrskontrolle
-local pc = km:FindFirstChild("NPC_polizei"):GetPivot()
-local dir = pc.LookVector
-local rechts = Vector3.new(-dir.Z, 0, dir.X)
-local punkt = Vector3.new(pc.Position.X, 0, pc.Position.Z) - dir * 14 - rechts * 5
-print("checkpoint at", tostring(punkt))
-auto2.Chassis.CFrame = CFrame.lookAt(punkt - dir * 40 + Vector3.new(0, 2, 0), punkt - dir * 39 + Vector3.new(0, 2, 0))
-auto2.Chassis.AssemblyLinearVelocity = dir * 40
-M.laufen(M.zeit() + 0.5)
-auto2.Chassis.CFrame = CFrame.lookAt(punkt - dir * 5 + Vector3.new(0, 2, 0), punkt - dir * 4 + Vector3.new(0, 2, 0))
-auto2.Chassis.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-M.laufen(M.zeit() + 1)
-local a = frage("kontrolleAntwort", true)
-print("police says:", a.text or a.fehler, "money:", p:GetAttribute("Geld"))
-M.laufen(M.zeit() + 3)
-
-print("== police patrol")
+-- drive far too fast for a while: nobody stops you any more (speed cameras still work elsewhere)
+auto2.Chassis.CFrame = CFrame.new(-345, 2, 5.5)
+auto2.Chassis.AssemblyLinearVelocity = Vector3.new(-150, 0, 0)
+M.laufen(M.zeit() + 240)
 local V = require(game.ReplicatedStorage.Fuehrerschein.Verkehr)
-M.laufen(M.zeit() + 50)
-local pol
-for _, f in V.fahrzeuge do if f.art == "polizei" then pol = f end end
-auto2.Chassis.CFrame = CFrame.new(pol.pos + Vector3.new(0, 2, 30))
-auto2.Chassis.AssemblyLinearVelocity = Vector3.new(0, 0, 160)
-M.laufen(M.zeit() + 2.5)
-print("blaulicht attr:", game.ReplicatedStorage.Fuehrerschein:GetAttribute("Blaulicht_" .. pol.nr))
-auto2.Chassis.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-M.laufen(M.zeit() + 10)
-a = frage("kontrolleAntwort", true)
-print("police says:", a.text or a.fehler, "money:", p:GetAttribute("Geld"))
-M.laufen(M.zeit() + 10)
-print("police models left:", #workspace.Polizei:GetChildren(), "walkers:", #workspace.Fussgaenger:GetChildren())
+local pol = 0
+for _, f in V.fahrzeuge do if f.art == "polizei" then pol += 1 end end
+local function check(name, ok) print((ok and "OK  " or "FAIL") .. " " .. name) if not ok then error("check failed: " .. name) end end
+check("no police cars in the traffic", pol == 0)
+check("no checkpoint was built", #workspace.Polizei:GetChildren() == 0)
+check("no police stop", frage("kontrolleAntwort", true).fehler ~= nil)
+check("pizza car still there", auto2.Parent ~= nil)
 print("errors", M.fehler or 0)

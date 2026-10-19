@@ -226,7 +226,7 @@ function dialog()
 				if a.fehler then hinweis(a.fehler) return end
 				local seiten = {
 					{ "Retraining course", "Speeding is the most common cause of accidents.\n\n• Always watch the speed limit sign on your speedometer.\n• Speed cameras measure in <b>both directions</b>.\n• Every offence brings <b>penalty points</b>; at <b>8 points</b> the license is gone again." },
-					{ "Retraining course", "• Red light = stop. Always.\n• Stop for the police when they signal you.\n• Points expire over time if you drive safely.\n\nNow book your new driving test with Anna!" },
+					{ "Retraining course", "• Red light = stop. Always.\n• Speed cameras are everywhere – watch the limit.\n• Points expire over time if you drive safely.\n\nNow book your new driving test with Anna!" },
 				}
 				local i = 1
 				local function seite()

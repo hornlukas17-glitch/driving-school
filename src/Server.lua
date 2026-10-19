@@ -2286,7 +2286,10 @@ end
 
 -- ---------------------------------------------------------------
 -- Police: traffic checkpoints (for you and the NPC traffic) and patrol cars that stop speeders
+-- v52: switched OFF (Lukas: no police in the game). Speed cameras, fines and points stay (Strafen.lua).
+-- Set POLIZEI_AKTIV = true (and Verkehr.POLIZEI = true) to bring it back.
 -- ---------------------------------------------------------------
+local POLIZEI_AKTIV = false
 local KONTROLL_PUNKTE = {
 	{ pos = Vector3.new(-450, 0, -5.5), dir = Vector3.new(-1, 0, 0) },   -- country road west
 	{ pos = Vector3.new(-300, 0, 605.5), dir = Vector3.new(1, 0, 0) },   -- south ring
@@ -2408,6 +2411,7 @@ end
 
 -- checkpoints come and go at random places (more often and close to you when you are wanted)
 task.spawn(function()
+	if not POLIZEI_AKTIV then return end
 	task.wait(45)
 	local letzter
 	local zaehler = 0
@@ -2532,6 +2536,7 @@ end
 -- watches all players driving a vehicle
 local polizeiTakt = 0
 RunService.Heartbeat:Connect(function(dt)
+	if not POLIZEI_AKTIV then return end
 	polizeiTakt += dt
 	if polizeiTakt < 0.2 then return end
 	polizeiTakt = 0

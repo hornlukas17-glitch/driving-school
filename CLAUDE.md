@@ -15,6 +15,7 @@ Roblox-Fahrschulspiel von Lukas. Antworten an Lukas auf **Deutsch**, kurz und eh
 - **Eigene Fehler** selbst melden, korrigieren und eine dauerhafte Maßnahme ergänzen (Test, Regel, Doku).
 - **Selbstbewertung nach wichtigen Schritten:** gut gelungen / unsicher / offen / als Nächstes – ehrlich, nichts erfinden, nach Bedeutung sortiert.
 - Werbe-/Konzeptbilder: keine echten Namen von Lukas oder Bekannten, nur ausgedachte Spielernamen.
+- **Lukas' Regeln für seinen PC (19.10.):** kein Zugriff auf seine Daten ohne Einverständnis, kein Versenden seiner Daten, vor jedem Schritt in Blender/Studio ankündigen und auf seine Bestätigung warten. Blender: offizielles Blender-Lab-MCP-Add-on (Blender 5.2.2, localhost:9876); Lukas startet den Bridge-Server selbst. Er hat erlaubt, seine offene Blender-Datei für die Karte zu verwenden.
 
 ## Aufbau
 - `karte/stadt_generator.lua` – Karte, läuft einmal in der Studio-Befehlszeile. Nur neu ausliefern, wenn sich die Karte ändert.

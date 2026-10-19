@@ -1,5 +1,10 @@
 # Changelog
 
+## v53 – Karte: Löcher weg, wärmere Optik
+- Löcher an den Straßenrändern (man sah den Himmel unter der Karte) geschlossen: `Karte.Bankett` (Rasen-Grundplatte + Rasenstreifen unter Straßen), in Studio und im Generator.
+- Licht ohne Blaustich (Umwelt.lua + Generator): wärmeres Umgebungslicht, weniger Himmelsspiegelung, weniger Sättigung.
+- Fenster dunkles Glas statt knallblau; Häuser aus Putz in warmen Farben; Dächer mit Ziegeln/Schindeln; Stadtfassaden warm (Sand, Terrakotta, Ocker, Backstein) statt Pastellblau/Lila; Gehwege Pflaster; Autohaus-Glas ohne „Wasser“-Effekt.
+
 ## v52 – Keine Polizei mehr
 - Polizeikontrollen, Polizei-Verfolgung und Streifenwagen im Verkehr sind abgeschaltet (`POLIZEI_AKTIV = false` in Server.lua, `Verkehr.POLIZEI = false`). Blitzer, Bußgelder und Punkte bleiben.
 - Tagesmission „Polizeikontrolle“ entfernt; wer sie heute schon hatte, bekommt automatisch eine neue Liste.

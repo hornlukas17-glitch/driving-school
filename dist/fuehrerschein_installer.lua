@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v52
+--  DRIVER'S LICENSE SYSTEM v53
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -6874,10 +6874,16 @@ function Umwelt.starten(ordner)
 	atmo.Parent = Lighting
 	-- clearer, richer look: less haze, deeper shadows, a bit more contrast and colour
 	atmo.Density, atmo.Haze, atmo.Glare = 0.26, 0.6, 0.2
-	Lighting.OutdoorAmbient = Color3.fromRGB(105, 110, 125)
-	Lighting.Ambient = Color3.fromRGB(60, 62, 72)
+	-- v53: neutral-warmes Licht statt Blaustich (Schatten waren blau, Glas spiegelte den Himmel)
+	Lighting.OutdoorAmbient = Color3.fromRGB(122, 118, 112)
+	Lighting.Ambient = Color3.fromRGB(70, 67, 64)
+	pcall(function()
+		Lighting.EnvironmentDiffuseScale = 0.55
+		Lighting.EnvironmentSpecularScale = 0.45
+	end)
+	atmo.Color, atmo.Decay = Color3.fromRGB(205, 208, 212), Color3.fromRGB(120, 118, 115)
 	local farbe = Lighting:FindFirstChildOfClass("ColorCorrectionEffect")
-	if farbe then farbe.Contrast, farbe.Saturation = 0.14, 0.2 end
+	if farbe then farbe.Contrast, farbe.Saturation, farbe.TintColor = 0.14, 0.1, Color3.fromRGB(255, 247, 236) end
 	local wolken = workspace.Terrain:FindFirstChildOfClass("Clouds")
 	local basis = { dichte = atmo.Density or 0.3, dunst = atmo.Haze or 0, bedeckt = wolken and wolken.Cover or 0.5 }
 	atmo.Density, atmo.Haze = basis.dichte, basis.dunst
@@ -9934,7 +9940,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v52 loaded")
+print("[Driving School] client v53 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -14462,7 +14468,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v52 loading")
+	print("[Driving School] start screen v53 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -14682,4 +14688,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v52 installed. Press F5 to test.")
+print("License system v53 installed. Press F5 to test.")

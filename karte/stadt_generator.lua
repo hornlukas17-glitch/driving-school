@@ -39,16 +39,16 @@ local M = Enum.Material
 local ASPHALT = RGB(45, 45, 48)
 local WEISS = RGB(235, 235, 235)
 local GEHWEG = RGB(165, 165, 165)
-local GLAS = RGB(80, 120, 160)
+local GLAS = RGB(38, 46, 54) -- dunkles Glas (vorher knallblau)
 local METALL = RGB(60, 62, 66)
 
-local FASSADEN = {
-	RGB(225, 215, 195), RGB(200, 120, 90), RGB(170, 190, 175), RGB(235, 225, 160),
-	RGB(160, 185, 210), RGB(130, 135, 145), RGB(240, 240, 235), RGB(165, 80, 65),
-	RGB(210, 170, 130), RGB(110, 130, 150), RGB(190, 160, 190), RGB(150, 170, 120),
+local FASSADEN = { -- 19.10.: warme Toene statt kuehler Pastellfarben (Sand, Terrakotta, Ocker, Backstein, Grau)
+	RGB(214, 196, 170), RGB(188, 146, 120), RGB(224, 214, 196), RGB(172, 166, 156),
+	RGB(158, 104, 84), RGB(206, 186, 140), RGB(150, 152, 140), RGB(230, 222, 205),
+	RGB(200, 172, 140), RGB(176, 128, 104), RGB(196, 190, 176), RGB(186, 170, 130),
 }
-local MATS = { M.Concrete, M.Brick, M.SmoothPlastic, M.Concrete }
-local HAUSFARBEN = { RGB(245, 235, 210), RGB(240, 240, 240), RGB(220, 230, 240), RGB(250, 225, 200), RGB(225, 240, 215) }
+local MATS = { M.Concrete, M.Brick, M.Plaster, M.Concrete }
+local HAUSFARBEN = { RGB(234, 224, 200), RGB(236, 233, 226), RGB(204, 198, 188), RGB(232, 210, 186), RGB(216, 201, 174) }
 local DACHFARBEN = { RGB(150, 60, 45), RGB(70, 70, 75), RGB(120, 75, 55) }
 
 -- ---------- Grundstruktur ----------
@@ -423,8 +423,8 @@ end
 -- ---------- Gebaeude ----------
 local function fenster(parent, x, y, z, breite, hoehe, entlangX)
 	local gr = entlangX and V(breite, hoehe, 0.4) or V(0.4, hoehe, breite)
-	local f = teil("Fenster", gr, V(x, y, z), RGB(70, 105, 140), M.Glass, parent, true)
-	f.Reflectance = 0.35
+	local f = teil("Fenster", gr, V(x, y, z), GLAS, M.SmoothPlastic, parent, true)
+	f.Reflectance = 0.12
 end
 
 local function gebaeude(bx, bz, sx, sz, cx, cz)
@@ -683,13 +683,13 @@ local function haus(x, z, gierung, parent, strasse, halb)
 	local function t(name, gr, lokal, farbe, mat, klasse, keineKol)
 		return teil(name, gr, basis * lokal, farbe, mat, m, keineKol, klasse)
 	end
-	t("Koerper", V(20, 12, 16), CFrame.new(0, 6, 0), wand, M.SmoothPlastic)
+	t("Koerper", V(20, 12, 16), CFrame.new(0, 6, 0), wand, M.Plaster)
 	for _, s in { 1, -1 } do
-		t("Dach", V(22, 0.8, 10.2), CFrame.new(0, 14.6, s * 4) * CFrame.Angles(math.rad(30 * s), 0, 0), dach, M.Slate)
+		t("Dach", V(22, 0.8, 10.2), CFrame.new(0, 14.6, s * 4) * CFrame.Angles(math.rad(30 * s), 0, 0), dach, dach == DACHFARBEN[2] and M.RoofShingles or M.ClayRoofTiles)
 		for _, ex in { -9.6, 9.6 } do
 			local lage = CFrame.new(ex, 14.31, s * 4)
 			if s == 1 then lage = lage * CFrame.Angles(0, math.pi, 0) end
-			t("Giebel", V(0.8, 4.62, 8), lage, wand, M.SmoothPlastic, "WedgePart")
+			t("Giebel", V(0.8, 4.62, 8), lage, wand, M.Plaster, "WedgePart")
 		end
 	end
 	t("Tuer", V(4, 8, 0.4), CFrame.new(0, 4, 8.1), RGB(110, 70, 45), M.Wood)
@@ -1883,10 +1883,10 @@ Lighting.GlobalShadows = true
 Lighting.Brightness = 3
 Lighting.ClockTime = 14.5
 Lighting.GeographicLatitude = 48
-Lighting.Ambient = RGB(60, 62, 72)
-Lighting.OutdoorAmbient = RGB(105, 110, 125)
-Lighting.EnvironmentDiffuseScale = 1
-Lighting.EnvironmentSpecularScale = 1
+Lighting.Ambient = RGB(70, 67, 64)          -- 19.10.: neutral-warm statt blaustichig
+Lighting.OutdoorAmbient = RGB(122, 118, 112)
+Lighting.EnvironmentDiffuseScale = 0.55
+Lighting.EnvironmentSpecularScale = 0.45
 Lighting.ShadowSoftness = 0.15
 Lighting.ExposureCompensation = 0
 
@@ -1896,8 +1896,8 @@ end
 local atmo = Instance.new("Atmosphere")
 atmo.Density = 0.26
 atmo.Offset = 0.2
-atmo.Color = RGB(200, 210, 225)
-atmo.Decay = RGB(110, 120, 140)
+atmo.Color = RGB(205, 208, 212)
+atmo.Decay = RGB(120, 118, 115)
 atmo.Glare = 0.2
 atmo.Haze = 0.6
 atmo.Parent = Lighting
@@ -1910,10 +1910,10 @@ bloom.Size = 24
 bloom.Threshold = 1.6
 bloom.Parent = Lighting
 local farbe = Instance.new("ColorCorrectionEffect")
-farbe.Saturation = 0.2
+farbe.Saturation = 0.1
 farbe.Contrast = 0.14
 farbe.Brightness = 0.02
-farbe.TintColor = RGB(255, 250, 242)
+farbe.TintColor = RGB(255, 247, 236)
 farbe.Parent = Lighting
 local strahlen = Instance.new("SunRaysEffect")
 strahlen.Intensity = 0.04

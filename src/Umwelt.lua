@@ -18,10 +18,16 @@ function Umwelt.starten(ordner)
 	atmo.Parent = Lighting
 	-- clearer, richer look: less haze, deeper shadows, a bit more contrast and colour
 	atmo.Density, atmo.Haze, atmo.Glare = 0.26, 0.6, 0.2
-	Lighting.OutdoorAmbient = Color3.fromRGB(105, 110, 125)
-	Lighting.Ambient = Color3.fromRGB(60, 62, 72)
+	-- v53: neutral-warmes Licht statt Blaustich (Schatten waren blau, Glas spiegelte den Himmel)
+	Lighting.OutdoorAmbient = Color3.fromRGB(122, 118, 112)
+	Lighting.Ambient = Color3.fromRGB(70, 67, 64)
+	pcall(function()
+		Lighting.EnvironmentDiffuseScale = 0.55
+		Lighting.EnvironmentSpecularScale = 0.45
+	end)
+	atmo.Color, atmo.Decay = Color3.fromRGB(205, 208, 212), Color3.fromRGB(120, 118, 115)
 	local farbe = Lighting:FindFirstChildOfClass("ColorCorrectionEffect")
-	if farbe then farbe.Contrast, farbe.Saturation = 0.14, 0.2 end
+	if farbe then farbe.Contrast, farbe.Saturation, farbe.TintColor = 0.14, 0.1, Color3.fromRGB(255, 247, 236) end
 	local wolken = workspace.Terrain:FindFirstChildOfClass("Clouds")
 	local basis = { dichte = atmo.Density or 0.3, dunst = atmo.Haze or 0, bedeckt = wolken and wolken.Cover or 0.5 }
 	atmo.Density, atmo.Haze = basis.dichte, basis.dunst

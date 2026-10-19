@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v49
+--  DRIVER'S LICENSE SYSTEM v50
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -2017,9 +2017,7 @@ local function lektionBeenden(p, erfolg, text)
 		local weiter
 		if d and erfolg and not st.pruefung then
 			if d.fahrstunden < #LEKTIONEN then
-				weiter = d.theorie and "Talk to Anna for your next lesson." or "Next: your next lesson with Anna – or the theory lesson at the whiteboard in the classroom."
-			elseif not d.theorie then
-				weiter = "All lessons done! Now the theory: whiteboard in the classroom, then the test at an exam desk."
+				weiter = "Talk to Anna for your next lesson."
 			elseif not d.fuehrerschein then
 				weiter = "You're ready for the driving test – talk to Anna!"
 			end
@@ -2210,12 +2208,12 @@ local function lektionStarten(p, art, wiederholNr, party)
 	if jobs[p] then
 		return { fehler = "Finish or cancel your delivery job first." }
 	end
-	-- v31: drive first, theory later. Lessons are open right away; the theory test is needed for the driving test.
+	-- v50: the theory is optional (bonus XP). The car driving test needs all driving lessons (checked here on the server).
 	if not d then
 		return { fehler = "Still loading – try again in a moment." }
 	end
-	if pruefung and not d.theorie then
-		return { fehler = "You need to pass the theory test first: theory lesson at the whiteboard, then the test at an exam desk (classroom)." }
+	if pruefung and not lkw and not d.fuehrerschein and not d.entzogen and d.fahrstunden < #LEKTIONEN then
+		return { fehler = ("Finish all driving lessons first (%d/%d) – talk to Anna at the reception."):format(d.fahrstunden, #LEKTIONEN) }
 	end
 	if not d.angemeldet then
 		d.angemeldet = true
@@ -9880,7 +9878,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v49 loaded")
+print("[Driving School] client v50 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -10056,9 +10054,8 @@ local function fortschritt(r)
 	return table.concat({
 		zeile(s.angemeldet, "Signed up"),
 		zeile(s.fahrstunden >= r.anzahlLektionen, ("Driving lessons (%d/%d)"):format(s.fahrstunden, r.anzahlLektionen)),
-		zeile(s.unterricht, "Theory lesson"),
-		zeile(s.theorie, "Theory test"),
-		zeile(s.fuehrerschein, "Practical driving test"),
+		zeile(s.fuehrerschein, "Driving test"),
+		zeile(s.theorie, "Theory test (optional, bonus XP)"),
 		zeile(s.lkwFuehrerschein, "Truck license (optional)"),
 	}, "\n")
 end
@@ -10142,10 +10139,8 @@ function pkwMenue(r)
 	for i = 1, n do summe += (s.sterne and s.sterne[tostring(i)]) or 0 end
 	local liste = "Here is everything you need to do:\n\n" .. schritte({
 		{ s.fahrstunden >= n, ("Driving lessons (%d/%d)  ⭐ %d/%d"):format(math.min(s.fahrstunden, n), n, summe, n * 3) },
-		{ s.unterricht, "Theory lesson at the <b>whiteboard</b> (classroom)" },
-		{ s.theorie, "Theory test at an <b>exam desk</b> (17 of 20 correct)" },
-		{ s.fuehrerschein, "Practical driving test (max 3 mistakes)" },
-	}) .. "\n\n"
+		{ s.fuehrerschein, "Driving test (max 3 mistakes)" },
+	}) .. (s.theorie and "" or "\n<font size=\"15\" color=\"#9aa4b5\">Optional: theory test in the classroom for bonus XP.</font>") .. "\n\n"
 	local knoepfe = {}
 	local function lektionKnopf()
 		table.insert(knoepfe, { text = ("Start lesson %d"):format(s.fahrstunden + 1), farbe = GRUEN, klick = function()
@@ -10160,12 +10155,7 @@ function pkwMenue(r)
 	local text
 	if s.fahrstunden < n then
 		text = r.naechste and ("Next lesson: <b>%s</b>\nYour instructor is waiting in the car on the parking lot. Who will it be this time?"):format(r.naechste) or ""
-		if not s.unterricht then text ..= "\n<font size=\"15\" color=\"#9aa4b5\">You can do the theory (classroom) any time in between.</font>" end
 		lektionKnopf()
-	elseif not s.unterricht then
-		text = "All lessons done – great! Now the theory: go into the classroom on the left and press E at the <b>whiteboard</b>."
-	elseif not s.theorie then
-		text = "Next: sit down at one of the <b>exam desks</b> in the classroom to start your theory test."
 	elseif not s.fuehrerschein then
 		text = "Your examiner Mr. Becker rides in the back, a (crazy) instructor sits next to you. The route is random – hitting a pedestrian counts as 3 mistakes!"
 		table.insert(knoepfe, { text = "Start the driving test", farbe = GRUEN, klick = function()
@@ -10289,7 +10279,7 @@ local function pruefung()
 		if e.fehler then hinweis(e.fehler) return end
 		local prozent = math.floor(e.punkte / e.gesamt * 100 + 0.5)
 		if e.bestanden then
-			zeige("Passed! 🎉", ("You answered <b>%d of %d</b> questions correctly (%d %%).\n\nNext step: book your first driving lesson with Anna at the reception."):format(e.punkte, e.gesamt, prozent), {
+			zeige("Passed! 🎉", ("You answered <b>%d of %d</b> questions correctly (%d %%).\n\n+80 XP bonus! Talk to Anna at the reception for your next driving lesson."):format(e.punkte, e.gesamt, prozent), {
 				{ text = "Close", farbe = GRUEN, klick = schliessen },
 			}, "hinweis")
 		else
@@ -10319,7 +10309,7 @@ function pruefungsplatz()
 	if r.fehler then hinweis(r.fehler) return end
 	local s = r.status
 	if s.theorie then
-		hinweis("You have already passed the theory test. Talk to Anna at the reception to book a driving lesson.")
+		hinweis("You have already passed the theory test. Talk to Anna at the reception for your next driving lesson.")
 	elseif not s.unterricht then
 		hinweis("Please attend the theory lesson at the whiteboard first (press E at the whiteboard).")
 	else
@@ -14397,7 +14387,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v49 loading")
+	print("[Driving School] start screen v50 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -14537,7 +14527,7 @@ do
 			if r.fehler or not r.status or r.status.angemeldet or r.status.fahrstunden > 0 or r.lektionLaeuft then return end
 			local a = frage("ersteFahrt")
 			if a.fehler then return end
-			zeige("Welcome to Crazy Driving School! 🍌", "Let's drive right away!\n\nYour (slightly crazy) instructor is waiting in the car on the parking lot right in front of you. Walk to the <b>driver's door</b> and press <b>E</b> (on a phone: tap the button) to get in.\n\n<font size=\"15\" color=\"#9aa4b5\">The theory comes later – Anna at the reception shows you every step.</font>", {
+			zeige("Welcome to Crazy Driving School! 🍌", "Let's drive right away!\n\nYour (slightly crazy) instructor is waiting in the car on the parking lot right in front of you. Walk to the <b>driver's door</b> and press <b>E</b> (on a phone: tap the button) to get in.\n\n<font size=\"15\" color=\"#9aa4b5\">No theory needed – Anna at the reception shows you every step.</font>", {
 				{ text = "Let's go!", farbe = GRUEN, klick = schliessen },
 			}, "dialog")
 		end)
@@ -14617,4 +14607,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v49 installed. Press F5 to test.")
+print("License system v50 installed. Press F5 to test.")

@@ -187,14 +187,17 @@ local function ampel(cx, cz, d)
 	m.Name = "Ampel"
 	m:SetAttribute("Richtung", d.X ~= 0 and "EW" or "NS")
 	m:SetAttribute("Phase", "Rot")
-	teil("Mast", V(0.8, 13, 0.8), basis + V(0, Y_GEHWEG + 6.5, 0), METALL, M.Metal, m)
-	local kopfPos = basis + V(0, Y_GEHWEG + 11, 0)
+	-- 19.10.: realistische Groesse (vorher doppelt so gross), mit Blende und Schirmen
+	teil("Mast", V(0.5, 13, 0.5), basis + V(0, Y_GEHWEG + 6.5, 0), METALL, M.Metal, m)
+	local kopfPos = basis + V(0, Y_GEHWEG + 13 + 0.25 - 1.85, 0)
 	local kopf = CFrame.lookAt(kopfPos, kopfPos + d)
-	teil("Gehaeuse", V(2.2, 6.6, 1.4), kopf, RGB(20, 20, 20), M.SmoothPlastic, m)
-	for _, lampe in { { "Rot", 2.1 }, { "Gelb", 0 }, { "Gruen", -2.1 } } do
-		local l = teil(lampe[1], V(1.6, 1.6, 1.6), kopf * CFrame.new(0, lampe[2], -0.6), AUS, M.SmoothPlastic, m, true)
+	teil("Gehaeuse", V(1.25, 3.7, 0.9), kopf, RGB(28, 30, 32), M.Metal, m)
+	for _, lampe in { { "Rot", 1.15 }, { "Gelb", 0 }, { "Gruen", -1.15 } } do
+		local l = teil(lampe[1], V(0.92, 0.92, 0.92), kopf * CFrame.new(0, lampe[2], -0.38), AUS, M.SmoothPlastic, m, true)
 		l.Shape = Enum.PartType.Ball
+		teil("Schirm", V(1.05, 0.08, 0.6), kopf * CFrame.new(0, lampe[2] + 0.52, -0.62), RGB(28, 30, 32), M.Metal, m, true)
 	end
+	teil("Blende", V(1.9, 4.4, 0.08), kopf * CFrame.new(0, 0, 0.48), RGB(24, 25, 27), M.Metal, m, true)
 	m.Parent = fAmpeln
 	-- Haltelinie auf der rechten Fahrspur
 	local hl = V(cx, 0, cz) + d * 20.5 + rechts * 6
@@ -375,7 +378,12 @@ local function laterne(x, z, n, bodenY)
 	teil("Mast", V(0.6, 14, 0.6), V(x, y + 7, z), METALL, M.Metal, m)
 	local armGr = (n.X ~= 0) and V(4, 0.4, 0.4) or V(0.4, 0.4, 4)
 	teil("Arm", armGr, V(x, y + 13.6, z) + n * 2, METALL, M.Metal, m)
-	local kopf = teil("Leuchte", V(2.2, 0.6, 2.2), V(x, y + 13.1, z) + n * 3.8, RGB(255, 230, 170), M.Neon, m, true)
+	-- 19.10.: Leuchtenkopf aus Metall mit flacher Abdeckung statt leuchtendem Kasten
+	local lp = V(x, y + 13.1, z) + n * 3.8
+	local lcf = CFrame.lookAt(lp, lp + n) * CFrame.Angles(0, math.rad(90), 0)
+	teil("Leuchtenkopf", V(2.3, 0.32, 1.0), lcf * CFrame.new(0, 0.12, 0), RGB(48, 50, 54), M.Metal, m, true)
+	local kopf = teil("Leuchte", V(1.8, 0.1, 0.72), lcf * CFrame.new(0, -0.08, 0), RGB(246, 240, 226), M.SmoothPlastic, m, true)
+	kopf.Reflectance = 0.1
 	local licht = Instance.new("PointLight")
 	licht.Range = 24
 	licht.Brightness = 1.2

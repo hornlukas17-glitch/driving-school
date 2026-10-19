@@ -1,5 +1,12 @@
 # Changelog
 
+## v54 – Beta-Werkzeuge: Karte lädt, Freunde einladen, Codes, Fahrlehrer-Modus
+- **Karte im veröffentlichten Spiel:** Streaming nach Roblox-Empfehlung (Ziel 1024, Minimum 64, `PauseOutsideLoadedArea`, `Opportunistic`) und keine vereinfachten Detailstufen mehr (`LevelOfDetail = StreamingMesh` steht im Verdacht, Modelle verschwinden zu lassen). Studio: `studio/streaming_fix.lua`, Generator angepasst. Der Client blockiert nicht mehr, wenn die Karte spät ankommt.
+- **🧑‍🏫 Fahrlehrer-Modus Light:** Wer bei einem Freund mitfährt, bekommt Knöpfe (bzw. Tasten 1–6) für LEFT / STRAIGHT / RIGHT / STOP / SLOW / NICE – der Fahrer sieht das Kommando groß oben. Nach mind. 3 Kommandos kann man den Fahrer mit 1–5 Sternen bewerten (8 Münzen pro Stern). Nur feste Kommandos, kein Chat nötig.
+- **📨 Freunde einladen:** Einladung prüft vorher, ob das Konto einladen darf. Kommt ein *neuer* Spieler über deine Einladung, bekommen beide 750 Münzen (max. 20 Einladungen).
+- **🎟️ Codes** in den Einstellungen: BETA, BANANA, CHAOS (je einmal). **Lustiges Zeugnis** im Ergebnisfenster („Certified Road Angel“ … „Licensed Menace“).
+- **Messen:** neuer Einstiegs-Funnel (Joined → Map loaded → im Auto → erstes Tor → erstes Chaos → Lektionen → Führerschein → eigenes Auto) und Ereignisse (Ladezeit der Karte, Codes, Einladungen, Fahrlehrer-Kommandos). Test 29.
+
 ## v53 – Karte: Löcher weg, wärmere Optik
 - Löcher an den Straßenrändern (man sah den Himmel unter der Karte) geschlossen: `Karte.Bankett` (Rasen-Grundplatte + Rasenstreifen unter Straßen), in Studio und im Generator.
 - Licht ohne Blaustich (Umwelt.lua + Generator): wärmeres Umgebungslicht, weniger Himmelsspiegelung, weniger Sättigung.

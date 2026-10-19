@@ -608,12 +608,13 @@ function M.laufen(bis, schritt)
 end
 function M.zeit() return uhr end
 
-function M.spielerErzeugen(name)
+function M.spielerErzeugen(name, userId, joinDaten)
 	local P = M.dienst("Players")
 	local p = neueInstanz("Player")
 	p.Name = name
 	p.__props.DisplayName = name
-	p.__props.UserId = 12345
+	p.__props.UserId = userId or 12345
+	p.__props.GetJoinData = function() return joinDaten or {} end
 	local bp = neueInstanz("Backpack") bp.Name = "Backpack" bp.Parent = p
 	local sg = neueInstanz("StarterGear") sg.Name = "StarterGear" sg.Parent = p
 	local pg = neueInstanz("PlayerGui") pg.Name = "PlayerGui" pg.Parent = p

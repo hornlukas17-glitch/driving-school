@@ -21,6 +21,7 @@ local Shop = require(script:WaitForChild("Shop"))
 local Belohnungen = require(script:WaitForChild("Belohnungen"))
 local Chaos = require(script:WaitForChild("Chaos"))
 local Party = require(script:WaitForChild("Party"))
+local Beta = require(script:WaitForChild("Beta"))
 local Hupen = require(ordner:WaitForChild("Hupen"))
 local Verkehr = require(ordner:WaitForChild("Verkehr"))
 local verkehrEvent = ordner:WaitForChild("VerkehrDaten")
@@ -60,6 +61,8 @@ local function standard()
 		erfolge = {}, erfolgGemeldet = {}, taxiFahrten = 0, freundeSek = 0, gruppeGeschenk = false,
 		-- v31: best stars per lesson (key = lesson number as text), onboarding steps already reported
 		sterne = {}, funnel = {},
+		-- v54: funnel v2, used promo codes, invited by (UserId), rewarded invites, driving ratings from friends
+		funnel2 = {}, codes = {}, geworbenVon = 0, werbungen = 0, bewertung = { summe = 0, anzahl = 0 },
 	}
 end
 
@@ -142,23 +145,25 @@ local function geaendert(p)
 	task.spawn(speichern, p)
 end
 
--- Onboarding funnel for the Roblox creator dashboard (Analytics -> Funnels): shows where new players stop.
--- Every step is reported once per player; only works in the published game (in Studio it is just skipped).
-local AnalyticsService = game:GetService("AnalyticsService")
-local FUNNEL = {
-	"Joined", "Sat in the first lesson car", "First lesson done", "Third lesson done", "All lessons done",
-	"Theory test passed", "Driver's license", "First own car", "First job done",
+-- Onboarding funnel (v54: new step list in Beta.lua). The old step numbers used in this file are mapped here;
+-- steps that are no longer part of the main path (theory is optional, jobs) are custom events instead.
+local FUNNEL_ALT = {
+	[1] = "Joined", [2] = "Sat in the first lesson car", [3] = "First lesson done", [4] = "Third lesson done",
+	[5] = "All lessons done", [7] = "Driver's license", [8] = "First own car",
 }
+local EREIGNIS_ALT = { [6] = "Theory test passed", [9] = "First job done" }
 local function funnel(p, schritt)
-	local d = daten[p]
-	if not d or not FUNNEL[schritt] then return end
-	d.funnel = d.funnel or {}
-	local key = tostring(schritt)
-	if d.funnel[key] then return end
-	d.funnel[key] = true
-	pcall(function()
-		AnalyticsService:LogOnboardingFunnelStepEvent(p, schritt, FUNNEL[schritt])
-	end)
+	if FUNNEL_ALT[schritt] then
+		Beta.funnel(p, FUNNEL_ALT[schritt])
+	elseif EREIGNIS_ALT[schritt] then
+		local d = daten[p]
+		if not d then return end
+		d.funnel2 = d.funnel2 or {}
+		local key = "e" .. schritt
+		if d.funnel2[key] then return end
+		d.funnel2[key] = true
+		Beta.ereignis(p, EREIGNIS_ALT[schritt])
+	end
 end
 
 -- XP and level: level = floor(sqrt(xp / 150)) + 1  (level 2 at 150 XP, level 5 at 2400 XP, ...)
@@ -185,6 +190,7 @@ local function geldGeben(p, betrag, grund, ohneBonus)
 	geaendert(p)
 	fahrEvent:FireClient(p, { typ = "geld", betrag = betrag, grund = grund })
 end
+Beta.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, geaendert = geaendert, fahrEvent = fahrEvent, Chaos = Chaos })
 
 local fuehrerscheinGeben -- defined further down
 -- Admin = the owner of the game (or anyone in Roblox Studio). Extra people: put their UserId here.
@@ -197,8 +203,11 @@ end
 
 local function spielerDa(p)
 	p:SetAttribute("Admin", istAdmin(p) or nil)
-	daten[p] = laden(p)
+	local d = laden(p)
+	daten[p] = d
 	funnel(p, 1)
+	-- brand-new player (nothing saved yet)? then a friend's invite gives both a reward
+	Beta.beigetreten(p, (d.xp or 0) == 0 and (d.fahrstunden or 0) == 0 and not d.angemeldet and not d.fuehrerschein)
 	anzeigen(p)
 	if fuehrerscheinGeben then task.spawn(fuehrerscheinGeben, p) end
 end
@@ -1377,6 +1386,7 @@ RunService.Heartbeat:Connect(function(dt)
 			else
 				st.index += 1
 				st.stoppHinweis = false
+				if st.nr == 1 and not st.pruefung then Beta.funnel(p, "First checkpoint passed") end
 				Chaos.reaktion(p, st, "lob")
 				if st.index > #st.lektion.punkte then
 					local text = st.fehler == 0 and "Excellent, no mistakes! Lesson complete." or ("Lesson complete with %d mistake(s). Keep practising!"):format(st.fehler)
@@ -3344,6 +3354,18 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 		end
 		return { fehler = "Unknown test command." }
 
+	-- v54 beta tools (checked in Beta.lua)
+	elseif was == "code" then
+		return Beta.code(p, eingabe)
+	elseif was == "kartenGeladen" then
+		return Beta.kartenGeladen(p, eingabe)
+	elseif was == "eingeladen" then
+		return Beta.eingeladen(p)
+	elseif was == "kommando" then
+		return Beta.kommando(p, eingabe)
+	elseif was == "bewerten" then
+		return Beta.bewerten(p, eingabe)
+
 	elseif was == "fahrstundeAbbrechen" then
 		if lektionen[p] then
 			lektionBeenden(p, false, "Lesson cancelled.")
@@ -3407,7 +3429,8 @@ Pflege.starten({
 Missionen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent })
 Shop.starten({ daten = daten, geldGeben = geldGeben, fahrEvent = fahrEvent, geaendert = geaendert, speichernSofort = speichern, Auto = Auto, Pflege = Pflege, Chaos = Chaos })
 Chaos.starten({ fahrEvent = fahrEvent, geldGeben = geldGeben, lektionen = lektionen, jobs = jobs, privatAutos = privatAutos,
-	daten = daten, geaendert = geaendert, Shop = Shop, Missionen = Missionen, Hupen = Hupen })
+	daten = daten, geaendert = geaendert, Shop = Shop, Missionen = Missionen, Hupen = Hupen,
+	onEvent = function(p) Beta.funnel(p, "First chaos event") end })
 Party.starten({ fahrEvent = fahrEvent, geldGeben = geldGeben, xpGeben = xpGeben, Chaos = Chaos,
 	beschaeftigt = function(p) return lektionen[p] ~= nil or jobs[p] ~= nil end,
 	zufallsRoute = function() return LEKTIONEN.PRUEFUNGEN[math.random(#LEKTIONEN.PRUEFUNGEN)] end,

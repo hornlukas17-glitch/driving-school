@@ -2047,21 +2047,22 @@ wolken.Cover = 0.55
 wolken.Density = 0.7
 wolken.Parent = gelaende
 
--- Streaming und Detailstufen: weit entfernte Gebaeude zeigt Roblox als vereinfachte Form
--- (Handys und schwache PCs muessen dann nur die Umgebung voll zeichnen)
-pcall(function()
-	workspace.StreamingEnabled = true
-	workspace.StreamingTargetRadius = 640
-	workspace.StreamingMinRadius = 160
-end)
-local mitDetailstufe = 0
-for _, m in karte:GetDescendants() do
-	if m:IsA("Model") and #m:GetDescendants() >= 12 then
-		if pcall(function() m.LevelOfDetail = Enum.ModelLevelOfDetail.StreamingMesh end) then
-			mitDetailstufe += 1
-		end
+-- Streaming nach Roblox-Empfehlung (create.roblox.com/docs/workspace/streaming):
+-- Ziel 1024, Minimum 64, PauseOutsideLoadedArea, Opportunistic. KEINE vereinfachten Detailstufen
+-- (LevelOfDetail = StreamingMesh liess im veroeffentlichten Spiel Modelle verschwinden, v54).
+for eig, wert in {
+	StreamingEnabled = true,
+	StreamingTargetRadius = 1024,
+	StreamingMinRadius = 64,
+	StreamingIntegrityMode = Enum.StreamingIntegrityMode.PauseOutsideLoadedArea,
+	StreamOutBehavior = Enum.StreamOutBehavior.Opportunistic,
+} do
+	if not pcall(function() workspace[eig] = wert end) then
+		warn("Bitte im Eigenschaften-Fenster von Workspace setzen: " .. eig .. " = " .. tostring(wert))
 	end
 end
-print("Modelle mit Detailstufe: " .. mitDetailstufe)
+for _, m in karte:GetDescendants() do
+	if m:IsA("Model") then pcall(function() m.LevelOfDetail = Enum.ModelLevelOfDetail.Disabled end) end
+end
 
 print("Karte fertig! Teile: " .. anzahl)

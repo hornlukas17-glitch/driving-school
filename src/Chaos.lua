@@ -713,6 +713,7 @@ function Chaos.eventStarten(p, st, art)
 	local ev = EVENTS[art]
 	c.anzahl += 1
 	statistik(p, "arten", art)
+	if ctx and ctx.onEvent then pcall(ctx.onEvent, p) end -- analytics funnel (v54)
 	if ev.ohneObjekt then
 		-- one of the instructor's gags, never the same twice in a row
 		local auswahl = {}

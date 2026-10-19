@@ -1,5 +1,11 @@
 # Changelog
 
+## v50 – Theorie ist optional
+- Die Theorieprüfung ist keine Pflicht mehr: Für die Fahrprüfung braucht man nur noch alle Fahrstunden (prüft der Server). Die Theorie gibt weiterhin +80 XP als Bonus.
+- Annas Checkliste zeigt nur noch „Fahrstunden → Fahrprüfung“, die Theorie steht klein als optional darunter. Willkommens- und Ergebnistexte angepasst.
+- Neuer Test 27 (Prüfung ohne Theorie erlaubt, ohne alle Fahrstunden abgelehnt), Test 18/20 angepasst; der Mock-DataStore lässt sich jetzt vorbelegen.
+- Gefunden (Studio): Die Motorsounds haben im neuen Spiel keine Zugriffsfreigabe → Lukas muss sie freigeben.
+
 ## v49 – Hupen mit Ton
 - Die 5 Hupen-Sounds sind hochgeladen und eingetragen (`tools/sound/ids.json` → `src/Hupen.lua`). In Studio geprüft: alle 5 laden und spielen (Classic, Clown, Ente, Lufthorn, Fanfare).
 

@@ -556,8 +556,10 @@ function M.dienst(n)
 		methoden.GetUserThumbnailAsync = function() return "rbxthumb://x", true end
 	end
 	if n == "DataStoreService" then
-		methoden.GetDataStore = function()
-			local speicher = {}
+		methoden.GetDataStore = function(_, name)
+			M.datenspeicher = M.datenspeicher or {}
+			local speicher = M.datenspeicher[name or "?"] or {}
+			M.datenspeicher[name or "?"] = speicher
 			return { GetAsync = function(_, k) return speicher[k] end, SetAsync = function(_, k, v) speicher[k] = v end, UpdateAsync = function(_, k, f) speicher[k] = f(speicher[k]) end }
 		end
 	end

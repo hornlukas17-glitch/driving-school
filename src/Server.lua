@@ -607,9 +607,7 @@ local function lektionBeenden(p, erfolg, text)
 		local weiter
 		if d and erfolg and not st.pruefung then
 			if d.fahrstunden < #LEKTIONEN then
-				weiter = d.theorie and "Talk to Anna for your next lesson." or "Next: your next lesson with Anna – or the theory lesson at the whiteboard in the classroom."
-			elseif not d.theorie then
-				weiter = "All lessons done! Now the theory: whiteboard in the classroom, then the test at an exam desk."
+				weiter = "Talk to Anna for your next lesson."
 			elseif not d.fuehrerschein then
 				weiter = "You're ready for the driving test – talk to Anna!"
 			end
@@ -800,12 +798,12 @@ local function lektionStarten(p, art, wiederholNr, party)
 	if jobs[p] then
 		return { fehler = "Finish or cancel your delivery job first." }
 	end
-	-- v31: drive first, theory later. Lessons are open right away; the theory test is needed for the driving test.
+	-- v50: the theory is optional (bonus XP). The car driving test needs all driving lessons (checked here on the server).
 	if not d then
 		return { fehler = "Still loading – try again in a moment." }
 	end
-	if pruefung and not d.theorie then
-		return { fehler = "You need to pass the theory test first: theory lesson at the whiteboard, then the test at an exam desk (classroom)." }
+	if pruefung and not lkw and not d.fuehrerschein and not d.entzogen and d.fahrstunden < #LEKTIONEN then
+		return { fehler = ("Finish all driving lessons first (%d/%d) – talk to Anna at the reception."):format(d.fahrstunden, #LEKTIONEN) }
 	end
 	if not d.angemeldet then
 		d.angemeldet = true

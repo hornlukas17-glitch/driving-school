@@ -1,5 +1,5 @@
 -- New start: PLAY -> straight into the short first lesson (no theory first), stars per lesson,
--- replaying lessons, theory only needed for the driving test, onboarding funnel steps
+-- replaying lessons, theory optional (v50), driving test needs all lessons, onboarding funnel steps
 local letzteZiel, ende = nil, nil
 M.log = function(name, p, info)
 	if name == "FireClient Fahrstunde" and type(info) == "table" then
@@ -67,12 +67,12 @@ pruefe("stars saved", (st.status.sterne["1"] or 0) >= 1)
 pruefe("result shows stars and the next step", ende and ende.sterne ~= nil and ende.weiter ~= nil)
 pruefe("first lesson is short", #require(game.ServerScriptService.FuehrerscheinServer.Fahrstunden)[1].punkte <= 8)
 
--- 3) next lesson works without theory, the driving test does not
+-- 3) next lesson works without theory; the driving test needs all lessons (not the theory)
 local r = frage("fahrstundeStarten")
 pruefe("lesson 2 without theory: " .. tostring(r.text or r.fehler), r.text ~= nil)
 frage("fahrstundeAbbrechen")
 M.laufen(M.zeit() + 3)
-pruefe("driving test needs the theory", (frage("pruefungStarten").fehler or ""):find("theory", 1, true) ~= nil)
+pruefe("driving test needs all lessons", (frage("pruefungStarten").fehler or ""):find("lessons", 1, true) ~= nil)
 
 -- 4) replay lesson 1 for more stars, not lessons you haven't done
 pruefe("cannot replay lesson 3", frage("fahrstundeWiederholen", 3).fehler ~= nil)
@@ -93,8 +93,9 @@ knopf("Car license (B)").MouseButton1Click:Fire()
 M.laufen(M.zeit() + 1)
 local t = ""
 for _, x in gui:GetDescendants() do if x.ClassName == "TextLabel" and #x.Text > 40 then t = x.Text end end
-local a, b = t:find("Driving lessons", 1, true), t:find("Theory lesson", 1, true)
-pruefe("checklist: lessons before theory", a ~= nil and b ~= nil and a < b)
+local a, b = t:find("Driving lessons", 1, true), t:find("Driving test", 1, true)
+pruefe("checklist: lessons, then driving test", a ~= nil and b ~= nil and a < b)
+pruefe("theory only optional", t:find("Theory lesson", 1, true) == nil and t:find("Optional: theory", 1, true) ~= nil)
 pruefe("checklist shows stars", t:find("⭐", 1, true) ~= nil)
 local besteSterne = frage("status").status.sterne["1"]
 pruefe("improve button only while stars are missing", (knopf("Improve a lesson") ~= nil) == (besteSterne < 3))

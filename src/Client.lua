@@ -180,9 +180,8 @@ local function fortschritt(r)
 	return table.concat({
 		zeile(s.angemeldet, "Signed up"),
 		zeile(s.fahrstunden >= r.anzahlLektionen, ("Driving lessons (%d/%d)"):format(s.fahrstunden, r.anzahlLektionen)),
-		zeile(s.unterricht, "Theory lesson"),
-		zeile(s.theorie, "Theory test"),
-		zeile(s.fuehrerschein, "Practical driving test"),
+		zeile(s.fuehrerschein, "Driving test"),
+		zeile(s.theorie, "Theory test (optional, bonus XP)"),
 		zeile(s.lkwFuehrerschein, "Truck license (optional)"),
 	}, "\n")
 end
@@ -266,10 +265,8 @@ function pkwMenue(r)
 	for i = 1, n do summe += (s.sterne and s.sterne[tostring(i)]) or 0 end
 	local liste = "Here is everything you need to do:\n\n" .. schritte({
 		{ s.fahrstunden >= n, ("Driving lessons (%d/%d)  ⭐ %d/%d"):format(math.min(s.fahrstunden, n), n, summe, n * 3) },
-		{ s.unterricht, "Theory lesson at the <b>whiteboard</b> (classroom)" },
-		{ s.theorie, "Theory test at an <b>exam desk</b> (17 of 20 correct)" },
-		{ s.fuehrerschein, "Practical driving test (max 3 mistakes)" },
-	}) .. "\n\n"
+		{ s.fuehrerschein, "Driving test (max 3 mistakes)" },
+	}) .. (s.theorie and "" or "\n<font size=\"15\" color=\"#9aa4b5\">Optional: theory test in the classroom for bonus XP.</font>") .. "\n\n"
 	local knoepfe = {}
 	local function lektionKnopf()
 		table.insert(knoepfe, { text = ("Start lesson %d"):format(s.fahrstunden + 1), farbe = GRUEN, klick = function()
@@ -284,12 +281,7 @@ function pkwMenue(r)
 	local text
 	if s.fahrstunden < n then
 		text = r.naechste and ("Next lesson: <b>%s</b>\nYour instructor is waiting in the car on the parking lot. Who will it be this time?"):format(r.naechste) or ""
-		if not s.unterricht then text ..= "\n<font size=\"15\" color=\"#9aa4b5\">You can do the theory (classroom) any time in between.</font>" end
 		lektionKnopf()
-	elseif not s.unterricht then
-		text = "All lessons done – great! Now the theory: go into the classroom on the left and press E at the <b>whiteboard</b>."
-	elseif not s.theorie then
-		text = "Next: sit down at one of the <b>exam desks</b> in the classroom to start your theory test."
 	elseif not s.fuehrerschein then
 		text = "Your examiner Mr. Becker rides in the back, a (crazy) instructor sits next to you. The route is random – hitting a pedestrian counts as 3 mistakes!"
 		table.insert(knoepfe, { text = "Start the driving test", farbe = GRUEN, klick = function()
@@ -413,7 +405,7 @@ local function pruefung()
 		if e.fehler then hinweis(e.fehler) return end
 		local prozent = math.floor(e.punkte / e.gesamt * 100 + 0.5)
 		if e.bestanden then
-			zeige("Passed! 🎉", ("You answered <b>%d of %d</b> questions correctly (%d %%).\n\nNext step: book your first driving lesson with Anna at the reception."):format(e.punkte, e.gesamt, prozent), {
+			zeige("Passed! 🎉", ("You answered <b>%d of %d</b> questions correctly (%d %%).\n\n+80 XP bonus! Talk to Anna at the reception for your next driving lesson."):format(e.punkte, e.gesamt, prozent), {
 				{ text = "Close", farbe = GRUEN, klick = schliessen },
 			}, "hinweis")
 		else
@@ -443,7 +435,7 @@ function pruefungsplatz()
 	if r.fehler then hinweis(r.fehler) return end
 	local s = r.status
 	if s.theorie then
-		hinweis("You have already passed the theory test. Talk to Anna at the reception to book a driving lesson.")
+		hinweis("You have already passed the theory test. Talk to Anna at the reception for your next driving lesson.")
 	elseif not s.unterricht then
 		hinweis("Please attend the theory lesson at the whiteboard first (press E at the whiteboard).")
 	else
@@ -4661,7 +4653,7 @@ do
 			if r.fehler or not r.status or r.status.angemeldet or r.status.fahrstunden > 0 or r.lektionLaeuft then return end
 			local a = frage("ersteFahrt")
 			if a.fehler then return end
-			zeige("Welcome to Crazy Driving School! 🍌", "Let's drive right away!\n\nYour (slightly crazy) instructor is waiting in the car on the parking lot right in front of you. Walk to the <b>driver's door</b> and press <b>E</b> (on a phone: tap the button) to get in.\n\n<font size=\"15\" color=\"#9aa4b5\">The theory comes later – Anna at the reception shows you every step.</font>", {
+			zeige("Welcome to Crazy Driving School! 🍌", "Let's drive right away!\n\nYour (slightly crazy) instructor is waiting in the car on the parking lot right in front of you. Walk to the <b>driver's door</b> and press <b>E</b> (on a phone: tap the button) to get in.\n\n<font size=\"15\" color=\"#9aa4b5\">No theory needed – Anna at the reception shows you every step.</font>", {
 				{ text = "Let's go!", farbe = GRUEN, klick = schliessen },
 			}, "dialog")
 		end)

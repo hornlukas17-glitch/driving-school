@@ -1999,6 +1999,41 @@ randTeil("Wand", V(KARTE * 2 + 8, 400, 4), V(0, 180, KARTE + 2))
 randTeil("Wand", V(KARTE * 2 + 8, 400, 4), V(0, 180, -KARTE - 2))
 randTeil("Sicherheitsboden", V(KARTE * 2 + 4, 2, KARTE * 2 + 4), V(0, -9, 0))
 
+-- Bankett (19.10.): Das Gelaende zeichnet an Strassenkanten trotz Fuellung duenne Spalten, durch die man
+-- den Himmel unter der Karte sah (hellblaue "Kanaele"). Darum: eine Rasen-Grundplatte knapp unter dem
+-- Gelaende (Oberkante -0,6) und unter jeder Strasse ein Rasenstreifen, der 3,5 Studs ueber die Kante reicht
+-- (Oberkante -0,03, also immer unter der Fahrbahn). Liegt im eigenen Ordner, beruehrt Strassen nicht.
+do
+	local bankett = Instance.new("Folder")
+	bankett.Name = "Bankett"
+	local ok, grasFarbe = pcall(function() return gelaende:GetMaterialColor(M.Grass) end)
+	if not ok then grasFarbe = RGB(80, 130, 60) end
+	local function rasen(name, gr, cf, zylinder)
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Anchored, p.CastShadow = true, false
+		p.Material, p.Color = M.Grass, grasFarbe
+		if zylinder then p.Shape = Enum.PartType.Cylinder end
+		p.Size, p.CFrame = gr, cf
+		p.Parent = bankett
+	end
+	rasen("Grundplatte", V(KARTE * 2, 4, KARTE * 2), CFrame.new(0, -2.6, 0))
+	local OBEN, DICKE, RAND = -0.03, 6, 3.5
+	for _, t in karte:GetDescendants() do
+		if t:IsA("Part") and t.Name ~= "Leitplanke" and t.Position.Y < 2 and t:IsDescendantOf(fStrassen) then
+			if t.Shape == Enum.PartType.Cylinder then
+				rasen("Bankett_" .. t.Name, V(DICKE, t.Size.Y + 2 * RAND, t.Size.Z + 2 * RAND),
+					CFrame.new(t.Position.X, OBEN - DICKE / 2, t.Position.Z) * CFrame.Angles(0, 0, math.rad(90)), true)
+			elseif t.Size.Y <= 2 and (t.Size.X > 6 or t.Size.Z > 6) then
+				local _, gier = t.CFrame:ToOrientation()
+				rasen("Bankett_" .. t.Name, V(t.Size.X + 2 * RAND, DICKE, t.Size.Z + 2 * RAND),
+					CFrame.new(t.Position.X, OBEN - DICKE / 2, t.Position.Z) * CFrame.Angles(0, gier, 0))
+			end
+		end
+	end
+	bankett.Parent = karte
+end
+
 local wolken = gelaende:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
 wolken.Cover = 0.55
 wolken.Density = 0.7

@@ -17,6 +17,12 @@ for f in src/*.lua karte/*.lua; do
   if ! out=$("$COMPILE" "$f" 2>&1 >/dev/null); then echo "  ✗ $f"; echo "$out" | head -5; fehler=1; fi
 done
 [ $fehler = 0 ] && echo "  ✓ alle Dateien" || exit 1
+# Roblox: Script.Source darf höchstens 199.999 Zeichen haben (sonst lässt Studio den Code nicht setzen, v54)
+for f in src/*.lua; do
+  n=$(wc -c < "$f")
+  if [ "$n" -ge 195000 ]; then echo "  ✗ $f hat $n Zeichen (Roblox-Grenze 200.000, Puffer 5.000) – Teile in ein Modul auslagern"; fehler=1; fi
+done
+[ $fehler = 0 ] || exit 1
 [ "${1:-}" = "--schnell" ] && exit 0
 echo "== Build"
 python3 tools/build.py | sed 's/^/  /' || exit 1

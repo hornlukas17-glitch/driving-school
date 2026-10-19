@@ -101,6 +101,7 @@ local besteSterne = frage("status").status.sterne["1"]
 pruefe("improve button only while stars are missing", (knopf("Improve a lesson") ~= nil) == (besteSterne < 3))
 
 -- 6) onboarding funnel steps were recorded once
-local f = frage("status").status.funnel
-pruefe("funnel: joined, in the car, first lesson", f["1"] and f["2"] and f["3"])
+-- v54: funnel v2 (Beta.FUNNEL): 1 Joined, 3 Sat in the first lesson car, 6 First lesson done
+local f = frage("status").status.funnel2
+pruefe("funnel: joined, in the car, first lesson", f["1"] and f["3"] and f["6"])
 print("start flow ok")

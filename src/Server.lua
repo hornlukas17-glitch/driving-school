@@ -527,10 +527,26 @@ local function aussteigen(sitz)
 	if w then w:Destroy() end
 end
 
+-- v51: after a failed lesson the car does NOT vanish under you: it stays until you get out
+-- (or 45 s, or you start the next lesson / leave the game). "Try again" restarts the same lesson.
+local restAutos = {}     -- [player] = car of the finished lesson that is still standing there
+local letzteLektion = {} -- [player] = { art = "pruefung"/"lkw"/"lektion"/"wiederholen", nr = n }
+local function restAutoWeg(p)
+	local m = restAutos[p]
+	restAutos[p] = nil
+	if m and m.Parent then m:Destroy() end
+end
+
 local function lektionBeenden(p, erfolg, text)
 	local st = lektionen[p]
 	if not st then return end
 	lektionen[p] = nil
+	-- v51: normal lessons are never stopped by mistakes; with too many the finished route just does not count
+	if erfolg and not st.pruefung and not st.party and st.fehler > st.erlaubt then
+		erfolg = false
+		text = ("You finished the route, but with %d mistakes (max. %d) this lesson does not count. Try again!"):format(st.fehler, st.erlaubt)
+		xpGeben(p, 10, "Route finished")
+	end
 	Chaos.reaktion(p, st, erfolg and "ende_gut" or "ende_schlecht")
 	Chaos.ende(st)
 	if st.party then
@@ -615,12 +631,29 @@ local function lektionBeenden(p, erfolg, text)
 		fahrEvent:FireClient(p, { typ = "ende", erfolg = erfolg, text = text, fehler = st.fehler, nr = st.nr, gesamt = #LEKTIONEN, pruefung = st.pruefung,
 			sterne = sterne, besser = besser and bisher and bisher > 0, weiter = weiter })
 	end
-	local warten = 1
-	if erfolg then warten = st.pruefung and 13 or 4 end
-	task.delay(warten, function()
-		aussteigen(st.sitz)
-		if st.model then st.model:Destroy() end
+	if erfolg then
+		task.delay(st.pruefung and 13 or 4, function()
+			aussteigen(st.sitz)
+			if st.model then st.model:Destroy() end
+		end)
+		return
+	end
+	-- failed: keep the car while the player still sits in it
+	local m = st.model
+	if not (m and m.Parent) then return end
+	local hum = st.sitz and st.sitz.Occupant
+	if not hum or not p.Parent then
+		task.delay(1, function() if m.Parent then m:Destroy() end end)
+		return
+	end
+	restAutoWeg(p)
+	restAutos[p] = m
+	st.sitz:GetPropertyChangedSignal("Occupant"):Connect(function()
+		if not st.sitz.Occupant and restAutos[p] == m then
+			task.delay(3, function() if restAutos[p] == m then restAutoWeg(p) end end)
+		end
 	end)
+	task.delay(45, function() if restAutos[p] == m then restAutoWeg(p) end end)
 end
 
 local function zielSenden(p, st)
@@ -664,9 +697,11 @@ local function warnung(p, st, text, punkte)
 	Chaos.reaktion(p, st, (punkte or 1) >= 3 and "unfall" or "fehler")
 	if st.fehler > st.erlaubt then
 		if st.pruefung then
-			lektionBeenden(p, false, ("You made %d mistakes, but only %d are allowed. You failed the driving test. Talk to Anna to try again."):format(st.fehler, st.erlaubt))
-		else
-			lektionBeenden(p, false, ("You made %d mistakes, so this lesson does not count. Talk to Anna at the reception and try it again."):format(st.fehler))
+			lektionBeenden(p, false, ("You made %d mistakes, but only %d are allowed. You failed the driving test – try again!"):format(st.fehler, st.erlaubt))
+		elseif not st.party and not st.zuVieleGesagt then
+			-- v51: no stop in normal lessons – just say it once, the route goes on
+			st.zuVieleGesagt = true
+			fahrEvent:FireClient(p, { typ = "hinweis", text = ("%d mistakes – this lesson won't count any more. Finish the route anyway, then try again!"):format(st.fehler) })
 		end
 	end
 end
@@ -798,6 +833,7 @@ local function lektionStarten(p, art, wiederholNr, party)
 	if jobs[p] then
 		return { fehler = "Finish or cancel your delivery job first." }
 	end
+	restAutoWeg(p)
 	-- v50: the theory is optional (bonus XP). The car driving test needs all driving lessons (checked here on the server).
 	if not d then
 		return { fehler = "Still loading – try again in a moment." }
@@ -878,6 +914,7 @@ local function lektionStarten(p, art, wiederholNr, party)
 	}
 	if party then st.erlaubt = 99 end
 	lektionen[p] = st
+	letzteLektion[p] = { art = art or "lektion", nr = art == "wiederholen" and wiederholNr or nil }
 
 	-- Instructor in the passenger seat (a random crazy one, see Chaos.lua), examiner in the back (or in the middle of the truck cab)
 	local lehrer = Chaos.neu(p, st)
@@ -3179,6 +3216,14 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 	elseif was == "fahrstundeWiederholen" then
 		return lektionStarten(p, "wiederholen", eingabe)
 
+	elseif was == "nochmal" then
+		-- v51: "Try again" in the result window: the same lesson / test again
+		local l = letzteLektion[p]
+		if not l or l.art == "party" then return { fehler = "Talk to Anna at the reception." } end
+		if l.art == "wiederholen" then return lektionStarten(p, "wiederholen", l.nr) end
+		if l.art == "pruefung" or l.art == "lkw" then return lektionStarten(p, l.art) end
+		return lektionStarten(p)
+
 	elseif was == "ersteFahrt" then
 		-- brand-new player pressed PLAY: sign up and go straight into the first (short) lesson
 		if d.angemeldet or d.fahrstunden > 0 or d.fuehrerschein or lektionen[p] then
@@ -3312,6 +3357,8 @@ Players.PlayerRemoving:Connect(function(p)
 	local st = lektionen[p]
 	if st and st.model then st.model:Destroy() end
 	lektionen[p] = nil
+	restAutoWeg(p)
+	letzteLektion[p] = nil
 	local job = jobs[p]
 	if job then
 		jobs[p] = nil

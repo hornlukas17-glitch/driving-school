@@ -1,5 +1,11 @@
 # Changelog
 
+## v51 – Auto bleibt bei vielen Fehlern, Minimap lädt wieder
+- Normale Fahrstunden brechen bei 10 Fehlern nicht mehr ab: Man fährt die Route zu Ende, sie zählt dann nur nicht (+10 XP). Hinweis kommt einmal.
+- Nach einer nicht bestandenen Fahrstunde/Prüfung verschwindet das Auto nicht mehr unter einem: Es bleibt, bis man aussteigt (dann 3 s) bzw. max. 45 s. Neuer Knopf „🔁 Try again“ startet dieselbe Lektion/Prüfung sofort neu.
+- Minimap leer im veröffentlichten Spiel: Die Kartendaten wurden abgefragt, solange der Spielstand noch lud, und nie wieder. Jetzt wird bis zu 60 s nachgefragt; dasselbe für gespeicherte Einstellungen und die erste Fahrt.
+- Test 28.
+
 ## v50 – Theorie ist optional
 - Die Theorieprüfung ist keine Pflicht mehr: Für die Fahrprüfung braucht man nur noch alle Fahrstunden (prüft der Server). Die Theorie gibt weiterhin +80 XP als Bonus.
 - Annas Checkliste zeigt nur noch „Fahrstunden → Fahrprüfung“, die Theorie steht klein als optional darunter. Willkommens- und Ergebnistexte angepasst.

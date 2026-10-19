@@ -168,6 +168,18 @@ local function frage(was, eingabe)
 	return r
 end
 
+-- v51: right after joining the server is still loading the save game (in the live game that takes a moment)
+-- and answers "still loading" – startup requests wait for it instead of giving up (max. ~60 s)
+local function frageGeladen(was, eingabe)
+	local r = frage(was, eingabe)
+	for _ = 1, 30 do
+		if not (r.fehler and (r.fehler:find("loading", 1, true) or r.fehler:find("reach the server", 1, true))) then break end
+		task.wait(2)
+		r = frage(was, eingabe)
+	end
+	return r
+end
+
 local function hinweis(meldung)
 	zeige("Note", meldung, { { text = "Close", farbe = GRAU, klick = schliessen } }, "hinweis")
 end
@@ -1513,9 +1525,15 @@ fahrEvent.OnClientEvent:Connect(function(info)
 			if info.besser then sterneText ..= "\n<b>New best!</b> Bonus coins for the extra stars." end
 			if info.sterne < 3 then sterneText ..= "\n<font size=\"14\" color=\"#9aa4b5\">0 mistakes = 3 stars. You can repeat lessons with Anna.</font>" end
 		end
-		zeige(titelText, info.text .. ("\n\nMistakes: %d"):format(info.fehler or 0) .. sterneText .. (info.erfolg and ("\n\n" .. (info.weiter or "Talk to Anna at the reception for your next lesson.")) or ""), {
-			{ text = "Close", farbe = info.erfolg and GRUEN or GRAU, klick = schliessen },
-		}, "hinweis")
+		local knoepfe = { { text = "Close", farbe = info.erfolg and GRUEN or GRAU, klick = schliessen } }
+		if not info.erfolg then
+			-- v51: start the same lesson / test again right away (new car on the parking lot)
+			table.insert(knoepfe, 1, { text = "🔁 Try again", farbe = GRUEN, klick = function()
+				local a = frage("nochmal")
+				if a.fehler then hinweis(a.fehler) else zeige("Try again", a.text, { { text = "Let's go!", farbe = GRUEN, klick = schliessen } }, "dialog") end
+			end })
+		end
+		zeige(titelText, info.text .. ("\n\nMistakes: %d"):format(info.fehler or 0) .. sterneText .. (info.erfolg and ("\n\n" .. (info.weiter or "Talk to Anna at the reception for your next lesson.")) or ""), knoepfe, "hinweis")
 	end
 end)
 
@@ -2353,8 +2371,9 @@ do
 	end
 
 	task.spawn(function()
-		local r = frage("kartendaten")
-		if not r.daten then return end
+		-- v51: wait until the save game is loaded (the server answers "still loading" before)
+		local r = frageGeladen("kartendaten")
+		if not r.daten then warn("[Driving School] minimap: no map data") return end
 		for _, e in r.daten do
 			local typ, x, z, sx, sz = e[1], e[2], e[3], e[4], e[5]
 			local h = HOEHE[typ] or 0
@@ -4649,7 +4668,7 @@ do
 
 		-- brand-new player: no reading first – the first (short) lesson starts right away
 		task.spawn(function()
-			local r = frage("status")
+			local r = frageGeladen("status")
 			if r.fehler or not r.status or r.status.angemeldet or r.status.fahrstunden > 0 or r.lektionLaeuft then return end
 			local a = frage("ersteFahrt")
 			if a.fehler then return end
@@ -4713,9 +4732,9 @@ do
 		end)
 	end
 
-	-- load the saved settings
+	-- load the saved settings (v51: wait for the save game – otherwise saved settings were lost)
 	task.spawn(function()
-		local r = frage("status")
+		local r = frageGeladen("status")
 		if r.status and type(r.status.einstellungen) == "table" then
 			for k, v in r.status.einstellungen do
 				if _G.Einstellungen[k] ~= nil and type(v) == type(_G.Einstellungen[k]) then _G.Einstellungen[k] = v end

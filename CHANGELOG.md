@@ -6,6 +6,7 @@
 - **🤖 Bot-Gegner (Party-Test):** Die grüne Party-Zone startet schon mit 1 Spieler; freie Plätze füllen Bots (Turbo Tina, Crash Carl, …). Sie fahren „virtuell“: Zeit aus der Routenlänge (24–34 Studs/s + 0–3 Fehler), Meldungen „… IS HALFWAY!“ und „🏁 … PARKED!“, Platz in der Ergebnisliste. Bots bekommen nie Coins; gewinnt ein Bot, gibt es keine Krone.
 - **VIP-Name:** Das große „👑 VIP“-Schild ist weg. Andere sehen den Namen in Gold mit kleinem „VIP“ daneben, man selbst sieht sein Schild nicht.
 - **KI-Sabotage:** 🚗 Geisterfahrer (kommt hupend und blinkend auf deiner Spur entgegen – ausweichen = Bonus, er fährt als „Geist“ durch dich durch) und 😈 Fahrlehrer-Streiche (Kaffee auf der Scheibe, Selfie-Blitz, Hände vor den Augen, absichtlich falsche Richtung – nicht in Blind Drive). Alles nur Optik/Abstand, das Fahrgefühl bleibt gleich.
+- Studio-Test: Kreise in der Fahrgasse, KI-Beifahrer startet nach 15 s und sagt „RIGHT! ▶“, Geisterfahrer erscheint auf der Straße, Party-Zone startet mit Bots, keine Skriptfehler. Dabei gefunden: KI-Kommando lag über dem Chaos-Banner → Kommandos stehen jetzt tiefer (40 % Bildhöhe).
 - Test 35, Test 23 angepasst.
 
 ## v60 – 💥 Ragdoll-Crashes und Sabotage-Shop

@@ -791,6 +791,11 @@ src = src:gsub("client v60 loaded", "client v61 loaded"):gsub("start screen v60 
 s.Source = src
 table.insert(log, "Client: " .. #src)
 end
+do -- Nachtrag: Kommandos unter die Chaos-Banner (überlappten im Studio-Test), mehrfach ausführbar
+local s = game.ReplicatedStorage.Fuehrerschein.BetaClient
+s.Source = s.Source:gsub("	kommandoText.Position = UDim2.new%(0.5, 0, 0.12, 0%)\n", "	kommandoText.Position = UDim2.new(0.5, 0, 0.4, 0) -- v61: below the chaos banners (they overlapped)\n")
+table.insert(log, "BetaClient: " .. #s.Source .. " (soll 14731)")
+end
 game:GetService("ChangeHistoryService"):SetWaypoint("v61")
 print(table.concat(log, " | "))
 return table.concat(log, " | ")

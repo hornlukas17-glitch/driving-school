@@ -54,7 +54,7 @@ for _, l in Chaos.LEHRER do
 	for _, pool in { "start", "fehler", "unfall", "lob", "leerlauf", "event", "ende_gut", "ende_schlecht" } do
 		pruefe(l.name .. " has " .. pool .. " lines", #l[pool] > 0)
 	end
-	pruefe(l.name .. " has 3 gags", #l.gags == 3 and l.gags[1].titel and l.gags[3].sagt)
+	pruefe(l.name .. " has at least 5 gags", #l.gags >= 5 and l.gags[1].titel and l.gags[5].sagt)
 end
 
 -- put the car on the motorway, driving west (-X), nothing else around

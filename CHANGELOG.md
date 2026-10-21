@@ -1,5 +1,11 @@
 # Changelog
 
+## v59 – Fahrschulauto verschwindet nicht mehr, mehr Fahrlehrer-Gags
+- **Fehler behoben:** Nach einer abgebrochenen/nicht bestandenen Stunde bleibt das Auto bis zu 45 s stehen – die Bucht-Prüfung hat das übersehen, ein neues Fahrschulauto wurde **genau in dieses Auto** gesetzt (im Test: 0,0 Studs Abstand) und von der Physik weggeschleudert. Jetzt zählen stehengebliebene Autos als belegt; sind alle Buchten voll, kommt „All driving school cars are out right now…“ statt eines Autos im Auto.
+- Verschwindet ein Fahrschulauto oder fällt es von der Karte, endet die Stunde nicht mehr stumm: Meldung „Oops – your car got lost! …“ mit „Try again“, im Party-Test wartet das Rennen nicht mehr darauf. Analyse-Ereignis „Lesson car lost (gone/fell)“ zeigt im Live-Spiel, ob es noch vorkommt.
+- Je Fahrlehrer 2 neue Gags (jetzt 5 pro Persona).
+- Test 33 (schlägt mit dem alten Code fehl).
+
 ## v58 – Grüne Startzonen, Shop live
 - **🟢 Startzonen vor der Fahrschule** (`src/Zonen.lua`, Server-Modul): links/rechts vom Eingang je eine grüne Fläche mit Schild über der Fläche.
   - **🙈 BLIND DRIVE**: Schild zeigt „0/2 PLAYERS“ → „1/2 – Waiting for a partner…“. Sobald 2 Spieler drinstehen, startet Blind Drive; wer zuerst da war, fährt, der andere ist Co-Pilot. Beide werden direkt ins Auto gesetzt.

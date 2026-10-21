@@ -760,6 +760,10 @@ local function buchtFrei(b)
 	for _, a in privatAutos do
 		if a.chassis and a.chassis.Parent and (a.chassis.Position - b.Position).Magnitude < 8 then return false end
 	end
+	-- v59: cars of failed lessons stay up to 45 s – never spawn a new car into them (it would be flung away)
+	for _, m in restAutos do
+		if m.Parent and (m:GetPivot().Position - b.Position).Magnitude < 8 then return false end
+	end
 	return true
 end
 
@@ -772,8 +776,7 @@ local function freierStart()
 			end
 		end
 	end
-	local b = buchtOrdner:GetChildren()[1]
-	return CFrame.new(b.Position.X, b.Position.Y + 0.25, b.Position.Z - 1)
+	return nil -- v59: all bays taken (before: first bay anyway -> two cars inside each other)
 end
 
 local function freieLkwBucht()
@@ -993,6 +996,9 @@ local function lektionStarten(p, art, wiederholNr, party)
 		modell.Name = "Fahrschul_Lkw_" .. p.Name
 	else
 		cf = freierStart()
+		if not cf then
+			return { fehler = "All driving school cars are out right now. Please try again in a moment." }
+		end
 		modell, sitz, beifahrer, chassis, ruecksitz = Auto.bauen(cf, AUTOFARBEN[math.random(#AUTOFARBEN)])
 		modell.Name = "Fahrschulauto_" .. p.Name
 	end
@@ -1250,10 +1256,20 @@ RunService.Heartbeat:Connect(function(dt)
 	if takt < 0.1 then return end
 	takt = 0
 	for p, st in lektionen do
-		if not p.Parent or not st.model.Parent then
+		-- v59: the car is gone or fell off the map -> tell the player instead of ending silently (+ analytics)
+		local weg = not st.model.Parent or not st.chassis or not st.chassis.Parent
+		local gefallen = not weg and st.chassis.Position.Y < -60
+		if not p.Parent or weg or gefallen then
 			lektionen[p] = nil
 			Chaos.ende(st)
 			if st.model then st.model:Destroy() end
+			if st.party then Party.fertig(p, st, false) end -- the race must not wait for this car
+			if p.Parent then
+				local grund = gefallen and "fell" or "gone"
+				Beta.ereignis(p, "Lesson car lost (" .. grund .. ")")
+				fahrEvent:FireClient(p, { typ = "ende", erfolg = false, fehler = st.fehler, nr = st.nr, gesamt = #LEKTIONEN, pruefung = st.pruefung,
+					text = "Oops – your car got lost! Nothing counts against you. Tap \"Try again\" for a new car." })
+			end
 			continue
 		end
 		if st.ausgestiegenSeit and os.clock() - st.ausgestiegenSeit > 20 then

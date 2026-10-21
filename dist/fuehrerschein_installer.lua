@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v58
+--  DRIVER'S LICENSE SYSTEM v59
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -2652,6 +2652,10 @@ local function buchtFrei(b)
 	for _, a in privatAutos do
 		if a.chassis and a.chassis.Parent and (a.chassis.Position - b.Position).Magnitude < 8 then return false end
 	end
+	-- v59: cars of failed lessons stay up to 45 s – never spawn a new car into them (it would be flung away)
+	for _, m in restAutos do
+		if m.Parent and (m:GetPivot().Position - b.Position).Magnitude < 8 then return false end
+	end
 	return true
 end
 
@@ -2664,8 +2668,7 @@ local function freierStart()
 			end
 		end
 	end
-	local b = buchtOrdner:GetChildren()[1]
-	return CFrame.new(b.Position.X, b.Position.Y + 0.25, b.Position.Z - 1)
+	return nil -- v59: all bays taken (before: first bay anyway -> two cars inside each other)
 end
 
 local function freieLkwBucht()
@@ -2885,6 +2888,9 @@ local function lektionStarten(p, art, wiederholNr, party)
 		modell.Name = "Fahrschul_Lkw_" .. p.Name
 	else
 		cf = freierStart()
+		if not cf then
+			return { fehler = "All driving school cars are out right now. Please try again in a moment." }
+		end
 		modell, sitz, beifahrer, chassis, ruecksitz = Auto.bauen(cf, AUTOFARBEN[math.random(#AUTOFARBEN)])
 		modell.Name = "Fahrschulauto_" .. p.Name
 	end
@@ -3142,10 +3148,20 @@ RunService.Heartbeat:Connect(function(dt)
 	if takt < 0.1 then return end
 	takt = 0
 	for p, st in lektionen do
-		if not p.Parent or not st.model.Parent then
+		-- v59: the car is gone or fell off the map -> tell the player instead of ending silently (+ analytics)
+		local weg = not st.model.Parent or not st.chassis or not st.chassis.Parent
+		local gefallen = not weg and st.chassis.Position.Y < -60
+		if not p.Parent or weg or gefallen then
 			lektionen[p] = nil
 			Chaos.ende(st)
 			if st.model then st.model:Destroy() end
+			if st.party then Party.fertig(p, st, false) end -- the race must not wait for this car
+			if p.Parent then
+				local grund = gefallen and "fell" or "gone"
+				Beta.ereignis(p, "Lesson car lost (" .. grund .. ")")
+				fahrEvent:FireClient(p, { typ = "ende", erfolg = false, fehler = st.fehler, nr = st.nr, gesamt = #LEKTIONEN, pruefung = st.pruefung,
+					text = "Oops – your car got lost! Nothing counts against you. Tap \"Try again\" for a new car." })
+			end
 			continue
 		end
 		if st.ausgestiegenSeit and os.clock() - st.ausgestiegenSeit > 20 then
@@ -8834,6 +8850,8 @@ Chaos.LEHRER = {
 			{ titel = "🛍️ PANIC ATTACK", text = "Panic Pete is breathing into a paper bag.", sagt = "*huff* *puff* I'm okay... *huff*" },
 			{ titel = "🪖 SAFETY FIRST", text = "Panic Pete put on a helmet. And knee pads. And a second helmet.", sagt = "You can never have too many helmets!" },
 			{ titel = "📞 CALLING MOM", text = "Panic Pete is calling his mom to say goodbye.", sagt = "Mom? I love you. Tell the cat too." },
+			{ titel = "🧯 FIRE DRILL", text = "Panic Pete is practising with a fire extinguisher. There is no fire.", sagt = "THERE COULD BE A FIRE! ANY SECOND!" },
+			{ titel = "🗺️ ESCAPE PLAN", text = "Panic Pete drew an escape plan for the car. It has 14 exits.", sagt = "Exit 7 is the sunroof. Memorize it!" },
 		},
 		ende_gut = { "We survived! I'm going to lie down now." },
 		ende_schlecht = { "I need a vacation. A LONG one." },
@@ -8851,6 +8869,8 @@ Chaos.LEHRER = {
 			{ titel = "🥞 SLEEP TALKING", text = "Sleepy Sam is ordering pancakes in his sleep.", sagt = "Twelve pancakes... extra syrup... Zzz" },
 			{ titel = "😴 SNORE ATTACK", text = "Sleepy Sam snores so loud the windows shake.", sagt = "ZZZZZZRRRRRRRK... *snort*" },
 			{ titel = "🛏️ PILLOW FORT", text = "Sleepy Sam pulled a pillow out of nowhere.", sagt = "Always prepared... for a nap..." },
+			{ titel = "🧸 TEDDY TIME", text = "Sleepy Sam is hugging a teddy bear and sucking his thumb.", sagt = "Mr. Fluffles says you drive nice... Zzz" },
+			{ titel = "⏰ ALARM CLOCK", text = "Sleepy Sam's alarm clock goes off. He throws it out of the window.", sagt = "Not today, Satan... I mean, alarm..." },
 		},
 		ende_gut = { "Are we there? Great. *yawn* Good night." },
 		ende_schlecht = { "Let's try again... after my nap." },
@@ -8868,6 +8888,8 @@ Chaos.LEHRER = {
 			{ titel = "🧶 KNITTING TIME", text = "Grandma Gerti is knitting a cover for your steering wheel.", sagt = "Hold still, dear, I need to measure your hands!" },
 			{ titel = "🍪 COOKIE BREAK", text = "Grandma Gerti is handing out cookies. To you. While you drive.", sagt = "Open wide, sweetie! Here comes the cookie!" },
 			{ titel = "📸 FAMILY PHOTOS", text = "Grandma Gerti is showing you 300 photos of her cat.", sagt = "And this is Mr. Whiskers in 1998. Isn't he cute?" },
+			{ titel = "🧣 TOO COLD", text = "Grandma Gerti wrapped you in three scarves. You can barely see.", sagt = "There! Now you won't catch a cold, sweetie!" },
+			{ titel = "🥧 PIE DELIVERY", text = "Grandma Gerti wants to stop at every house to deliver pie.", sagt = "Stop here, dear! Mrs. Miller LOVES my apple pie!" },
 		},
 		ende_gut = { "Well done, sweetie! Cookies for everyone!" },
 		ende_schlecht = { "Oh dear. Let's have some tea and try again." },
@@ -8885,6 +8907,8 @@ Chaos.LEHRER = {
 			{ titel = "🥤 PROTEIN SPILL", text = "Coach Kevin spilled his protein shake all over the dashboard.", sagt = "NOOO! That was my post-workout shake!" },
 			{ titel = "💪 PUSH-UPS", text = "Coach Kevin is doing push-ups on the back seat.", sagt = "47... 48... DON'T MIND ME... 49..." },
 			{ titel = "📣 MOTIVATION", text = "Coach Kevin is screaming motivational quotes out of the window.", sagt = "YOU! PEDESTRIAN! YOU CAN DO IT!" },
+			{ titel = "🏋️ LEG DAY", text = "Coach Kevin brought dumbbells. They're on your feet now.", sagt = "Brake WITH RESISTANCE! Feel those calves!" },
+			{ titel = "⏱️ STOPWATCH", text = "Coach Kevin is timing how fast you blink.", sagt = "0.3 seconds! WE CAN DO BETTER! AGAIN!" },
 		},
 		ende_gut = { "CHAMPION! Now go drink some water!" },
 		ende_schlecht = { "Champions fall. Champions get up. TRY AGAIN!" },
@@ -8902,6 +8926,8 @@ Chaos.LEHRER = {
 			{ titel = "🔊 VOLUME 200%", text = "DJ Dina turned the radio up to 200 percent.", sagt = "CAN YOU HEAR ME?! THE BASS IS PERFECT!" },
 			{ titel = "🪩 DISCO MODE", text = "DJ Dina installed a disco ball in your car.", sagt = "Every car is a club if you believe!" },
 			{ titel = "🎤 KARAOKE", text = "DJ Dina wants you to sing along. Right now.", sagt = "One, two, three – SING IT WITH ME!" },
+			{ titel = "📻 LIVE ON AIR", text = "DJ Dina is broadcasting your driving live on the radio.", sagt = "And our driver takes the turn… THE CROWD GOES WILD!" },
+			{ titel = "🕺 DANCE BREAK", text = "DJ Dina declared a dance break. The whole car is shaking.", sagt = "Hands up! …no wait, hands on the wheel!" },
 		},
 		ende_gut = { "Show's over! Give it up for my driver! 👏" },
 		ende_schlecht = { "Wrong track. Let's play it again!" },
@@ -11080,7 +11106,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v58 loaded")
+print("[Driving School] client v59 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -15671,7 +15697,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v58 loading")
+	print("[Driving School] start screen v59 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -15891,4 +15917,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v58 installed. Press F5 to test.")
+print("License system v59 installed. Press F5 to test.")

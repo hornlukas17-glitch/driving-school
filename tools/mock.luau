@@ -126,6 +126,8 @@ function C3.Lerp(a, b, t) return Color3.new(a.R + (b.R - a.R) * t, a.G + (b.G - 
 C3.__eq = function(a, b) return a.R == b.R and a.G == b.G and a.B == b.B end
 UDim2 = stubType("UDim2"); UDim = stubType("UDim"); Vector2 = stubType("Vector2")
 UDim2.new = function(xs, xo, ys, yo) return { X = { Scale = xs or 0, Offset = xo or 0 }, Y = { Scale = ys or 0, Offset = yo or 0 } } end
+UDim2.fromOffset = function(x, y) return UDim2.new(0, x, 0, y) end -- v64: real values (menu bar width)
+UDim2.fromScale = function(x, y) return UDim2.new(x, 0, y, 0) end
 UDim2.fromScale = function(x, y) return UDim2.new(x, 0, y, 0) end; UDim2.fromOffset = function(x, y) return UDim2.new(0, x, 0, y) end
 UDim.new = function(...) return { ... } end
 Vector2.new = function(x, y) return { X = x, Y = y } end
@@ -278,6 +280,24 @@ Inst.__index = function(o, k)
 	if k == "Rotation" and not istPart(o.__klasse) then return 0 end
 	if k == "Position" and not istPart(o.__klasse) then return UDim2.new(0, 0, 0, 0) end
 	if k == "Changed" then return propSignal(o, "__changed") end
+	-- v64: list layouts measure their visible siblings (offsets only)
+	if k == "AbsoluteContentSize" and o.__klasse == "UIListLayout" then
+		local eltern = props.Parent
+		local pd = props.Padding
+		local pad = type(pd) == "table" and (tonumber(rawget(pd, "Offset")) or tonumber(rawget(pd, 2)) or (rawget(pd, "args") and pd.args[2])) or 0
+		local horiz = props.FillDirection == Enum.FillDirection.Horizontal
+		local summe, n, quer = 0, 0, 0
+		for _, kind in (eltern and eltern.__kinder or {}) do
+			local g = rawget(kind, "__props")
+			if g.Visible ~= false and type(g.Size) == "table" and type(g.Size.X) == "table" then
+				n += 1
+				summe += horiz and g.Size.X.Offset or g.Size.Y.Offset
+				quer = math.max(quer, horiz and g.Size.Y.Offset or g.Size.X.Offset)
+			end
+		end
+		summe += math.max(0, n - 1) * pad
+		return horiz and { X = summe, Y = quer } or { X = quer, Y = summe }
+	end
 	-- children by name
 	for _, kind in o.__kinder do
 		if kind.Name == k then return kind end

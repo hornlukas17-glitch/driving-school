@@ -1,5 +1,11 @@
 # Changelog
 
+## v64 – Neue Menüleiste
+- **Neuer Look:** helle Kacheln (Creme-Verlauf) mit gelbem Rand, 60×60 statt 52×48, dunkle Schrift; Menü-Knopf dunkelblau mit gelbem Rand. Grund: Lukas' ForgeGUI-Icons sind dunkelblau und gingen auf dunklen Knöpfen unter (Vorschau in Originalgröße geprüft).
+- **Weniger Knöpfe (11 → 7):** Blind und Party ausgeblendet (starten über die grünen Zonen), Kamera nur noch auf Touch-Geräten (PC: Taste V). Breite der Klappe = nur sichtbare Knöpfe.
+- **Bild-Icons:** `src/LeisteStil.lua` (`LeisteStil.BILDER`: Shop, Rewards, Daily, My Cars). Solange die ID 0 ist, bleibt das Emoji. Lukas lädt die 4 PNGs hoch und gibt die IDs.
+- Neues Client-Modul `LeisteStil` (Client-Datei nur +94 Zeichen, Roblox-Grenze). Mock: `UIListLayout.AbsoluteContentSize`, `UDim2.fromOffset/fromScale` echt. Test 36. In Studio angesehen (Play, Menü offen).
+
 ## v63 – Fahr-Anweisungen weiter oben und früher
 - **Weiter oben:** Kommandos von KI und Mitfahrern stehen jetzt direkt unter der Anweisungsbox (104 px von oben) statt in der Bildschirmmitte. Ist gerade ein Chaos-Banner an dieser Stelle, rutscht das Kommando darunter.
 - **Sanfter:** 0,3 s Einblenden statt „Aufploppen“, 3 s sichtbar (vorher 1,8 s), dann 0,4 s Ausblenden.

@@ -55,6 +55,8 @@ neu("ModuleScript", "BetaClient", ordner, [=====[
 ''' + src("BetaClient.lua") + ''']=====])
 neu("ModuleScript", "SpassClient", ordner, [=====[
 ''' + src("SpassClient.lua") + ''']=====])
+neu("ModuleScript", "LeisteStil", ordner, [=====[
+''' + src("LeisteStil.lua") + ''']=====])
 
 local server = Instance.new("Script")
 server.Name = "FuehrerscheinServer"
@@ -130,6 +132,7 @@ rs = item("Folder", "Fuehrerschein", [
     item("ModuleScript", "Hupen", quelle=src("Hupen.lua")),
     item("ModuleScript", "BetaClient", quelle=src("BetaClient.lua")),
     item("ModuleScript", "SpassClient", quelle=src("SpassClient.lua")),
+    item("ModuleScript", "LeisteStil", quelle=src("LeisteStil.lua")),
 ])
 server = item("Script", "FuehrerscheinServer", [
     item("ModuleScript", n, quelle=src(n + ".lua")) for n in ["Fragen", "Auto", "Fahrstunden", "Strafen", "Umwelt", "Fahrzeugpflege", "Missionen", "Shop", "Belohnungen", "Chaos", "Party", "Beta", "Zonen", "Spass", "Karosserien"]

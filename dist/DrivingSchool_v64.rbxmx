@@ -1,4 +1,4 @@
-<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="Folder" referent="RBX31"><Properties><string name="Name">DrivingSchoolInstall</string></Properties><Item class="Folder" referent="RBX13"><Properties><string name="Name">Fuehrerschein</string></Properties><Item class="RemoteFunction" referent="RBX1"><Properties><string name="Name">Aktion</string></Properties></Item><Item class="RemoteEvent" referent="RBX2"><Properties><string name="Name">Oeffnen</string></Properties></Item><Item class="RemoteEvent" referent="RBX3"><Properties><string name="Name">Fahrstunde</string></Properties></Item><Item class="RemoteEvent" referent="RBX4"><Properties><string name="Name">Blinker</string></Properties></Item><Item class="RemoteEvent" referent="RBX5"><Properties><string name="Name">VerkehrDaten</string></Properties></Item><Item class="ModuleScript" referent="RBX6"><Properties><string name="Name">Verkehrsregeln</string><ProtectedString name="Source"><![CDATA[-- Shared traffic rules (used by server and client): speed limit zones, roundabouts and route gates.
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="Folder" referent="RBX32"><Properties><string name="Name">DrivingSchoolInstall</string></Properties><Item class="Folder" referent="RBX14"><Properties><string name="Name">Fuehrerschein</string></Properties><Item class="RemoteFunction" referent="RBX1"><Properties><string name="Name">Aktion</string></Properties></Item><Item class="RemoteEvent" referent="RBX2"><Properties><string name="Name">Oeffnen</string></Properties></Item><Item class="RemoteEvent" referent="RBX3"><Properties><string name="Name">Fahrstunde</string></Properties></Item><Item class="RemoteEvent" referent="RBX4"><Properties><string name="Name">Blinker</string></Properties></Item><Item class="RemoteEvent" referent="RBX5"><Properties><string name="Name">VerkehrDaten</string></Properties></Item><Item class="ModuleScript" referent="RBX6"><Properties><string name="Name">Verkehrsregeln</string><ProtectedString name="Source"><![CDATA[-- Shared traffic rules (used by server and client): speed limit zones, roundabouts and route gates.
 local Regeln = {}
 
 Regeln.HZ = -520 -- highway
@@ -2015,7 +2015,130 @@ function SpassClient.starten(k)
 end
 
 return SpassClient
-]]></ProtectedString></Properties></Item></Item><Item class="Script" referent="RBX29"><Properties><string name="Name">FuehrerscheinServer</string><ProtectedString name="Source"><![CDATA[-- Driver's license system (server): saving, receptionist, theory test, driving lessons,
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX13"><Properties><string name="Name">LeisteStil</string><ProtectedString name="Source"><![CDATA[-- 🎨 Menu bar style (v64): light tiles so Lukas' dark-navy icons stay readable, yellow edge, bigger buttons,
+-- picture icons instead of emoji where we have them, fewer buttons (Blind/Party now start in the green zones).
+-- Required by FuehrerscheinClient (that script is close to Roblox' 200,000-character limit).
+local UIS = game:GetService("UserInputService")
+local LeisteStil = {}
+
+LeisteStil.GROESSE = 60
+-- picture icons (upload in Studio: Asset Manager -> Images, then paste the number). 0 = the emoji stays.
+LeisteStil.BILDER = {
+	Shop = 0,
+	Rewards = 0,
+	Daily = 0,
+	["My Cars"] = 0,
+}
+-- these start in the green zones on the parking lot now -> not needed in the bar
+LeisteStil.VERSTECKT = { Blind = true, Party = true }
+-- first/third person: PC players have the V key, only touch devices need the button
+LeisteStil.NUR_TOUCH = { ["1st (V)"] = true }
+
+local KACHEL_OBEN = Color3.fromRGB(252, 249, 240)
+local KACHEL_UNTEN = Color3.fromRGB(222, 215, 198)
+local NAVY = Color3.fromRGB(22, 28, 46)
+local GELB = Color3.fromRGB(255, 200, 60)
+
+function LeisteStil.nurTouch()
+	return UIS.TouchEnabled and not UIS.KeyboardEnabled
+end
+
+local function rahmen(k, farbe)
+	for _, s in k:GetChildren() do
+		if s:IsA("UIStroke") then s:Destroy() end
+	end
+	local r = Instance.new("UIStroke")
+	r.Name = "Rahmen"
+	r.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	r.Color = farbe
+	r.Thickness = 2
+	r.Parent = k
+	k.MouseEnter:Connect(function() r.Thickness = 3 end)
+	k.MouseLeave:Connect(function() r.Thickness = 2 end)
+	return r
+end
+
+local function verlauf(k, oben, unten)
+	local v = k:FindFirstChildOfClass("UIGradient") or Instance.new("UIGradient")
+	v.Rotation = 90
+	v.Color = ColorSequence.new(oben, unten)
+	v.Parent = k
+end
+
+-- one tile of the bar (called for every button, also ones added later)
+function LeisteStil.knopf(k)
+	if not k:IsA("TextButton") or k:GetAttribute("Gestylt") then return end
+	k:SetAttribute("Gestylt", true)
+	if LeisteStil.VERSTECKT[k.Name] or (LeisteStil.NUR_TOUCH[k.Name] and not LeisteStil.nurTouch()) then
+		k.Visible = false
+		return
+	end
+	local g = LeisteStil.GROESSE
+	k.Size = UDim2.fromOffset(g, g)
+	k.BackgroundColor3 = Color3.new(1, 1, 1)
+	k.BackgroundTransparency = 0
+	verlauf(k, KACHEL_OBEN, KACHEL_UNTEN)
+	rahmen(k, GELB)
+	local ecke = k:FindFirstChildOfClass("UICorner")
+	if ecke then ecke.CornerRadius = UDim.new(0, 14) end
+	local icon = k:FindFirstChild("Icon")
+	local id = LeisteStil.BILDER[k.Name]
+	if icon and id and id ~= 0 then
+		icon.Visible = false
+		local b = Instance.new("ImageLabel")
+		b.Name = "IconBild"
+		b.AnchorPoint = Vector2.new(0.5, 0)
+		b.Position = UDim2.new(0.5, 0, 0, 3)
+		b.Size = UDim2.fromOffset(40, 40)
+		b.BackgroundTransparency = 1
+		b.ScaleType = Enum.ScaleType.Fit
+		b.Image = "rbxassetid://" .. tostring(id)
+		b.Parent = k
+	elseif icon then
+		icon.Position = UDim2.fromOffset(0, 5)
+		icon.Size = UDim2.new(1, 0, 0, 34)
+		icon.TextSize = 28
+	end
+	local name = k:FindFirstChild("Beschriftung")
+	if name then
+		name.Position = UDim2.new(0, 0, 1, -16)
+		name.Size = UDim2.new(1, 0, 0, 13)
+		name.Font = Enum.Font.GothamBlack
+		name.TextSize = 10
+		name.TextColor3 = NAVY
+	end
+end
+
+-- t = { leiste, klappe, menueKnopf }
+function LeisteStil.anwenden(t)
+	local g = LeisteStil.GROESSE
+	local m = t.menueKnopf
+	m.Size = UDim2.fromOffset(g, g)
+	m.BackgroundColor3 = NAVY
+	m.BackgroundTransparency = 0.02
+	verlauf(m, Color3.new(1, 1, 1), Color3.fromRGB(150, 160, 185))
+	rahmen(m, GELB)
+	local ecke = m:FindFirstChildOfClass("UICorner")
+	if ecke then ecke.CornerRadius = UDim.new(0, 14) end
+	local symbol = m:FindFirstChild("Symbol")
+	if symbol then symbol.Position = UDim2.new(0.5, 0, 0, 13) end
+	local name = m:FindFirstChild("Beschriftung")
+	if name then
+		name.Position = UDim2.new(0, 0, 1, -16)
+		name.Font = Enum.Font.GothamBlack
+		name.TextColor3 = GELB
+	end
+	t.klappe.Position = UDim2.new(0, 12 + g + 4, 0, 58) -- tiles sit 2 px inside -> line up with the menu button
+	t.klappe.Size = UDim2.fromOffset(t.klappe.Size.X.Offset, g + 4)
+	t.leiste.Size = UDim2.fromOffset(0, g + 4)
+	t.leiste.Position = UDim2.fromOffset(2, 2) -- room for the thicker hover edge (the fold-out clips)
+	for _, k in t.leiste:GetChildren() do LeisteStil.knopf(k) end
+	-- buttons are parented before their icon/label exist -> style them a moment later
+	t.leiste.ChildAdded:Connect(function(k) task.defer(LeisteStil.knopf, k) end)
+end
+
+return LeisteStil
+]]></ProtectedString></Properties></Item></Item><Item class="Script" referent="RBX30"><Properties><string name="Name">FuehrerscheinServer</string><ProtectedString name="Source"><![CDATA[-- Driver's license system (server): saving, receptionist, theory test, driving lessons,
 -- practical driving test, pedestrians and the driver's license item.
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
@@ -5735,7 +5858,7 @@ task.spawn(function()
 end)
 
 print("License system ready" .. (store and "" or " (WITHOUT saving)"))
-]]></ProtectedString><bool name="Disabled">true</bool></Properties><Item class="ModuleScript" referent="RBX14"><Properties><string name="Name">Fragen</string><ProtectedString name="Source"><![CDATA[-- Question pool for the theory test (general road rules used in this game).
+]]></ProtectedString><bool name="Disabled">true</bool></Properties><Item class="ModuleScript" referent="RBX15"><Properties><string name="Name">Fragen</string><ProtectedString name="Source"><![CDATA[-- Question pool for the theory test (general road rules used in this game).
 -- q = question, a = answers, r = number of the correct answer
 return {
 	{ q = "Which side of the road do you drive on in this game?", a = { "The right side", "The left side", "Whichever side is free" }, r = 1 },
@@ -5776,7 +5899,7 @@ return {
 	{ q = "You feel very tired while driving. What should you do?", a = { "Take a break at a safe place", "Open the window and keep going", "Drive faster to arrive sooner" }, r = 1 },
 	{ q = "How do you enter the highway safely?", a = { "Match the speed of traffic and merge", "Stop at the end of the ramp", "Enter slowly in the left lane" }, r = 1 },
 }
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX15"><Properties><string name="Name">Auto</string><ProtectedString name="Source"><![CDATA[-- Driving school car: a compact sedan with glass windows and an interior.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX16"><Properties><string name="Name">Auto</string><ProtectedString name="Source"><![CDATA[-- Driving school car: a compact sedan with glass windows and an interior.
 -- Physics: hinge wheels. The driving itself is controlled by the driver's client
 -- (FuehrerscheinClient), which makes the car feel direct instead of floaty.
 local Auto = {}
@@ -7332,7 +7455,7 @@ function Auto.bauenPrivat(cf, typ, farbe, kennzeichen)
 end
 
 return Auto
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX16"><Properties><string name="Name">Fahrstunden</string><ProtectedString name="Source"><![CDATA[-- Driving lessons: each lesson is a route of waypoints with instructor instructions.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX17"><Properties><string name="Name">Fahrstunden</string><ProtectedString name="Source"><![CDATA[-- Driving lessons: each lesson is a route of waypoints with instructor instructions.
 -- x/z = map position, r = radius to reach it, t = what the instructor says when this point is next.
 local HZ = -520
 
@@ -7521,7 +7644,7 @@ LEKTIONEN.LKW = {
 }
 
 return LEKTIONEN
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX17"><Properties><string name="Name">Strafen</string><ProtectedString name="Source"><![CDATA[-- Traffic offences: speed cameras, red lights, fines, penalty points, license withdrawal
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX18"><Properties><string name="Name">Strafen</string><ProtectedString name="Source"><![CDATA[-- Traffic offences: speed cameras, red lights, fines, penalty points, license withdrawal
 -- and the personal traffic record. All values can be changed here.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -7730,7 +7853,7 @@ function Strafen.starten(c)
 end
 
 return Strafen
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX18"><Properties><string name="Name">Umwelt</string><ProtectedString name="Source"><![CDATA[-- Time of day and weather (server). One in-game day lasts 24 real minutes.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX19"><Properties><string name="Name">Umwelt</string><ProtectedString name="Source"><![CDATA[-- Time of day and weather (server). One in-game day lasts 24 real minutes.
 -- Weather changes every few minutes: clear, rain or fog. Rain makes the roads slippery
 -- (the driving script reads the "Wetter" attribute), fog and night reduce the view.
 local Lighting = game:GetService("Lighting")
@@ -7808,7 +7931,7 @@ function Umwelt.starten(ordner)
 end
 
 return Umwelt
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX19"><Properties><string name="Name">Fahrzeugpflege</string><ProtectedString name="Source"><![CDATA[-- Own cars: fuel, damage, repairs, insurance and tuning (server).
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX20"><Properties><string name="Name">Fahrzeugpflege</string><ProtectedString name="Source"><![CDATA[-- Own cars: fuel, damage, repairs, insurance and tuning (server).
 -- All prices and values can be changed here.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -8139,7 +8262,7 @@ function Pflege.starten(c)
 end
 
 return Pflege
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX20"><Properties><string name="Name">Missionen</string><ProtectedString name="Source"><![CDATA[-- Daily missions (3 new ones every day) and the leaderboards in the city park.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX21"><Properties><string name="Name">Missionen</string><ProtectedString name="Source"><![CDATA[-- Daily missions (3 new ones every day) and the leaderboards in the city park.
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
 
@@ -8342,7 +8465,7 @@ function Missionen.starten(c)
 end
 
 return Missionen
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX21"><Properties><string name="Name">Shop</string><ProtectedString name="Source"><![CDATA[-- Robux shop: game passes, coin packs, 2x coin boosts, starter pack, VIP / Premium bonus (server).
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX22"><Properties><string name="Name">Shop</string><ProtectedString name="Source"><![CDATA[-- Robux shop: game passes, coin packs, 2x coin boosts, starter pack, VIP / Premium bonus (server).
 --
 -- SET UP (Creator Dashboard -> your experience -> Monetization):
 --   1. Create the game passes and developer products below with the same names.
@@ -8669,7 +8792,7 @@ function Shop.starten(c)
 end
 
 return Shop
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX22"><Properties><string name="Name">Belohnungen</string><ProtectedString name="Source"><![CDATA[-- Reasons to come back (server): daily login streak, playtime gifts, friends / group bonus,
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX23"><Properties><string name="Name">Belohnungen</string><ProtectedString name="Source"><![CDATA[-- Reasons to come back (server): daily login streak, playtime gifts, friends / group bonus,
 -- achievements with tiers incl. license classes, optional Roblox badges.
 --
 -- Design notes (what keeps players):
@@ -8971,7 +9094,7 @@ function Belohnungen.starten(c)
 end
 
 return Belohnungen
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX23"><Properties><string name="Name">Chaos</string><ProtectedString name="Source"><![CDATA[-- Chaos Driving School: crazy instructors and random chaos events during lessons.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX24"><Properties><string name="Name">Chaos</string><ProtectedString name="Source"><![CDATA[-- Chaos Driving School: crazy instructors and random chaos events during lessons.
 -- IMPORTANT: nothing here touches the car physics. All event objects are anchored,
 -- never collide and are only checked by distance (same box test as for pedestrians).
 local RunService = game:GetService("RunService")
@@ -10299,7 +10422,7 @@ function Chaos.starten(k)
 end
 
 return Chaos
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX24"><Properties><string name="Name">Party</string><ProtectedString name="Source"><![CDATA[-- 🏁 Party driving test: up to 4 players race the same exam route with extra chaos.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX25"><Properties><string name="Name">Party</string><ProtectedString name="Source"><![CDATA[-- 🏁 Party driving test: up to 4 players race the same exam route with extra chaos.
 -- Somebody opens a party with the 🏁 button, everybody can join for 25 seconds, then: GO!
 -- Every player drives their own driving school car. Each mistake = +5 seconds. First to park wins.
 local Players = game:GetService("Players")
@@ -10550,7 +10673,7 @@ function Party.starten(c)
 end
 
 return Party
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX25"><Properties><string name="Name">Beta</string><ProtectedString name="Source"><![CDATA[-- v54 Beta tools (server): onboarding funnel v2, custom analytics events, promo codes,
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX26"><Properties><string name="Name">Beta</string><ProtectedString name="Source"><![CDATA[-- v54 Beta tools (server): onboarding funnel v2, custom analytics events, promo codes,
 -- friend invites with a one-time reward, and the 🧑‍🏫 Instructor mode light
 -- (a friend riding along gives LEFT / STRAIGHT / RIGHT commands and rates the driver with stars).
 -- Everything the client sends is checked here: never trust the client.
@@ -10783,7 +10906,7 @@ function Beta.starten(k)
 end
 
 return Beta
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX26"><Properties><string name="Name">Zonen</string><ProtectedString name="Source"><![CDATA[-- 🟢 Start zones (v58): two green areas in front of the driving school. Walk in, wait for other players, go!
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX27"><Properties><string name="Name">Zonen</string><ProtectedString name="Source"><![CDATA[-- 🟢 Start zones (v58): two green areas in front of the driving school. Walk in, wait for other players, go!
 --   🙈 BLIND DRIVE – starts as soon as 2 players stand in it (who came first drives).
 --   🏁 PARTY TEST  – from 1 player a countdown runs, bots fill free spots (full with 4 = starts right away).
 --   v61: alone in the Blind Drive zone for 15 s -> AI co-pilot "Robo-Rita".
@@ -11019,7 +11142,7 @@ function Zonen.starten(c)
 end
 
 return Zonen
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX27"><Properties><string name="Name">Spass</string><ProtectedString name="Source"><![CDATA[-- 💥 Fun module (v60): ragdoll crashes + sabotage shop.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX28"><Properties><string name="Name">Spass</string><ProtectedString name="Source"><![CDATA[-- 💥 Fun module (v60): ragdoll crashes + sabotage shop.
 --   Ragdoll: crash hard into something -> you (and your passengers) fly out of the car, take damage, and are put
 --            back into your seat after a few seconds. The car and its driving feel stay exactly the same.
 --   Sabotage: spend coins to send a chaos event (cows, banana, mud, clown, UFO) to another player who is driving.
@@ -11290,7 +11413,7 @@ function Spass.starten(c)
 end
 
 return Spass
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX28"><Properties><string name="Name">Karosserien</string><ProtectedString name="Source"><![CDATA[-- GENERATED by tools/mesh/*.py - do not edit by hand.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX29"><Properties><string name="Name">Karosserien</string><ProtectedString name="Source"><![CDATA[-- GENERATED by tools/mesh/*.py - do not edit by hand.
 -- Round bodies for the private cars. Import dist/mesh/<vorlage>.obj with the 3D Importer
 -- and put the model (named like <vorlage>) into ServerStorage; then the car uses it.
 return {
@@ -11713,13 +11836,13 @@ return {
 		spoiler = { 4.6703, 6.75, 0.3 },
 	},
 }
-]]></ProtectedString></Properties></Item></Item><Item class="LocalScript" referent="RBX30"><Properties><string name="Name">FuehrerscheinClient</string><ProtectedString name="Source"><![CDATA[-- Driver's license system (player): dialogs, theory lesson, theory test and driving lesson HUD.
+]]></ProtectedString></Properties></Item></Item><Item class="LocalScript" referent="RBX31"><Properties><string name="Name">FuehrerscheinClient</string><ProtectedString name="Source"><![CDATA[-- Driver's license system (player): dialogs, theory lesson, theory test and driving lesson HUD.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v63 loaded")
+print("[Driving School] client v64 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -13812,18 +13935,15 @@ local function menuePunktNeu()
 end
 local function menueSetzen(offen)
 	menueOffen = offen
-	local n = 0
-	for _, k in leiste:GetChildren() do
-		if k:IsA("TextButton") then n += 1 end
-	end
-	local breite = offen and (n * 52 + math.max(0, n - 1) * 5) or 0
-	game:GetService("TweenService"):Create(klappe, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(breite, 48) }):Play()
+	local breite = offen and leistenLayout.AbsoluteContentSize.X + 4 or 0 -- v64: only visible buttons count
+	game:GetService("TweenService"):Create(klappe, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(breite, klappe.Size.Y.Offset) }):Play()
 	symbolSetzen(offen)
 	menueKnopf.Beschriftung.Text = offen and "Close" or "Menu"
 	menuePunktNeu()
 end
 _G.MenueSetzen = menueSetzen
 menueKnopf.MouseButton1Click:Connect(function() menueSetzen(not menueOffen) end)
+require(ordner:WaitForChild("LeisteStil")).anwenden({ leiste = leiste, klappe = klappe, menueKnopf = menueKnopf }) -- v64 new look
 spieler:GetAttributeChangedSignal("BelohnungenOffen"):Connect(menuePunktNeu)
 -- after choosing something the menu folds up again (not for the camera button)
 leiste.ChildAdded:Connect(function(k)
@@ -16313,7 +16433,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v63 loading")
+	print("[Driving School] start screen v64 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true

@@ -2097,18 +2097,15 @@ local function menuePunktNeu()
 end
 local function menueSetzen(offen)
 	menueOffen = offen
-	local n = 0
-	for _, k in leiste:GetChildren() do
-		if k:IsA("TextButton") then n += 1 end
-	end
-	local breite = offen and (n * 52 + math.max(0, n - 1) * 5) or 0
-	game:GetService("TweenService"):Create(klappe, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(breite, 48) }):Play()
+	local breite = offen and leistenLayout.AbsoluteContentSize.X + 4 or 0 -- v64: only visible buttons count
+	game:GetService("TweenService"):Create(klappe, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(breite, klappe.Size.Y.Offset) }):Play()
 	symbolSetzen(offen)
 	menueKnopf.Beschriftung.Text = offen and "Close" or "Menu"
 	menuePunktNeu()
 end
 _G.MenueSetzen = menueSetzen
 menueKnopf.MouseButton1Click:Connect(function() menueSetzen(not menueOffen) end)
+require(ordner:WaitForChild("LeisteStil")).anwenden({ leiste = leiste, klappe = klappe, menueKnopf = menueKnopf }) -- v64 new look
 spieler:GetAttributeChangedSignal("BelohnungenOffen"):Connect(menuePunktNeu)
 -- after choosing something the menu folds up again (not for the camera button)
 leiste.ChildAdded:Connect(function(k)

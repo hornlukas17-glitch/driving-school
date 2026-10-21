@@ -23,6 +23,7 @@ local Chaos = require(script:WaitForChild("Chaos"))
 local Party = require(script:WaitForChild("Party"))
 local Beta = require(script:WaitForChild("Beta"))
 local Zonen = require(script:WaitForChild("Zonen"))
+local Spass = require(script:WaitForChild("Spass"))
 local Hupen = require(ordner:WaitForChild("Hupen"))
 local Verkehr = require(ordner:WaitForChild("Verkehr"))
 local verkehrEvent = ordner:WaitForChild("VerkehrDaten")
@@ -893,9 +894,12 @@ local function copilotPrompt(fahrer, st, sitz, modell)
 		return true
 	end
 	pp.Triggered:Connect(function(wer) st.copilotEinsetzen(wer) end)
-	sitz:GetPropertyChangedSignal("Occupant"):Connect(function()
+	local function copilotWeg()
 		pp.Enabled = sitz.Occupant == nil
 		if sitz.Occupant == nil and st.blind.copilot and lektionen[fahrer] == st then
+			-- 💥 thrown out by a ragdoll crash (v60): comes back into the seat in a moment – check again then
+			local co = st.blind.copilot
+			if co.Character and co.Character:GetAttribute("Ragdoll") then task.delay(4, copilotWeg) return end
 			-- the co-pilot got out: the driver sees the route again (no team rating)
 			local weg = st.blind.copilot
 			st.blind.copilot, st.blind.solo = nil, true
@@ -905,7 +909,8 @@ local function copilotPrompt(fahrer, st, sitz, modell)
 			end
 			if weg.Parent then fahrEvent:FireClient(weg, { typ = "ende", blind = true, copilot = true, abbruch = true }) end
 		end
-	end)
+	end
+	sitz:GetPropertyChangedSignal("Occupant"):Connect(copilotWeg)
 	return pp
 end
 
@@ -1072,7 +1077,10 @@ local function lektionStarten(p, art, wiederholNr, party)
 			end
 		else
 			st.ausgestiegenSeit = os.clock()
-			fahrEvent:FireClient(p, { typ = "hinweis", text = "You left the vehicle! Get back in within 20 seconds, or the lesson ends." })
+			-- 💥 thrown out by a ragdoll crash (v60): you are put back in a moment, no warning needed
+			if not (p.Character and p.Character:GetAttribute("Ragdoll")) then
+				fahrEvent:FireClient(p, { typ = "hinweis", text = "You left the vehicle! Get back in within 20 seconds, or the lesson ends." })
+			end
 		end
 	end)
 
@@ -3557,6 +3565,12 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 		return lektionStarten(p, "blind")
 	elseif was == "blindPartner" then
 		return blindPartnerSuchen(p)
+	elseif was == "crash" then
+		return Spass.crash(p, eingabe)
+	elseif was == "sabotageListe" then
+		return Spass.liste(p)
+	elseif was == "sabotage" then
+		return Spass.sabotieren(p, eingabe)
 
 	-- v54 beta tools (checked in Beta.lua)
 	elseif was == "code" then
@@ -3634,7 +3648,11 @@ Missionen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fah
 Shop.starten({ daten = daten, geldGeben = geldGeben, fahrEvent = fahrEvent, geaendert = geaendert, speichernSofort = speichern, Auto = Auto, Pflege = Pflege, Chaos = Chaos })
 Chaos.starten({ fahrEvent = fahrEvent, geldGeben = geldGeben, lektionen = lektionen, jobs = jobs, privatAutos = privatAutos,
 	daten = daten, geaendert = geaendert, Shop = Shop, Missionen = Missionen, Hupen = Hupen,
-	onEvent = function(p) Beta.funnel(p, "First chaos event") end })
+	onEvent = function(p) Beta.funnel(p, "First chaos event") end,
+	sabotageUeberlebt = function(p, e) Spass.ueberlebt(p, e) end })
+Spass.starten({ fahrEvent = fahrEvent, daten = daten, lektionen = lektionen, privatAutos = privatAutos, geldGeben = geldGeben,
+	eventStarten = Chaos.eventStarten, schonzeit = Chaos.schonzeit, crashPunkte = Chaos.crashPunkte, ereignis = Beta.ereignis,
+	stVon = function(p) return lektionen[p] or privatAutos[p] end })
 Party.starten({ fahrEvent = fahrEvent, geldGeben = geldGeben, xpGeben = xpGeben, Chaos = Chaos,
 	beschaeftigt = function(p) return lektionen[p] ~= nil or jobs[p] ~= nil end,
 	zufallsRoute = function() return LEKTIONEN.PRUEFUNGEN[math.random(#LEKTIONEN.PRUEFUNGEN)] end,

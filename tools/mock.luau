@@ -300,6 +300,12 @@ Inst.__newindex = function(o, k, v)
 			for i, kind in kinder do if kind == o then table.remove(kinder, i) break end end
 		end
 		props.Parent = v
+		-- like Roblox: removing the SeatWeld makes the character stand up
+		if not v and alt and props.Name == "SeatWeld" and rawget(alt.__props, "Occupant") then
+			local hum = alt.__props.Occupant
+			alt.Occupant = nil
+			if hum and hum.SeatPart == alt then hum.SeatPart = nil end
+		end
 		if v then
 			table.insert(v.__kinder, o)
 			local cs = rawget(v.__props, "ChildAdded")
@@ -319,6 +325,15 @@ Inst.__newindex = function(o, k, v)
 		return
 	end
 	if k == "PrimaryPart" or k == "Source" then props[k] = v return end
+	-- like Roblox: locking a seat throws its occupant out
+	if k == "Disabled" and v == true and rawget(props, "Occupant") then
+		local w = o:FindFirstChild("SeatWeld")
+		if w then w:Destroy() else
+			local hum = props.Occupant
+			o.Occupant = nil
+			if hum and hum.SeatPart == o then hum.SeatPart = nil end
+		end
+	end
 	if k == "Shape" and v == nil then error("Shape nil") end
 	local alt = props[k]
 	props[k] = v
@@ -470,6 +485,10 @@ function methoden.EquipTool(o, t) local c = o.Parent t.Parent = c end
 function methoden.Sit(seat, hum)
 	seat.Occupant = hum
 	hum.SeatPart = seat
+	-- like Roblox: the character is pulled into the seat
+	local figur = hum.Parent
+	local wurzel = figur and figur:FindFirstChild("HumanoidRootPart")
+	if wurzel and figur.PrimaryPart then figur:PivotTo(seat.CFrame + Vector3.new(0, 2, 0)) end
 	local w = neueInstanz("Weld") w.Name = "SeatWeld" w.Parent = seat
 end
 -- sounds (and animation tracks): only remember whether they play

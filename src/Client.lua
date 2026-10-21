@@ -3769,6 +3769,8 @@ end)
 -- ---------------------------------------------------------------
 do
 	leistenKnopf("🙈", "Blind", 9, Color3.fromRGB(150, 60, 170)).MouseButton1Click:Connect(BetaClient.blindKnopf)
+	require(ordner:WaitForChild("SpassClient")).starten({ spieler = spieler, frage = frage, warnen = warnen, zeige = zeige, schliessen = schliessen,
+		knopf = leistenKnopf("💥", "Sabotage", 10, Color3.fromRGB(200, 50, 50)) }) -- v60 ragdoll crashes + sabotage
 	local partyKnopf = leistenKnopf("🏁", "Party", 8, Color3.fromRGB(200, 90, 30))
 	partyKnopf.MouseButton1Click:Connect(function()
 		local r = frage("partyBeitreten")
@@ -3795,7 +3797,7 @@ end
 -- ---------------------------------------------------------------
 -- Settings (saved on the server) and the start screen
 -- ---------------------------------------------------------------
-_G.Einstellungen = { minimap = true, mph = false, grosseAnzeige = false, ersteP = false, sparmodus = false, sparmodusGewaehlt = false, chaosAus = false, hupe = "normal" }
+_G.Einstellungen = { minimap = true, mph = false, grosseAnzeige = false, ersteP = false, sparmodus = false, sparmodusGewaehlt = false, chaosAus = false, sabotageAus = false, hupe = "normal" }
 _G.SparmodusAuto() -- phones / tablets: performance mode until the saved settings say otherwise
 
 local function einstellungenAnwenden()
@@ -3823,7 +3825,7 @@ einstellGui.Parent = spieler.PlayerGui
 local einstellRahmen = Instance.new("Frame")
 einstellRahmen.AnchorPoint = Vector2.new(0.5, 0.5)
 einstellRahmen.Position = UDim2.fromScale(0.5, 0.5)
-einstellRahmen.Size = UDim2.fromOffset(380, 534)
+einstellRahmen.Size = UDim2.fromOffset(380, 584)
 einstellRahmen.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
 einstellRahmen.Parent = einstellGui
 Instance.new("UICorner", einstellRahmen).CornerRadius = UDim.new(0, 14)
@@ -3845,6 +3847,7 @@ local OPTIONEN = {
 	{ "ersteP", "Start in first person", "On", "Off" },
 	{ "sparmodus", "Graphics", "⚡ Fast", "Best" },
 	{ "chaosAus", "Chaos in your own car", "Off", "On" }, -- lessons always have chaos
+	{ "sabotageAus", "Others can sabotage you", "Off", "On" },
 }
 local optionKnoepfe = {}
 for i, o in OPTIONEN do

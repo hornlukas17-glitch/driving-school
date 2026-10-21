@@ -854,6 +854,8 @@ local function eventEnde(p, st, e, grund)
 		task.delay(e.art == "ufo" and 0 or 4, function() m:Destroy() end)
 	end
 	if grund ~= "vorbei" then return end
+	-- 💥 sabotage by another player (v60): not hit = bonus for the victim
+	if e.sabotage and not e.getroffen and ctx.sabotageUeberlebt then pcall(ctx.sabotageUeberlebt, p, e) end
 	if e.art == "ufo" then
 		return -- the alien bonus comes right when you drive into the beam
 	elseif e.clown then

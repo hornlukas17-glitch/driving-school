@@ -1,5 +1,17 @@
 # Changelog
 
+## v60 – 💥 Ragdoll-Crashes und Sabotage-Shop
+- **Ragdoll-Crashes** (`src/Spass.lua` Server, `src/SpassClient.lua` Client): Wer hart gegen etwas fährt (mindestens 40 km/h Tempoverlust in 0,25 s ab 50 km/h – mit der Bremse unmöglich), fliegt aus dem Auto, alle mitfahrenden Spieler auch. Schaden 8–45 HP je nach Wucht (Mitfahrer 60 %), nie unter 5 HP (kein Tod). Nach 3 s sitzt man automatisch wieder auf seinem Platz. Nicht bei Bananen-Rutschen, UFO und in den ersten 3 s nach dem Einsteigen. Zählt für die „Worst Drivers“-Bestenliste. Das Auto und das Fahrgefühl bleiben unverändert (der Client liest nur das Tempo).
+- **💥 Sabotage-Shop** (neuer Menüknopf „Sabotage“): Coins ausgeben und einem fahrenden Spieler ein Chaos-Event schicken – 🍌 Banana Peel 100, 🟤 Mud Splash 120, 🐄 Cow Stampede 150, 🤡 Creepy Clown 200, 👽 UFO Abduction 300. Das Opfer sieht „💥 SABOTAGE! Mia sent you …“; weicht es aus, bekommt es +50 Coins und der Sender „😤 DODGED!“.
+  - Schutz: Lektion 1, Führerscheinprüfung, Lkw, Einstellung „Others can sabotage you: Off“ (neu in Settings), „Chaos in your own car: Off“ fürs eigene Auto. Pro Ziel alle 20 s, max. 3 pro Fahrt, Sender alle 8 s. Kein Platz auf der Straße → Coins zurück.
+- Blind Drive: Fliegt der Co-Pilot bei einem Crash raus, bleibt er Co-Pilot (wartet aufs Wiedereinsteigen).
+- In Studio getestet und dabei behoben (alles gemessen):
+  - Neue Roblox-Avatare haben keine `Motor6D` mehr, sondern `AnimationConstraint` + `BallSocketConstraint` → Ragdoll schaltet die AnimationConstraints ab (alte Avatare weiter über Motor6D).
+  - Den eigenen Charakter simuliert der Client: er setzt sich sofort wieder hin bzw. fiel auf den Beifahrersitz → alle Sitze des Autos werden während des Ragdolls gesperrt (vorher Insassen einsammeln und als „Ragdoll“ markieren, denn Sperren wirft sofort raus), der Client steht selbst auf, hebt die Figur übers Dach und setzt den Schwung über 4 Frames (einmal gesetzt ging er verloren).
+  - Ein gelöstes Halsgelenk tötet Roblox-Figuren (`RequiresNeck`) → Hals bleibt fest, Prüfung während des Flugs aus.
+  - Während des Ragdolls keine Meldung „You left the vehicle…“.
+- Mock: `Sit` zieht die Figur zum Sitz, Entfernen der `SeatWeld` und `Disabled = true` lassen aufstehen (wie Roblox). Test 34.
+
 ## v59 – Fahrschulauto verschwindet nicht mehr, mehr Fahrlehrer-Gags
 - **Fehler behoben:** Nach einer abgebrochenen/nicht bestandenen Stunde bleibt das Auto bis zu 45 s stehen – die Bucht-Prüfung hat das übersehen, ein neues Fahrschulauto wurde **genau in dieses Auto** gesetzt (im Test: 0,0 Studs Abstand) und von der Physik weggeschleudert. Jetzt zählen stehengebliebene Autos als belegt; sind alle Buchten voll, kommt „All driving school cars are out right now…“ statt eines Autos im Auto.
 - Verschwindet ein Fahrschulauto oder fällt es von der Karte, endet die Stunde nicht mehr stumm: Meldung „Oops – your car got lost! …“ mit „Try again“, im Party-Test wartet das Rennen nicht mehr darauf. Analyse-Ereignis „Lesson car lost (gone/fell)“ zeigt im Live-Spiel, ob es noch vorkommt.

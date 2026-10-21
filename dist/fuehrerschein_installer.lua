@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v60
+--  DRIVER'S LICENSE SYSTEM v61
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -1875,9 +1875,13 @@ function BetaClient.starten(k)
 	function BetaClient.blindKnopf()
 		k.zeige("🙈 Blind Drive",
 			"<b>One drives, one navigates.</b>\nThe driver can't see the route – the co-pilot sees the map and tells them where to go.\n\n"
-				.. "👥 <b>With a friend:</b> you drive, your friend sits next to you.\n🎲 <b>Find a partner:</b> we match you with another player on this server.", {
+				.. "👥 <b>With a friend:</b> you drive, your friend sits next to you.\n🎲 <b>Find a partner:</b> we match you with another player on this server.\n🤖 <b>AI co-pilot:</b> Robo-Rita calls the directions.", {
 				{ text = "👥 With a friend", farbe = GRUEN, klick = mitFreund },
 				{ text = "🎲 Find a partner", farbe = BLAU, klick = partnerSuchen },
+				{ text = "🤖 With the AI co-pilot", farbe = Color3.fromRGB(150, 60, 170), klick = function()
+					local r = frage("blindKI")
+					if r.fehler then warnen(r.fehler, Color3.fromRGB(200, 140, 30)) else k.schliessen() warnen(r.text or "", GRUEN) end
+				end },
 				{ text = "Close", farbe = Color3.fromRGB(70, 75, 85), klick = k.schliessen },
 			}, "dialog")
 	end
@@ -1930,6 +1934,27 @@ function SpassClient.starten(k)
 	end)
 
 	-- the server threw us out of the car: go limp, fly, get up again
+	-- 🙈 v61 instructor prank "hands over your eyes": the screen goes dark for a moment
+	local dunkelGui = Instance.new("ScreenGui")
+	dunkelGui.Name = "Augen"
+	dunkelGui.IgnoreGuiInset = true
+	dunkelGui.ResetOnSpawn = false
+	dunkelGui.DisplayOrder = 40
+	dunkelGui.Parent = spieler:WaitForChild("PlayerGui")
+	game:GetService("ReplicatedStorage"):WaitForChild("Fuehrerschein"):WaitForChild("Fahrstunde").OnClientEvent:Connect(function(info)
+		if type(info) ~= "table" or info.typ ~= "chaos" or not info.dunkel then return end
+		local f = Instance.new("Frame")
+		f.Size = UDim2.fromScale(1, 1)
+		f.BackgroundColor3 = Color3.fromRGB(20, 12, 8)
+		f.BackgroundTransparency = 0.05
+		f.BorderSizePixel = 0
+		f.Parent = dunkelGui
+		task.delay(tonumber(info.dunkel) or 1.2, function()
+			game:GetService("TweenService"):Create(f, TweenInfo.new(0.5), { BackgroundTransparency = 1 }):Play()
+			task.delay(0.6, function() f:Destroy() end)
+		end)
+	end)
+
 	game:GetService("ReplicatedStorage"):WaitForChild("Fuehrerschein"):WaitForChild("Fahrstunde").OnClientEvent:Connect(function(info)
 		if type(info) ~= "table" or info.typ ~= "ragdoll" then return end
 		local char = spieler.Character
@@ -2580,9 +2605,10 @@ local function lektionBeenden(p, erfolg, text)
 		local co = st.blind.copilot
 		local sek = st.blind.start and math.floor(os.clock() - st.blind.start) or 0
 		local falsch = st.blind.falsch or 0
-		local team = Beta.blindWertung(st.fehler + falsch, erfolg, co ~= nil)
+		local team = Beta.blindWertung(st.fehler + falsch, erfolg, co ~= nil or st.blind.ki ~= nil)
+		if not co and st.blind.ki then team.geld = math.floor(team.geld / 2) end -- with the AI: half the coins (a friend is more fun)
 		local info = { typ = "ende", blind = true, erfolg = erfolg, text = text, fehler = st.fehler, falsch = falsch, sek = sek, titel = team.titel,
-			geld = team.geld, fahrer = p.DisplayName, copilotName = co and co.DisplayName }
+			geld = team.geld, fahrer = p.DisplayName, copilotName = co and co.DisplayName or (st.blind.ki and "🤖 " .. Beta.KI_NAME) }
 		for _, wer in { p, co } do
 			if wer and wer.Parent then
 				if team.geld > 0 then geldGeben(wer, team.geld, "Blind Drive") end
@@ -2739,6 +2765,12 @@ local function zielSenden(p, st)
 		info.copilot, info.fahrer = true, p.DisplayName
 		fahrEvent:FireClient(co, info)
 		fahrEvent:FireClient(p, { typ = "ziel", blind = true, nr = info.nr, gesamt = info.gesamt, text = ("🙈 Listen to %s!"):format(co.DisplayName), sprecher = "Co-pilot" })
+		return
+	end
+	if st.blind and st.blind.ki then
+		-- 🤖 AI co-pilot (v61): the driver still sees no route, the AI calls the directions (Beta.kiNavi)
+		st.blind.ki.zeit = 0
+		fahrEvent:FireClient(p, { typ = "ziel", blind = true, nr = info.nr, gesamt = info.gesamt, text = ("🤖 Listen to %s!"):format(Beta.KI_NAME), sprecher = "AI co-pilot" })
 		return
 	end
 	fahrEvent:FireClient(p, info)
@@ -3063,7 +3095,7 @@ local function lektionStarten(p, art, wiederholNr, party)
 		elseif st.blind then
 			st.blind.start = os.clock()
 			titel, sprecher = "🙈 BLIND DRIVE", "Co-pilot"
-			text = ("You can't see the route – %s can! Listen and drive."):format(st.blind.copilot.DisplayName)
+			text = ("You can't see the route – %s can! Listen and drive."):format(st.blind.copilot and st.blind.copilot.DisplayName or ("🤖 " .. Beta.KI_NAME))
 		end
 		fahrEvent:FireClient(p, { typ = "start", titel = titel, text = text, sprecher = sprecher, grenze = st.erlaubt, lehrer = lehrer.name })
 		task.delay(1.5, function()
@@ -3084,7 +3116,7 @@ local function lektionStarten(p, art, wiederholNr, party)
 			st.ausgestiegenSeit = nil
 			pcall(function() chassis:SetNetworkOwner(p) end)
 			if not st.gestartet then
-				if st.blind and not st.blind.copilot then
+				if st.blind and not st.blind.copilot and not st.blind.ki then
 					fahrEvent:FireClient(p, { typ = "hinweis", text = "🙈 Blind Drive: you need a co-pilot! A friend sits in your passenger seat (\"Be the co-pilot\")." })
 					return
 				end
@@ -3497,6 +3529,7 @@ RunService.Heartbeat:Connect(function(dt)
 		local wp = st.lektion.punkte[st.index]
 		local abstand = (Vector3.new(wp.x, pos.Y, wp.z) - pos).Magnitude
 		local amTor = st.tor and Regeln.durchTor(pos, st.tor.pos, st.tor.dir, st.tor.breite, st.tor.r)
+		if st.blind and st.blind.ki and not st.blind.copilot then Beta.kiNavi(p, st) end
 		if st.blind and st.tor and st.zielAktiv then
 			-- 🙈 Blind Drive (v56): driving away from the next gate = wrong way (hint for both; counts for the team rating)
 			local zumTor = (Vector3.new(st.tor.pos.X, pos.Y, st.tor.pos.Z) - pos).Magnitude
@@ -5231,6 +5264,20 @@ local function blindPaarStarten(fahrer, copilot)
 	fahrEvent:FireClient(copilot, { typ = "chaos", titel = "🗺 YOU'RE THE CO-PILOT!", text = ("Tell %s where to drive – only you can see the route!"):format(fahrer.DisplayName), farbe = "gruen" })
 	return true
 end
+-- 🤖 Blind Drive with the AI co-pilot (v61): for players without a partner
+local function blindKIStarten(p)
+	local r = lektionStarten(p, "blind")
+	if r.fehler then return r end
+	local st = lektionen[p]
+	st.blind.ki = { zeit = 0 }
+	local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		if hum.SeatPart then hum.Sit = false end
+		st.sitz:Sit(hum)
+	end
+	fahrEvent:FireClient(p, { typ = "chaos", titel = "🤖 AI CO-PILOT!", text = ("%s navigates – you only see the road. Listen to the commands!"):format(Beta.KI_NAME), farbe = "lila" })
+	return { text = ("🤖 Blind Drive with %s! You can't see the route – follow the commands."):format(Beta.KI_NAME) }
+end
 local blindAufruf = -math.huge
 local BLIND_WARTEZEIT = 180
 local function blindPartnerSuchen(p)
@@ -5580,6 +5627,8 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 		return lektionStarten(p, "blind")
 	elseif was == "blindPartner" then
 		return blindPartnerSuchen(p)
+	elseif was == "blindKI" then
+		return blindKIStarten(p)
 	elseif was == "crash" then
 		return Spass.crash(p, eingabe)
 	elseif was == "sabotageListe" then
@@ -5682,7 +5731,7 @@ Party.starten({ fahrEvent = fahrEvent, geldGeben = geldGeben, xpGeben = xpGeben,
 })
 Zonen.starten({ fahrEvent = fahrEvent, Party = Party, Beta = Beta,
 	beschaeftigt = function(p) return lektionen[p] ~= nil or jobs[p] ~= nil end,
-	blindPaar = blindPaarStarten,
+	blindPaar = blindPaarStarten, blindKI = blindKIStarten,
 	spawn = workspace:FindFirstChild("FahrschulSpawn"),
 })
 Belohnungen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent, geaendert = geaendert, Shop = Shop })
@@ -8450,10 +8499,11 @@ local function attribute(p)
 end
 Shop.attribute = attribute
 
--- golden tag above VIP players
+-- VIP name tag (v61): the others see the name in gold with a small "VIP" next to it; you don't see your own tag
 local function vipSchild(p)
 	local figur = p.Character
 	local kopf = figur and figur:FindFirstChild("Head")
+	local hum = figur and figur:FindFirstChildOfClass("Humanoid")
 	if not kopf then return end
 	local alt = kopf:FindFirstChild("VipSchild")
 	if not Shop.hat(p, "vip") then
@@ -8461,23 +8511,26 @@ local function vipSchild(p)
 		return
 	end
 	if alt then return end
+	-- the normal Roblox name is replaced by the golden one
+	if hum then hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end
 	local g = Instance.new("BillboardGui")
 	g.Name = "VipSchild"
-	g.Size = UDim2.fromOffset(70, 24)
-	g.StudsOffset = Vector3.new(0, 2.6, 0)
+	g.Size = UDim2.fromOffset(200, 26)
+	g.StudsOffset = Vector3.new(0, 2.3, 0)
 	g.AlwaysOnTop = false
-	g.MaxDistance = 80
+	g.MaxDistance = 100
+	g.PlayerToHideFrom = p
 	g.Parent = kopf
 	local t = Instance.new("TextLabel")
 	t.Size = UDim2.fromScale(1, 1)
-	t.BackgroundColor3 = Color3.fromRGB(40, 32, 10)
-	t.BackgroundTransparency = 0.25
-	t.Font = Enum.Font.GothamBlack
-	t.TextScaled = true
+	t.BackgroundTransparency = 1
+	t.Font = Enum.Font.GothamBold
+	t.TextSize = 18
+	t.RichText = true
 	t.TextColor3 = Color3.fromRGB(255, 210, 70)
-	t.Text = "👑 VIP"
+	t.TextStrokeTransparency = 0.3
+	t.Text = ('%s <font size="11" color="#FFE9A8"><b>VIP</b></font>'):format(p.DisplayName:gsub("[<>&]", ""))
 	t.Parent = g
-	Instance.new("UICorner", t)
 end
 
 local function besitzLaden(p)
@@ -9588,6 +9641,84 @@ EVENTS.clown = {
 	tempo = 0,
 }
 
+-- 🚗 v61: wrong-way driver – a car comes at you in your lane, horn and flashing lights. A ghost: it drives through you.
+local function geisterAuto()
+	local m
+	local vorlagen = game:GetService("ReplicatedStorage"):FindFirstChild("Fuehrerschein")
+	vorlagen = vorlagen and vorlagen:FindFirstChild("Autos")
+	local v = vorlagen and (vorlagen:FindFirstChild("Limousine") or vorlagen:FindFirstChild("Kleinwagen"))
+	if v then
+		local ok, Verkehr = pcall(require, game:GetService("ReplicatedStorage").Fuehrerschein.Verkehr)
+		if ok and Verkehr.ausVorlage then m = Verkehr.ausVorlage(v, 14.5, Color3.fromRGB(150, 20, 25), nil) end
+	end
+	if m then
+		for _, t in m:GetDescendants() do
+			if t:IsA("BasePart") then t.CanCollide, t.CanQuery, t.CanTouch = false, false, false end
+		end
+		m.Name = "Geisterfahrer"
+		return m
+	end
+	-- no templates (tests, old place): a simple block car
+	m = modell("Geisterfahrer")
+	block(m, "Lack", Vector3.new(6.4, 2.6, 14), Color3.fromRGB(150, 20, 25), CFrame.new(0, 2.2, 0))
+	block(m, "Glas", Vector3.new(5.6, 1.8, 6.5), Color3.fromRGB(35, 45, 60), CFrame.new(0, 4.3, 0.8))
+	block(m, "Licht", Vector3.new(1.2, 0.5, 0.2), Color3.fromRGB(255, 250, 225), CFrame.new(-2.2, 2.6, -7.05), Enum.Material.Neon)
+	block(m, "Licht", Vector3.new(1.2, 0.5, 0.2), Color3.fromRGB(255, 250, 225), CFrame.new(2.2, 2.6, -7.05), Enum.Material.Neon)
+	return m
+end
+
+EVENTS.geisterfahrer = {
+	gewicht = 2,
+	banner = { titel = "🚗 WRONG-WAY DRIVER!", text = "A car is coming at you in YOUR lane – swerve!" },
+	aufbauen = function(e)
+		local a = geisterAuto()
+		a.Parent = e.modell
+		local lichter = {}
+		for _, t in a:GetDescendants() do
+			if t:IsA("BasePart") and t.Name == "Licht" then table.insert(lichter, t) end
+		end
+		local bb = Instance.new("BillboardGui")
+		bb.Size = UDim2.fromOffset(150, 44)
+		bb.StudsOffset = Vector3.new(0, 7, 0)
+		bb.AlwaysOnTop = true
+		bb.MaxDistance = 160
+		local t = Instance.new("TextLabel")
+		t.Size = UDim2.fromScale(1, 1)
+		t.BackgroundTransparency = 1
+		t.Text = "HONK HONK!"
+		t.TextColor3 = Color3.fromRGB(255, 220, 60)
+		t.TextStrokeTransparency = 0
+		t.Font = Enum.Font.FredokaOne
+		t.TextScaled = true
+		t.Parent = bb
+		bb.Parent = a.PrimaryPart or a:FindFirstChildWhichIsA("BasePart")
+		local tier = { m = a, seite = 0, vor = -45, r = 4.2, phase = 0, geist = true }
+		tier.bewege = function(tier_, zeit)
+			tier_.aktSeite = tier_.seite + math.sin(zeit * 1.7) * 0.8 -- wobbles a bit
+			tier_.aktVor = tier_.vor + zeit * 17 -- comes at the car
+			tier_.m:PivotTo(bodenCF(e, tier_.aktSeite, tier_.aktVor, 0) * CFrame.Angles(0, math.pi, 0))
+			local an = math.floor(zeit * 4) % 2 == 0 -- flashing lights
+			for _, l in lichter do l.Material = an and Enum.Material.Neon or Enum.Material.SmoothPlastic end
+		end
+		e.tiere = { tier }
+	end,
+	tempo = 0,
+}
+
+-- 😈 v61: the instructor sabotages you (only looks: coffee on the windscreen, selfie flash, hands over your eyes,
+-- wrong directions). Nothing touches the car.
+Chaos.STREICHE = {
+	{ titel = "☕ OOPS, COFFEE!", text = "%s spilled coffee all over the windscreen!", sagt = "Wipers! WHERE ARE THE WIPERS?!", extra = { matsch = true } },
+	{ titel = "📸 SELFIE TIME!", text = "%s takes a selfie with flash – you're blinded!", sagt = "Say CHEESE! ...oops, too bright?", extra = { blitz = true } },
+	{ titel = "🙈 GUESS WHO?", text = "%s covers your eyes for a second!", sagt = "Guess who! Hehe... keep driving!", extra = { dunkel = 1.2 } },
+	{ titel = "😜 WRONG WAY... JUST KIDDING!", text = "%s shouts the wrong direction on purpose!", sagt = "LEFT! No, RIGHT! No... just kidding!", falsch = true },
+}
+EVENTS.streich = {
+	gewicht = 2,
+	ohneObjekt = true,
+	streich = true,
+}
+
 EVENTS.gag = {
 	gewicht = 2,
 	ohneObjekt = true,
@@ -9684,11 +9815,24 @@ function Chaos.eventStarten(p, st, art)
 	-- v56: the very first event of lesson 1 is always the cows – the funniest "what is going on?!" moment for new players
 	if not art and st.nr == 1 and c.anzahl == 0 and not c.frei and EVENTS.kuehe then art = "kuehe" end
 	art = art or wuerfeln(st)
-	if art == "gag" and not c.lehrer.gags then art = "banane" end -- no instructor in your own car
+	if (art == "gag" or art == "streich") and not c.lehrer.gags then art = "banane" end -- no instructor in your own car
+	if art == "streich" and st.blind then art = "gag" end -- Blind Drive: no fake directions on top of the co-pilot's
 	local ev = EVENTS[art]
 	c.anzahl += 1
 	statistik(p, "arten", art)
 	if ctx and ctx.onEvent then pcall(ctx.onEvent, p) end -- analytics funnel (v54)
+	if ev.streich then
+		local s = zufall(Chaos.STREICHE)
+		banner(p, s.titel, s.text:format(c.lehrer.name or "Your instructor"), "rot", s.extra)
+		Chaos.sagen(st, nil, s.sagt)
+		if s.falsch then
+			-- a fake command, then the instructor laughs
+			local falsch = math.random() < 0.5 and { "◀ LEFT!", "links" } or { "RIGHT! ▶", "rechts" }
+			ctx.fahrEvent:FireClient(p, { typ = "kommando", art = falsch[2], text = falsch[1], farbe = "gelb", von = c.lehrer.name or "Instructor" })
+		end
+		c.naechstesEvent = os.clock() + math.random(28, 40)
+		return { art = art }
+	end
 	if ev.ohneObjekt then
 		-- one of the instructor's gags, never the same twice in a row
 		local auswahl = {}
@@ -9824,7 +9968,7 @@ local function eventEnde(p, st, e, grund)
 	elseif e.clown then
 		return -- the clown only takes a photo
 	elseif not e.getroffen and e.naechster < 40 then
-		local texte = { kuehe = "Dodged the cows!", enten = "The ducks made it!", banane = "Dodged the banana!",
+		local texte = { kuehe = "Dodged the cows!", enten = "The ducks made it!", banane = "Dodged the banana!", geisterfahrer = "Dodged the wrong-way driver!",
 			huehner = "All chickens survived!", wagen = "Dodged the shopping cart!", reifen = "Dodged the giant tire!", pfuetze = "Stayed clean!" }
 		ctx.geldGeben(p, BONUS, texte[e.art] or "Dodged!")
 		statistik(p, "ausgewichen")
@@ -9857,6 +10001,7 @@ function Chaos.tick(p, st, pos, tempo, vorneZ, hintenZ, halbB)
 					if pt.tier.huhn then Chaos.federn(pt.tier.m) end
 					Chaos.crashPunkte(p, 1)
 					local was = { kuehe = { "💥 MOOOO!", "You bumped a cow. It's fine... probably." },
+						geisterfahrer = { "👻 IT WENT RIGHT THROUGH YOU!", "A GHOST driver! Spooky... but that counts as a crash." },
 						enten = { "🦆 QUAAACK!", "A duck went flying! It's okay, ducks can fly." },
 						banane = { "🍌 SLIIIP!", "You drove over the banana peel! Whoooa!" },
 						huehner = { "🐔 BAWK BAWK!", "Feathers everywhere!" },
@@ -10212,6 +10357,11 @@ Party.ZEIT = 300           -- max race time
 Party.STRAFE = 5           -- seconds per mistake
 Party.PREISE = { 500, 250, 120, 60 }
 Party.MIN = 2              -- players needed (1 in Studio for testing)
+-- 🤖 bots (v61): fill free spots in the green party zone. They race "virtually": a time from the route length,
+-- live messages ("Turbo Tina is halfway!", "TURBO TINA PARKED!") and a place in the results. No car on the road.
+Party.BOTS = { "Turbo Tina", "Crash Carl", "Granny Gear", "Drift Dora", "Speedy Sam", "Honk Hank" }
+Party.BOT_TEMPO = { 24, 34 }   -- studs/s on average (incl. turns, traffic lights)
+Party.START = Vector3.new(550, 0, 60)
 
 local ctx
 local lobby     -- { spieler = {}, ende = clock, offen = player }
@@ -10259,7 +10409,45 @@ function Party.beitreten(p)
 	return { text = ("You're in! The race starts in %d s – invite your friends!"):format(math.ceil(lobby.ende - os.clock())) }
 end
 
-starten = function()
+local function routeLaenge(lektion)
+	local laenge, vorher = 0, Party.START
+	for _, wp in lektion and lektion.punkte or {} do
+		local x, z = wp.x or (wp.pos and wp.pos.X), wp.z or (wp.pos and wp.pos.Z)
+		if x and z then
+			local jetzt = Vector3.new(x, 0, z)
+			laenge += (jetzt - vorher).Magnitude
+			vorher = jetzt
+		end
+	end
+	return math.max(laenge, 300)
+end
+Party.routeLaenge = routeLaenge
+
+local function botsStarten(r, anzahl)
+	r.bots = {}
+	if anzahl <= 0 then return end
+	local namen = table.clone(Party.BOTS)
+	local laenge = routeLaenge(r.lektion)
+	for _ = 1, anzahl do
+		local name = "🤖 " .. table.remove(namen, math.random(#namen))
+		local tempo = Party.BOT_TEMPO[1] + math.random() * (Party.BOT_TEMPO[2] - Party.BOT_TEMPO[1])
+		local fehler = math.random(0, 3)
+		local roh = laenge / tempo
+		local bot = { name = name, roh = roh, fehler = fehler, zeit = roh + fehler * Party.STRAFE }
+		table.insert(r.bots, bot)
+		task.delay(roh * 0.5, function()
+			if rennen == r then anTeilnehmer(r.spieler, { typ = "party", phase = "bot", titel = name:upper() .. " IS HALFWAY!", text = "Hurry up!" }) end
+		end)
+		task.delay(roh, function()
+			if rennen == r then
+				bot.angekommen = true
+				anTeilnehmer(r.spieler, { typ = "party", phase = "ziel", titel = ("🏁 %s PARKED!"):format(name:upper()), text = ("%.1f s + %d mistake(s)"):format(roh, fehler) })
+			end
+		end)
+	end
+end
+
+starten = function(bots)
 	local l = lobby
 	lobby = nil
 	if not l then return end
@@ -10267,7 +10455,7 @@ starten = function()
 	for _, sp in l.spieler do
 		if sp.Parent and not ctx.beschaeftigt(sp) then table.insert(dabei, sp) end
 	end
-	if #dabei < minimum() then
+	if #dabei < (bots and bots > 0 and 1 or minimum()) then
 		anTeilnehmer(dabei, { typ = "party", phase = "abbruch", titel = "🏁 NOT ENOUGH DRIVERS",
 			text = "Nobody else joined. Invite a friend and try again!" })
 		return
@@ -10279,6 +10467,7 @@ starten = function()
 		if ok and not ok.fehler then table.insert(r.spieler, sp) end
 	end
 	if #r.spieler == 0 then rennen = nil return end
+	botsStarten(r, math.min(bots or 0, Party.MAX - #r.spieler))
 	anTeilnehmer(r.spieler, { typ = "party", phase = "start", titel = "🏁 GO GO GO!",
 		text = ("Get in your car! First to park wins. Each mistake = +%d s."):format(Party.STRAFE) })
 	task.delay(Party.ZEIT, function()
@@ -10289,7 +10478,7 @@ Party.jetztStarten = function() starten() end -- (tests)
 Party.minimum = minimum
 
 -- green party zone: these players start right now (joins an open 🏁 lobby if there is one)
-function Party.mitSpielern(liste)
+function Party.mitSpielern(liste, bots)
 	if rennen then return nil end
 	if lobby then
 		for _, sp in liste do
@@ -10298,7 +10487,7 @@ function Party.mitSpielern(liste)
 	else
 		lobby = { spieler = table.clone(liste), ende = os.clock() }
 	end
-	starten()
+	starten(bots)
 	local r = rennen
 	if r and ctx.hinsetzen then
 		for _, sp in r.spieler do ctx.hinsetzen(sp) end
@@ -10335,24 +10524,31 @@ function Party.abschluss()
 			ctx.lektionAbbrechen(sp, "Time is up!")
 		end
 	end
+	for _, b in r.bots or {} do
+		table.insert(r.ergebnisse, { bot = true, name = b.name, roh = b.roh, fehler = b.fehler, zeit = b.zeit, ziel = true })
+	end
 	table.sort(r.ergebnisse, function(a, b)
 		if a.ziel ~= b.ziel then return a.ziel end
 		return a.zeit < b.zeit
 	end)
 	local liste = {}
 	for i, e in r.ergebnisse do
-		local preis = e.ziel and Party.PREISE[i] or 0
-		if preis > 0 and e.p.Parent then ctx.geldGeben(e.p, preis, ("Party test – place %d"):format(i)) end
-		if e.p.Parent then ctx.xpGeben(e.p, e.ziel and 60 or 20, "Party test") end
+		local preis = (e.ziel and not e.bot) and Party.PREISE[i] or 0
+		if e.p and e.p.Parent then
+			if preis > 0 then ctx.geldGeben(e.p, preis, ("Party test – place %d"):format(i)) end
+			ctx.xpGeben(e.p, e.ziel and 60 or 20, "Party test")
+		end
 		table.insert(liste, { platz = i, name = e.name, zeit = e.ziel and e.zeit or nil, fehler = e.fehler, preis = preis })
 	end
 	local sieger = r.ergebnisse[1]
-	if sieger and sieger.ziel and #r.ergebnisse >= 2 and sieger.p.Parent then
+	if sieger and sieger.ziel and not sieger.bot and #r.ergebnisse >= 2 and sieger.p.Parent then
 		if ctx.Chaos then ctx.Chaos.statistik(sieger.p, "partySiege") end
 		Party.krone(sieger.p)
 	end
 	anTeilnehmer(r.spieler, { typ = "party", phase = "ergebnis", titel = "🏁 PARTY TEST RESULTS", liste = liste })
-	if sieger and sieger.ziel then
+	if sieger and sieger.bot then
+		anTeilnehmer(r.spieler, { typ = "party", phase = "sieger", titel = "🤖 " .. sieger.name:gsub("🤖 ", ""):upper() .. " WINS!", text = "Beaten by a bot! Try again in the green zone." })
+	elseif sieger and sieger.ziel then
 		anAlle({ typ = "party", phase = "sieger", titel = "👑 " .. sieger.name:upper() .. " WINS!",
 			text = ("won the party driving test (%d drivers)"):format(#r.ergebnisse) })
 	end
@@ -10594,6 +10790,36 @@ function Beta.blindWertung(fehler, erfolg, mitCopilot)
 	end
 end
 
+-- 🤖 AI co-pilot for Blind Drive (v61): looks at the next gate and calls the direction like a friend would.
+-- It only knows where the gate is, not the roads – "STRAIGHT ON" until close, then the turn.
+Beta.KI_NAME = "Robo-Rita"
+Beta.KI_TAKT = 1.3      -- seconds between two checks
+Beta.KI_WIEDERHOLEN = 5 -- the same command again after this many seconds
+function Beta.kiRichtung(cf, ziel, parken)
+	local rel = cf:PointToObjectSpace(Vector3.new(ziel.X, cf.Position.Y, ziel.Z))
+	local dist = Vector3.new(rel.X, 0, rel.Z).Magnitude
+	local winkel = math.deg(math.atan2(rel.X, -rel.Z)) -- 0 = straight ahead (front = -Z), + = right
+	if parken and dist < 30 then return "stopp" end
+	if math.abs(winkel) > 100 then return winkel > 0 and "rechts" or "links" end -- behind us: turn around
+	if dist > 70 and math.abs(winkel) < 60 then return "gerade" end
+	if winkel > 25 then return "rechts" end
+	if winkel < -25 then return "links" end
+	return "gerade"
+end
+function Beta.kiNavi(p, st)
+	local ki = st.blind and st.blind.ki
+	if not ki or not st.tor or not st.zielAktiv or not st.chassis then return end
+	local jetzt = os.clock()
+	if jetzt - (ki.check or 0) < Beta.KI_TAKT then return end
+	ki.check = jetzt
+	local wp = st.lektion and st.lektion.punkte and st.lektion.punkte[st.index]
+	local art = Beta.kiRichtung(st.chassis.CFrame, st.tor.pos, wp and wp.parken)
+	if art == ki.letzt and jetzt - (ki.zeit or 0) < Beta.KI_WIEDERHOLEN then return end
+	ki.letzt, ki.zeit = art, jetzt
+	local def = Beta.KOMMANDOS[art]
+	ctx.fahrEvent:FireClient(p, { typ = "kommando", art = art, text = def[1], farbe = def[2], von = "🤖 " .. Beta.KI_NAME })
+end
+
 function Beta.starten(k)
 	ctx = k
 end
@@ -10603,7 +10829,8 @@ return Beta
 neu("ModuleScript", "Zonen", server, [=====[
 -- 🟢 Start zones (v58): two green areas in front of the driving school. Walk in, wait for other players, go!
 --   🙈 BLIND DRIVE – starts as soon as 2 players stand in it (who came first drives).
---   🏁 PARTY TEST  – from 2 players a countdown runs (full with 4 = starts right away).
+--   🏁 PARTY TEST  – from 1 player a countdown runs, bots fill free spots (full with 4 = starts right away).
+--   v61: alone in the Blind Drive zone for 15 s -> AI co-pilot "Robo-Rita".
 -- The sign above each zone shows how many players are waiting.
 local Players = game:GetService("Players")
 
@@ -10612,6 +10839,7 @@ Zonen.RADIUS = 5
 Zonen.TAKT = 0.3
 Zonen.PARTY_COUNTDOWN = 15
 Zonen.PARTY_VOLL = 3       -- seconds left when the party zone is full
+Zonen.KI_WARTEN = 15       -- v61: alone in the Blind Drive zone this long -> the AI co-pilot takes over
 
 local ctx
 local zonen = {}           -- [1] = blind, [2] = party
@@ -10681,7 +10909,7 @@ local function zoneBauen(ordner, name, pos, titel, farbeTitel)
 	info.TextColor3 = Color3.fromRGB(220, 230, 225)
 	info.Parent = g
 	m.Parent = ordner
-	return { model = m, pos = pos, status = zahl, info = info, drin = {}, sperre = {} }
+	return { model = m, pos = pos, status = zahl, info = info, drin = {}, sperre = {}, seit = {} }
 end
 
 local function setzen(z, status, info)
@@ -10703,12 +10931,13 @@ end
 -- keeps z.drin in arrival order; new players get a short hint
 local function aktualisieren(z, hinweis)
 	for i = #z.drin, 1, -1 do
-		if not z.drin[i].Parent or not stehtDrin(z, z.drin[i]) then table.remove(z.drin, i) end
+		if not z.drin[i].Parent or not stehtDrin(z, z.drin[i]) then z.seit[z.drin[i]] = nil table.remove(z.drin, i) end
 	end
 	for _, p in Players:GetPlayers() do
 		local gesperrt = z.sperre[p] and os.clock() < z.sperre[p]
 		if not gesperrt and not table.find(z.drin, p) and stehtDrin(z, p) then
 			table.insert(z.drin, p)
+			z.seit[p] = os.clock()
 			ctx.fahrEvent:FireClient(p, { typ = "hinweis", text = hinweis, farbe = "gruen" })
 		end
 	end
@@ -10717,7 +10946,7 @@ end
 function Zonen.tick()
 	local blind, party = zonen[1], zonen[2]
 	if blind then
-		aktualisieren(blind, "🙈 Blind Drive: waiting for a second player – bring a friend or wait here!")
+		aktualisieren(blind, ("🙈 Blind Drive: waiting for a second player – or the AI co-pilot takes over in %d s!"):format(Zonen.KI_WARTEN))
 		while #blind.drin >= 2 do
 			local fahrer = table.remove(blind.drin, 1)
 			local copilot = table.remove(blind.drin, 1)
@@ -10735,18 +10964,38 @@ function Zonen.tick()
 				end
 			end)
 		end
-		if #blind.drin == 1 then
+		-- v61: nobody else came -> drive with the AI co-pilot
+		if #blind.drin == 1 and ctx.blindKI then
+			local fahrer = blind.drin[1]
+			local rest = math.ceil((blind.seit[fahrer] or os.clock()) + Zonen.KI_WARTEN - os.clock())
+			if rest <= 0 then
+				table.remove(blind.drin, 1)
+				blind.seit[fahrer] = nil
+				blind.gestartet = (blind.gestartet or 0) + 1
+				task.spawn(function()
+					local r = ctx.blindKI(fahrer)
+					if r and r.fehler then
+						blind.sperre[fahrer] = os.clock() + 6
+						ctx.fahrEvent:FireClient(fahrer, { typ = "hinweis", text = r.fehler })
+					elseif ctx.Beta then
+						ctx.Beta.ereignis(fahrer, "Zone blind drive AI")
+					end
+				end)
+			else
+				setzen(blind, "1/2 PLAYERS", ("🤖 AI co-pilot in %d s"):format(rest))
+			end
+		elseif #blind.drin == 1 then
 			setzen(blind, "1/2 PLAYERS", "Waiting for a partner…")
 		else
 			setzen(blind, "0/2 PLAYERS", "One drives, one navigates")
 		end
 	end
 	if party then
-		aktualisieren(party, "🏁 Party test: the race starts when 2–4 players stand here!")
+		aktualisieren(party, "🏁 Party test: race starts soon – bots fill the free spots!")
 		local Party = ctx.Party
 		local _, rennen = Party.zustand()
 		local n = #party.drin
-		local mindest = Party.minimum()
+		local mindest = 1 -- v61: free spots are filled with bots
 		if rennen then
 			party.ende = nil
 			setzen(party, ("%d/%d PLAYERS"):format(math.min(n, Party.MAX), Party.MAX), "A race is running – next one soon!")
@@ -10755,14 +11004,14 @@ function Zonen.tick()
 			if not party.ende then party.ende = jetzt + Zonen.PARTY_COUNTDOWN end
 			if n >= Party.MAX then party.ende = math.min(party.ende, jetzt + Zonen.PARTY_VOLL) end
 			local rest = math.max(0, math.ceil(party.ende - jetzt))
-			setzen(party, ("%d/%d PLAYERS"):format(math.min(n, Party.MAX), Party.MAX), ("Starts in %d s!"):format(rest))
+			setzen(party, ("%d/%d PLAYERS"):format(math.min(n, Party.MAX), Party.MAX), n < Party.MAX and ("Starts in %d s · 🤖 bots fill up"):format(rest) or ("Starts in %d s!"):format(rest))
 			if jetzt >= party.ende then
 				party.ende = nil
 				local liste = {}
 				for i = 1, math.min(n, Party.MAX) do liste[i] = party.drin[i] end
 				for _ = 1, #liste do table.remove(party.drin, 1) end
 				party.gestartet = (party.gestartet or 0) + 1
-				local r = Party.mitSpielern(liste)
+				local r = Party.mitSpielern(liste, Party.MAX - #liste)
 				for _, sp in liste do
 					if not (r and table.find(r.spieler, sp)) then party.sperre[sp] = os.clock() + 6 end
 				end
@@ -10792,7 +11041,7 @@ function Zonen.starten(c)
 	local ordner = Instance.new("Folder")
 	ordner.Name = "Startzonen"
 	ordner.Parent = workspace
-	-- left and right of the entrance, between the door and the first parking bays
+	-- v61: in the middle of the parking lot (the lane between the two rows of bays)
 	local function bodenBei(lokal)
 		local p = (spawn.CFrame * CFrame.new(lokal)).Position
 		local par = RaycastParams.new()
@@ -10801,8 +11050,8 @@ function Zonen.starten(c)
 		local hit = workspace:Raycast(Vector3.new(p.X, spawn.Position.Y + 8, p.Z), Vector3.new(0, -30, 0), par)
 		return Vector3.new(p.X, hit and hit.Position.Y or spawn.Position.Y - 0.5, p.Z)
 	end
-	zonen[1] = zoneBauen(ordner, "BlindDrive", bodenBei(Vector3.new(-10, 0, -2)), "🙈 BLIND DRIVE", Color3.fromRGB(255, 210, 60))
-	zonen[2] = zoneBauen(ordner, "PartyTest", bodenBei(Vector3.new(10, 0, -2)), "🏁 PARTY TEST", Color3.fromRGB(120, 220, 255))
+	zonen[1] = zoneBauen(ordner, "BlindDrive", bodenBei(Vector3.new(-9, 0, 11)), "🙈 BLIND DRIVE", Color3.fromRGB(255, 210, 60))
+	zonen[2] = zoneBauen(ordner, "PartyTest", bodenBei(Vector3.new(9, 0, 11)), "🏁 PARTY TEST", Color3.fromRGB(120, 220, 255))
 	Zonen.tick()
 	task.spawn(function()
 		while ordner.Parent do
@@ -11522,7 +11771,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v60 loaded")
+print("[Driving School] client v61 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -16116,7 +16365,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v60 loading")
+	print("[Driving School] start screen v61 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -16336,4 +16585,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v60 installed. Press F5 to test.")
+print("License system v61 installed. Press F5 to test.")

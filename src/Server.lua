@@ -565,9 +565,10 @@ local function lektionBeenden(p, erfolg, text)
 		local co = st.blind.copilot
 		local sek = st.blind.start and math.floor(os.clock() - st.blind.start) or 0
 		local falsch = st.blind.falsch or 0
-		local team = Beta.blindWertung(st.fehler + falsch, erfolg, co ~= nil)
+		local team = Beta.blindWertung(st.fehler + falsch, erfolg, co ~= nil or st.blind.ki ~= nil)
+		if not co and st.blind.ki then team.geld = math.floor(team.geld / 2) end -- with the AI: half the coins (a friend is more fun)
 		local info = { typ = "ende", blind = true, erfolg = erfolg, text = text, fehler = st.fehler, falsch = falsch, sek = sek, titel = team.titel,
-			geld = team.geld, fahrer = p.DisplayName, copilotName = co and co.DisplayName }
+			geld = team.geld, fahrer = p.DisplayName, copilotName = co and co.DisplayName or (st.blind.ki and "🤖 " .. Beta.KI_NAME) }
 		for _, wer in { p, co } do
 			if wer and wer.Parent then
 				if team.geld > 0 then geldGeben(wer, team.geld, "Blind Drive") end
@@ -724,6 +725,12 @@ local function zielSenden(p, st)
 		info.copilot, info.fahrer = true, p.DisplayName
 		fahrEvent:FireClient(co, info)
 		fahrEvent:FireClient(p, { typ = "ziel", blind = true, nr = info.nr, gesamt = info.gesamt, text = ("🙈 Listen to %s!"):format(co.DisplayName), sprecher = "Co-pilot" })
+		return
+	end
+	if st.blind and st.blind.ki then
+		-- 🤖 AI co-pilot (v61): the driver still sees no route, the AI calls the directions (Beta.kiNavi)
+		st.blind.ki.zeit = 0
+		fahrEvent:FireClient(p, { typ = "ziel", blind = true, nr = info.nr, gesamt = info.gesamt, text = ("🤖 Listen to %s!"):format(Beta.KI_NAME), sprecher = "AI co-pilot" })
 		return
 	end
 	fahrEvent:FireClient(p, info)
@@ -1048,7 +1055,7 @@ local function lektionStarten(p, art, wiederholNr, party)
 		elseif st.blind then
 			st.blind.start = os.clock()
 			titel, sprecher = "🙈 BLIND DRIVE", "Co-pilot"
-			text = ("You can't see the route – %s can! Listen and drive."):format(st.blind.copilot.DisplayName)
+			text = ("You can't see the route – %s can! Listen and drive."):format(st.blind.copilot and st.blind.copilot.DisplayName or ("🤖 " .. Beta.KI_NAME))
 		end
 		fahrEvent:FireClient(p, { typ = "start", titel = titel, text = text, sprecher = sprecher, grenze = st.erlaubt, lehrer = lehrer.name })
 		task.delay(1.5, function()
@@ -1069,7 +1076,7 @@ local function lektionStarten(p, art, wiederholNr, party)
 			st.ausgestiegenSeit = nil
 			pcall(function() chassis:SetNetworkOwner(p) end)
 			if not st.gestartet then
-				if st.blind and not st.blind.copilot then
+				if st.blind and not st.blind.copilot and not st.blind.ki then
 					fahrEvent:FireClient(p, { typ = "hinweis", text = "🙈 Blind Drive: you need a co-pilot! A friend sits in your passenger seat (\"Be the co-pilot\")." })
 					return
 				end
@@ -1482,6 +1489,7 @@ RunService.Heartbeat:Connect(function(dt)
 		local wp = st.lektion.punkte[st.index]
 		local abstand = (Vector3.new(wp.x, pos.Y, wp.z) - pos).Magnitude
 		local amTor = st.tor and Regeln.durchTor(pos, st.tor.pos, st.tor.dir, st.tor.breite, st.tor.r)
+		if st.blind and st.blind.ki and not st.blind.copilot then Beta.kiNavi(p, st) end
 		if st.blind and st.tor and st.zielAktiv then
 			-- 🙈 Blind Drive (v56): driving away from the next gate = wrong way (hint for both; counts for the team rating)
 			local zumTor = (Vector3.new(st.tor.pos.X, pos.Y, st.tor.pos.Z) - pos).Magnitude
@@ -3216,6 +3224,20 @@ local function blindPaarStarten(fahrer, copilot)
 	fahrEvent:FireClient(copilot, { typ = "chaos", titel = "🗺 YOU'RE THE CO-PILOT!", text = ("Tell %s where to drive – only you can see the route!"):format(fahrer.DisplayName), farbe = "gruen" })
 	return true
 end
+-- 🤖 Blind Drive with the AI co-pilot (v61): for players without a partner
+local function blindKIStarten(p)
+	local r = lektionStarten(p, "blind")
+	if r.fehler then return r end
+	local st = lektionen[p]
+	st.blind.ki = { zeit = 0 }
+	local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		if hum.SeatPart then hum.Sit = false end
+		st.sitz:Sit(hum)
+	end
+	fahrEvent:FireClient(p, { typ = "chaos", titel = "🤖 AI CO-PILOT!", text = ("%s navigates – you only see the road. Listen to the commands!"):format(Beta.KI_NAME), farbe = "lila" })
+	return { text = ("🤖 Blind Drive with %s! You can't see the route – follow the commands."):format(Beta.KI_NAME) }
+end
 local blindAufruf = -math.huge
 local BLIND_WARTEZEIT = 180
 local function blindPartnerSuchen(p)
@@ -3565,6 +3587,8 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 		return lektionStarten(p, "blind")
 	elseif was == "blindPartner" then
 		return blindPartnerSuchen(p)
+	elseif was == "blindKI" then
+		return blindKIStarten(p)
 	elseif was == "crash" then
 		return Spass.crash(p, eingabe)
 	elseif was == "sabotageListe" then
@@ -3667,7 +3691,7 @@ Party.starten({ fahrEvent = fahrEvent, geldGeben = geldGeben, xpGeben = xpGeben,
 })
 Zonen.starten({ fahrEvent = fahrEvent, Party = Party, Beta = Beta,
 	beschaeftigt = function(p) return lektionen[p] ~= nil or jobs[p] ~= nil end,
-	blindPaar = blindPaarStarten,
+	blindPaar = blindPaarStarten, blindKI = blindKIStarten,
 	spawn = workspace:FindFirstChild("FahrschulSpawn"),
 })
 Belohnungen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent, geaendert = geaendert, Shop = Shop })

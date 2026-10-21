@@ -625,6 +625,84 @@ EVENTS.clown = {
 	tempo = 0,
 }
 
+-- 🚗 v61: wrong-way driver – a car comes at you in your lane, horn and flashing lights. A ghost: it drives through you.
+local function geisterAuto()
+	local m
+	local vorlagen = game:GetService("ReplicatedStorage"):FindFirstChild("Fuehrerschein")
+	vorlagen = vorlagen and vorlagen:FindFirstChild("Autos")
+	local v = vorlagen and (vorlagen:FindFirstChild("Limousine") or vorlagen:FindFirstChild("Kleinwagen"))
+	if v then
+		local ok, Verkehr = pcall(require, game:GetService("ReplicatedStorage").Fuehrerschein.Verkehr)
+		if ok and Verkehr.ausVorlage then m = Verkehr.ausVorlage(v, 14.5, Color3.fromRGB(150, 20, 25), nil) end
+	end
+	if m then
+		for _, t in m:GetDescendants() do
+			if t:IsA("BasePart") then t.CanCollide, t.CanQuery, t.CanTouch = false, false, false end
+		end
+		m.Name = "Geisterfahrer"
+		return m
+	end
+	-- no templates (tests, old place): a simple block car
+	m = modell("Geisterfahrer")
+	block(m, "Lack", Vector3.new(6.4, 2.6, 14), Color3.fromRGB(150, 20, 25), CFrame.new(0, 2.2, 0))
+	block(m, "Glas", Vector3.new(5.6, 1.8, 6.5), Color3.fromRGB(35, 45, 60), CFrame.new(0, 4.3, 0.8))
+	block(m, "Licht", Vector3.new(1.2, 0.5, 0.2), Color3.fromRGB(255, 250, 225), CFrame.new(-2.2, 2.6, -7.05), Enum.Material.Neon)
+	block(m, "Licht", Vector3.new(1.2, 0.5, 0.2), Color3.fromRGB(255, 250, 225), CFrame.new(2.2, 2.6, -7.05), Enum.Material.Neon)
+	return m
+end
+
+EVENTS.geisterfahrer = {
+	gewicht = 2,
+	banner = { titel = "🚗 WRONG-WAY DRIVER!", text = "A car is coming at you in YOUR lane – swerve!" },
+	aufbauen = function(e)
+		local a = geisterAuto()
+		a.Parent = e.modell
+		local lichter = {}
+		for _, t in a:GetDescendants() do
+			if t:IsA("BasePart") and t.Name == "Licht" then table.insert(lichter, t) end
+		end
+		local bb = Instance.new("BillboardGui")
+		bb.Size = UDim2.fromOffset(150, 44)
+		bb.StudsOffset = Vector3.new(0, 7, 0)
+		bb.AlwaysOnTop = true
+		bb.MaxDistance = 160
+		local t = Instance.new("TextLabel")
+		t.Size = UDim2.fromScale(1, 1)
+		t.BackgroundTransparency = 1
+		t.Text = "HONK HONK!"
+		t.TextColor3 = Color3.fromRGB(255, 220, 60)
+		t.TextStrokeTransparency = 0
+		t.Font = Enum.Font.FredokaOne
+		t.TextScaled = true
+		t.Parent = bb
+		bb.Parent = a.PrimaryPart or a:FindFirstChildWhichIsA("BasePart")
+		local tier = { m = a, seite = 0, vor = -45, r = 4.2, phase = 0, geist = true }
+		tier.bewege = function(tier_, zeit)
+			tier_.aktSeite = tier_.seite + math.sin(zeit * 1.7) * 0.8 -- wobbles a bit
+			tier_.aktVor = tier_.vor + zeit * 17 -- comes at the car
+			tier_.m:PivotTo(bodenCF(e, tier_.aktSeite, tier_.aktVor, 0) * CFrame.Angles(0, math.pi, 0))
+			local an = math.floor(zeit * 4) % 2 == 0 -- flashing lights
+			for _, l in lichter do l.Material = an and Enum.Material.Neon or Enum.Material.SmoothPlastic end
+		end
+		e.tiere = { tier }
+	end,
+	tempo = 0,
+}
+
+-- 😈 v61: the instructor sabotages you (only looks: coffee on the windscreen, selfie flash, hands over your eyes,
+-- wrong directions). Nothing touches the car.
+Chaos.STREICHE = {
+	{ titel = "☕ OOPS, COFFEE!", text = "%s spilled coffee all over the windscreen!", sagt = "Wipers! WHERE ARE THE WIPERS?!", extra = { matsch = true } },
+	{ titel = "📸 SELFIE TIME!", text = "%s takes a selfie with flash – you're blinded!", sagt = "Say CHEESE! ...oops, too bright?", extra = { blitz = true } },
+	{ titel = "🙈 GUESS WHO?", text = "%s covers your eyes for a second!", sagt = "Guess who! Hehe... keep driving!", extra = { dunkel = 1.2 } },
+	{ titel = "😜 WRONG WAY... JUST KIDDING!", text = "%s shouts the wrong direction on purpose!", sagt = "LEFT! No, RIGHT! No... just kidding!", falsch = true },
+}
+EVENTS.streich = {
+	gewicht = 2,
+	ohneObjekt = true,
+	streich = true,
+}
+
 EVENTS.gag = {
 	gewicht = 2,
 	ohneObjekt = true,
@@ -721,11 +799,24 @@ function Chaos.eventStarten(p, st, art)
 	-- v56: the very first event of lesson 1 is always the cows – the funniest "what is going on?!" moment for new players
 	if not art and st.nr == 1 and c.anzahl == 0 and not c.frei and EVENTS.kuehe then art = "kuehe" end
 	art = art or wuerfeln(st)
-	if art == "gag" and not c.lehrer.gags then art = "banane" end -- no instructor in your own car
+	if (art == "gag" or art == "streich") and not c.lehrer.gags then art = "banane" end -- no instructor in your own car
+	if art == "streich" and st.blind then art = "gag" end -- Blind Drive: no fake directions on top of the co-pilot's
 	local ev = EVENTS[art]
 	c.anzahl += 1
 	statistik(p, "arten", art)
 	if ctx and ctx.onEvent then pcall(ctx.onEvent, p) end -- analytics funnel (v54)
+	if ev.streich then
+		local s = zufall(Chaos.STREICHE)
+		banner(p, s.titel, s.text:format(c.lehrer.name or "Your instructor"), "rot", s.extra)
+		Chaos.sagen(st, nil, s.sagt)
+		if s.falsch then
+			-- a fake command, then the instructor laughs
+			local falsch = math.random() < 0.5 and { "◀ LEFT!", "links" } or { "RIGHT! ▶", "rechts" }
+			ctx.fahrEvent:FireClient(p, { typ = "kommando", art = falsch[2], text = falsch[1], farbe = "gelb", von = c.lehrer.name or "Instructor" })
+		end
+		c.naechstesEvent = os.clock() + math.random(28, 40)
+		return { art = art }
+	end
 	if ev.ohneObjekt then
 		-- one of the instructor's gags, never the same twice in a row
 		local auswahl = {}
@@ -861,7 +952,7 @@ local function eventEnde(p, st, e, grund)
 	elseif e.clown then
 		return -- the clown only takes a photo
 	elseif not e.getroffen and e.naechster < 40 then
-		local texte = { kuehe = "Dodged the cows!", enten = "The ducks made it!", banane = "Dodged the banana!",
+		local texte = { kuehe = "Dodged the cows!", enten = "The ducks made it!", banane = "Dodged the banana!", geisterfahrer = "Dodged the wrong-way driver!",
 			huehner = "All chickens survived!", wagen = "Dodged the shopping cart!", reifen = "Dodged the giant tire!", pfuetze = "Stayed clean!" }
 		ctx.geldGeben(p, BONUS, texte[e.art] or "Dodged!")
 		statistik(p, "ausgewichen")
@@ -894,6 +985,7 @@ function Chaos.tick(p, st, pos, tempo, vorneZ, hintenZ, halbB)
 					if pt.tier.huhn then Chaos.federn(pt.tier.m) end
 					Chaos.crashPunkte(p, 1)
 					local was = { kuehe = { "💥 MOOOO!", "You bumped a cow. It's fine... probably." },
+						geisterfahrer = { "👻 IT WENT RIGHT THROUGH YOU!", "A GHOST driver! Spooky... but that counts as a crash." },
 						enten = { "🦆 QUAAACK!", "A duck went flying! It's okay, ducks can fly." },
 						banane = { "🍌 SLIIIP!", "You drove over the banana peel! Whoooa!" },
 						huehner = { "🐔 BAWK BAWK!", "Feathers everywhere!" },

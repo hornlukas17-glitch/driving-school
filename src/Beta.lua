@@ -191,6 +191,36 @@ function Beta.blindWertung(fehler, erfolg, mitCopilot)
 	end
 end
 
+-- 🤖 AI co-pilot for Blind Drive (v61): looks at the next gate and calls the direction like a friend would.
+-- It only knows where the gate is, not the roads – "STRAIGHT ON" until close, then the turn.
+Beta.KI_NAME = "Robo-Rita"
+Beta.KI_TAKT = 1.3      -- seconds between two checks
+Beta.KI_WIEDERHOLEN = 5 -- the same command again after this many seconds
+function Beta.kiRichtung(cf, ziel, parken)
+	local rel = cf:PointToObjectSpace(Vector3.new(ziel.X, cf.Position.Y, ziel.Z))
+	local dist = Vector3.new(rel.X, 0, rel.Z).Magnitude
+	local winkel = math.deg(math.atan2(rel.X, -rel.Z)) -- 0 = straight ahead (front = -Z), + = right
+	if parken and dist < 30 then return "stopp" end
+	if math.abs(winkel) > 100 then return winkel > 0 and "rechts" or "links" end -- behind us: turn around
+	if dist > 70 and math.abs(winkel) < 60 then return "gerade" end
+	if winkel > 25 then return "rechts" end
+	if winkel < -25 then return "links" end
+	return "gerade"
+end
+function Beta.kiNavi(p, st)
+	local ki = st.blind and st.blind.ki
+	if not ki or not st.tor or not st.zielAktiv or not st.chassis then return end
+	local jetzt = os.clock()
+	if jetzt - (ki.check or 0) < Beta.KI_TAKT then return end
+	ki.check = jetzt
+	local wp = st.lektion and st.lektion.punkte and st.lektion.punkte[st.index]
+	local art = Beta.kiRichtung(st.chassis.CFrame, st.tor.pos, wp and wp.parken)
+	if art == ki.letzt and jetzt - (ki.zeit or 0) < Beta.KI_WIEDERHOLEN then return end
+	ki.letzt, ki.zeit = art, jetzt
+	local def = Beta.KOMMANDOS[art]
+	ctx.fahrEvent:FireClient(p, { typ = "kommando", art = art, text = def[1], farbe = def[2], von = "🤖 " .. Beta.KI_NAME })
+end
+
 function Beta.starten(k)
 	ctx = k
 end

@@ -213,7 +213,7 @@ pruefe("car parts unchanged (driving feel stays the same)", gleich)
 st.chaos.naechstesEvent = os.clock() - 1
 setzen(200, -520)
 M.laufen(M.zeit() + 0.3)
-pruefe("event starts by itself while driving", st.chaos.event ~= nil or letztes("chaos").farbe == "lila")
+pruefe("event starts by itself while driving", st.chaos.event ~= nil or letztes("chaos").farbe == "lila" or letztes("chaos").farbe == "rot") -- object, gag or prank (v61)
 print("automatic event:", st.chaos.event and st.chaos.event.art or "gag")
 
 -- 9) mistakes make the instructor react

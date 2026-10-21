@@ -1,5 +1,13 @@
 # Changelog
 
+## v61 – KI-Beifahrer, Bot-Gegner, VIP-Name, KI-Sabotage
+- **Startzonen in der Mitte des Parkplatzes** (Fahrgasse zwischen den Buchtreihen).
+- **🤖 KI-Beifahrer „Robo-Rita“ (Blind Drive):** Wer 15 s allein in der Blind-Drive-Zone steht, fährt mit der KI (Schild zählt herunter). Auch im 🙈-Menü: „With the AI co-pilot“. Die KI kennt nur die Lage des nächsten Tors: „STRAIGHT ON“ solange es weit vorne liegt, dann LEFT/RIGHT, beim Parken STOP; gleiches Kommando höchstens alle 5 s. Halbe Coins gegenüber einem echten Partner. Ein Freund kann sich jederzeit dazusetzen.
+- **🤖 Bot-Gegner (Party-Test):** Die grüne Party-Zone startet schon mit 1 Spieler; freie Plätze füllen Bots (Turbo Tina, Crash Carl, …). Sie fahren „virtuell“: Zeit aus der Routenlänge (24–34 Studs/s + 0–3 Fehler), Meldungen „… IS HALFWAY!“ und „🏁 … PARKED!“, Platz in der Ergebnisliste. Bots bekommen nie Coins; gewinnt ein Bot, gibt es keine Krone.
+- **VIP-Name:** Das große „👑 VIP“-Schild ist weg. Andere sehen den Namen in Gold mit kleinem „VIP“ daneben, man selbst sieht sein Schild nicht.
+- **KI-Sabotage:** 🚗 Geisterfahrer (kommt hupend und blinkend auf deiner Spur entgegen – ausweichen = Bonus, er fährt als „Geist“ durch dich durch) und 😈 Fahrlehrer-Streiche (Kaffee auf der Scheibe, Selfie-Blitz, Hände vor den Augen, absichtlich falsche Richtung – nicht in Blind Drive). Alles nur Optik/Abstand, das Fahrgefühl bleibt gleich.
+- Test 35, Test 23 angepasst.
+
 ## v60 – 💥 Ragdoll-Crashes und Sabotage-Shop
 - **Ragdoll-Crashes** (`src/Spass.lua` Server, `src/SpassClient.lua` Client): Wer hart gegen etwas fährt (mindestens 40 km/h Tempoverlust in 0,25 s ab 50 km/h – mit der Bremse unmöglich), fliegt aus dem Auto, alle mitfahrenden Spieler auch. Schaden 8–45 HP je nach Wucht (Mitfahrer 60 %), nie unter 5 HP (kein Tod). Nach 3 s sitzt man automatisch wieder auf seinem Platz. Nicht bei Bananen-Rutschen, UFO und in den ersten 3 s nach dem Einsteigen. Zählt für die „Worst Drivers“-Bestenliste. Das Auto und das Fahrgefühl bleiben unverändert (der Client liest nur das Tempo).
 - **💥 Sabotage-Shop** (neuer Menüknopf „Sabotage“): Coins ausgeben und einem fahrenden Spieler ein Chaos-Event schicken – 🍌 Banana Peel 100, 🟤 Mud Splash 120, 🐄 Cow Stampede 150, 🤡 Creepy Clown 200, 👽 UFO Abduction 300. Das Opfer sieht „💥 SABOTAGE! Mia sent you …“; weicht es aus, bekommt es +50 Coins und der Sender „😤 DODGED!“.

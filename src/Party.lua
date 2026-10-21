@@ -11,6 +11,11 @@ Party.ZEIT = 300           -- max race time
 Party.STRAFE = 5           -- seconds per mistake
 Party.PREISE = { 500, 250, 120, 60 }
 Party.MIN = 2              -- players needed (1 in Studio for testing)
+-- 🤖 bots (v61): fill free spots in the green party zone. They race "virtually": a time from the route length,
+-- live messages ("Turbo Tina is halfway!", "TURBO TINA PARKED!") and a place in the results. No car on the road.
+Party.BOTS = { "Turbo Tina", "Crash Carl", "Granny Gear", "Drift Dora", "Speedy Sam", "Honk Hank" }
+Party.BOT_TEMPO = { 24, 34 }   -- studs/s on average (incl. turns, traffic lights)
+Party.START = Vector3.new(550, 0, 60)
 
 local ctx
 local lobby     -- { spieler = {}, ende = clock, offen = player }
@@ -58,7 +63,45 @@ function Party.beitreten(p)
 	return { text = ("You're in! The race starts in %d s – invite your friends!"):format(math.ceil(lobby.ende - os.clock())) }
 end
 
-starten = function()
+local function routeLaenge(lektion)
+	local laenge, vorher = 0, Party.START
+	for _, wp in lektion and lektion.punkte or {} do
+		local x, z = wp.x or (wp.pos and wp.pos.X), wp.z or (wp.pos and wp.pos.Z)
+		if x and z then
+			local jetzt = Vector3.new(x, 0, z)
+			laenge += (jetzt - vorher).Magnitude
+			vorher = jetzt
+		end
+	end
+	return math.max(laenge, 300)
+end
+Party.routeLaenge = routeLaenge
+
+local function botsStarten(r, anzahl)
+	r.bots = {}
+	if anzahl <= 0 then return end
+	local namen = table.clone(Party.BOTS)
+	local laenge = routeLaenge(r.lektion)
+	for _ = 1, anzahl do
+		local name = "🤖 " .. table.remove(namen, math.random(#namen))
+		local tempo = Party.BOT_TEMPO[1] + math.random() * (Party.BOT_TEMPO[2] - Party.BOT_TEMPO[1])
+		local fehler = math.random(0, 3)
+		local roh = laenge / tempo
+		local bot = { name = name, roh = roh, fehler = fehler, zeit = roh + fehler * Party.STRAFE }
+		table.insert(r.bots, bot)
+		task.delay(roh * 0.5, function()
+			if rennen == r then anTeilnehmer(r.spieler, { typ = "party", phase = "bot", titel = name:upper() .. " IS HALFWAY!", text = "Hurry up!" }) end
+		end)
+		task.delay(roh, function()
+			if rennen == r then
+				bot.angekommen = true
+				anTeilnehmer(r.spieler, { typ = "party", phase = "ziel", titel = ("🏁 %s PARKED!"):format(name:upper()), text = ("%.1f s + %d mistake(s)"):format(roh, fehler) })
+			end
+		end)
+	end
+end
+
+starten = function(bots)
 	local l = lobby
 	lobby = nil
 	if not l then return end
@@ -66,7 +109,7 @@ starten = function()
 	for _, sp in l.spieler do
 		if sp.Parent and not ctx.beschaeftigt(sp) then table.insert(dabei, sp) end
 	end
-	if #dabei < minimum() then
+	if #dabei < (bots and bots > 0 and 1 or minimum()) then
 		anTeilnehmer(dabei, { typ = "party", phase = "abbruch", titel = "🏁 NOT ENOUGH DRIVERS",
 			text = "Nobody else joined. Invite a friend and try again!" })
 		return
@@ -78,6 +121,7 @@ starten = function()
 		if ok and not ok.fehler then table.insert(r.spieler, sp) end
 	end
 	if #r.spieler == 0 then rennen = nil return end
+	botsStarten(r, math.min(bots or 0, Party.MAX - #r.spieler))
 	anTeilnehmer(r.spieler, { typ = "party", phase = "start", titel = "🏁 GO GO GO!",
 		text = ("Get in your car! First to park wins. Each mistake = +%d s."):format(Party.STRAFE) })
 	task.delay(Party.ZEIT, function()
@@ -88,7 +132,7 @@ Party.jetztStarten = function() starten() end -- (tests)
 Party.minimum = minimum
 
 -- green party zone: these players start right now (joins an open 🏁 lobby if there is one)
-function Party.mitSpielern(liste)
+function Party.mitSpielern(liste, bots)
 	if rennen then return nil end
 	if lobby then
 		for _, sp in liste do
@@ -97,7 +141,7 @@ function Party.mitSpielern(liste)
 	else
 		lobby = { spieler = table.clone(liste), ende = os.clock() }
 	end
-	starten()
+	starten(bots)
 	local r = rennen
 	if r and ctx.hinsetzen then
 		for _, sp in r.spieler do ctx.hinsetzen(sp) end
@@ -134,24 +178,31 @@ function Party.abschluss()
 			ctx.lektionAbbrechen(sp, "Time is up!")
 		end
 	end
+	for _, b in r.bots or {} do
+		table.insert(r.ergebnisse, { bot = true, name = b.name, roh = b.roh, fehler = b.fehler, zeit = b.zeit, ziel = true })
+	end
 	table.sort(r.ergebnisse, function(a, b)
 		if a.ziel ~= b.ziel then return a.ziel end
 		return a.zeit < b.zeit
 	end)
 	local liste = {}
 	for i, e in r.ergebnisse do
-		local preis = e.ziel and Party.PREISE[i] or 0
-		if preis > 0 and e.p.Parent then ctx.geldGeben(e.p, preis, ("Party test – place %d"):format(i)) end
-		if e.p.Parent then ctx.xpGeben(e.p, e.ziel and 60 or 20, "Party test") end
+		local preis = (e.ziel and not e.bot) and Party.PREISE[i] or 0
+		if e.p and e.p.Parent then
+			if preis > 0 then ctx.geldGeben(e.p, preis, ("Party test – place %d"):format(i)) end
+			ctx.xpGeben(e.p, e.ziel and 60 or 20, "Party test")
+		end
 		table.insert(liste, { platz = i, name = e.name, zeit = e.ziel and e.zeit or nil, fehler = e.fehler, preis = preis })
 	end
 	local sieger = r.ergebnisse[1]
-	if sieger and sieger.ziel and #r.ergebnisse >= 2 and sieger.p.Parent then
+	if sieger and sieger.ziel and not sieger.bot and #r.ergebnisse >= 2 and sieger.p.Parent then
 		if ctx.Chaos then ctx.Chaos.statistik(sieger.p, "partySiege") end
 		Party.krone(sieger.p)
 	end
 	anTeilnehmer(r.spieler, { typ = "party", phase = "ergebnis", titel = "🏁 PARTY TEST RESULTS", liste = liste })
-	if sieger and sieger.ziel then
+	if sieger and sieger.bot then
+		anTeilnehmer(r.spieler, { typ = "party", phase = "sieger", titel = "🤖 " .. sieger.name:gsub("🤖 ", ""):upper() .. " WINS!", text = "Beaten by a bot! Try again in the green zone." })
+	elseif sieger and sieger.ziel then
 		anAlle({ typ = "party", phase = "sieger", titel = "👑 " .. sieger.name:upper() .. " WINS!",
 			text = ("won the party driving test (%d drivers)"):format(#r.ergebnisse) })
 	end

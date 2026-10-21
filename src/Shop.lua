@@ -116,10 +116,11 @@ local function attribute(p)
 end
 Shop.attribute = attribute
 
--- golden tag above VIP players
+-- VIP name tag (v61): the others see the name in gold with a small "VIP" next to it; you don't see your own tag
 local function vipSchild(p)
 	local figur = p.Character
 	local kopf = figur and figur:FindFirstChild("Head")
+	local hum = figur and figur:FindFirstChildOfClass("Humanoid")
 	if not kopf then return end
 	local alt = kopf:FindFirstChild("VipSchild")
 	if not Shop.hat(p, "vip") then
@@ -127,23 +128,26 @@ local function vipSchild(p)
 		return
 	end
 	if alt then return end
+	-- the normal Roblox name is replaced by the golden one
+	if hum then hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end
 	local g = Instance.new("BillboardGui")
 	g.Name = "VipSchild"
-	g.Size = UDim2.fromOffset(70, 24)
-	g.StudsOffset = Vector3.new(0, 2.6, 0)
+	g.Size = UDim2.fromOffset(200, 26)
+	g.StudsOffset = Vector3.new(0, 2.3, 0)
 	g.AlwaysOnTop = false
-	g.MaxDistance = 80
+	g.MaxDistance = 100
+	g.PlayerToHideFrom = p
 	g.Parent = kopf
 	local t = Instance.new("TextLabel")
 	t.Size = UDim2.fromScale(1, 1)
-	t.BackgroundColor3 = Color3.fromRGB(40, 32, 10)
-	t.BackgroundTransparency = 0.25
-	t.Font = Enum.Font.GothamBlack
-	t.TextScaled = true
+	t.BackgroundTransparency = 1
+	t.Font = Enum.Font.GothamBold
+	t.TextSize = 18
+	t.RichText = true
 	t.TextColor3 = Color3.fromRGB(255, 210, 70)
-	t.Text = "👑 VIP"
+	t.TextStrokeTransparency = 0.3
+	t.Text = ('%s <font size="11" color="#FFE9A8"><b>VIP</b></font>'):format(p.DisplayName:gsub("[<>&]", ""))
 	t.Parent = g
-	Instance.new("UICorner", t)
 end
 
 local function besitzLaden(p)

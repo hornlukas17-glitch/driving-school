@@ -41,6 +41,27 @@ function SpassClient.starten(k)
 	end)
 
 	-- the server threw us out of the car: go limp, fly, get up again
+	-- 🙈 v61 instructor prank "hands over your eyes": the screen goes dark for a moment
+	local dunkelGui = Instance.new("ScreenGui")
+	dunkelGui.Name = "Augen"
+	dunkelGui.IgnoreGuiInset = true
+	dunkelGui.ResetOnSpawn = false
+	dunkelGui.DisplayOrder = 40
+	dunkelGui.Parent = spieler:WaitForChild("PlayerGui")
+	game:GetService("ReplicatedStorage"):WaitForChild("Fuehrerschein"):WaitForChild("Fahrstunde").OnClientEvent:Connect(function(info)
+		if type(info) ~= "table" or info.typ ~= "chaos" or not info.dunkel then return end
+		local f = Instance.new("Frame")
+		f.Size = UDim2.fromScale(1, 1)
+		f.BackgroundColor3 = Color3.fromRGB(20, 12, 8)
+		f.BackgroundTransparency = 0.05
+		f.BorderSizePixel = 0
+		f.Parent = dunkelGui
+		task.delay(tonumber(info.dunkel) or 1.2, function()
+			game:GetService("TweenService"):Create(f, TweenInfo.new(0.5), { BackgroundTransparency = 1 }):Play()
+			task.delay(0.6, function() f:Destroy() end)
+		end)
+	end)
+
 	game:GetService("ReplicatedStorage"):WaitForChild("Fuehrerschein"):WaitForChild("Fahrstunde").OnClientEvent:Connect(function(info)
 		if type(info) ~= "table" or info.typ ~= "ragdoll" then return end
 		local char = spieler.Character

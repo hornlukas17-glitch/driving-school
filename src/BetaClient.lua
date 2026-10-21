@@ -343,9 +343,13 @@ function BetaClient.starten(k)
 	function BetaClient.blindKnopf()
 		k.zeige("🙈 Blind Drive",
 			"<b>One drives, one navigates.</b>\nThe driver can't see the route – the co-pilot sees the map and tells them where to go.\n\n"
-				.. "👥 <b>With a friend:</b> you drive, your friend sits next to you.\n🎲 <b>Find a partner:</b> we match you with another player on this server.", {
+				.. "👥 <b>With a friend:</b> you drive, your friend sits next to you.\n🎲 <b>Find a partner:</b> we match you with another player on this server.\n🤖 <b>AI co-pilot:</b> Robo-Rita calls the directions.", {
 				{ text = "👥 With a friend", farbe = GRUEN, klick = mitFreund },
 				{ text = "🎲 Find a partner", farbe = BLAU, klick = partnerSuchen },
+				{ text = "🤖 With the AI co-pilot", farbe = Color3.fromRGB(150, 60, 170), klick = function()
+					local r = frage("blindKI")
+					if r.fehler then warnen(r.fehler, Color3.fromRGB(200, 140, 30)) else k.schliessen() warnen(r.text or "", GRUEN) end
+				end },
 				{ text = "Close", farbe = Color3.fromRGB(70, 75, 85), klick = k.schliessen },
 			}, "dialog")
 	end

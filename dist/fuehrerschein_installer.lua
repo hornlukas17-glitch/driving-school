@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v57
+--  DRIVER'S LICENSE SYSTEM v58
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -1914,6 +1914,7 @@ local Belohnungen = require(script:WaitForChild("Belohnungen"))
 local Chaos = require(script:WaitForChild("Chaos"))
 local Party = require(script:WaitForChild("Party"))
 local Beta = require(script:WaitForChild("Beta"))
+local Zonen = require(script:WaitForChild("Zonen"))
 local Hupen = require(ordner:WaitForChild("Hupen"))
 local Verkehr = require(ordner:WaitForChild("Verkehr"))
 local verkehrEvent = ordner:WaitForChild("VerkehrDaten")
@@ -5063,6 +5064,26 @@ end
 -- 🎲 Blind Drive "Find a partner" (v56): two players without a friend get matched on the server.
 -- The one who waited longer drives, the other one becomes the co-pilot. Both are put into the car.
 local blindWarte = {}   -- { { p = player, seit = clock } }
+-- starts Blind Drive for two players: fahrer drives, copilot navigates; both are put into the car
+-- (used by "Find a partner" and by the green Blind Drive zone)
+local function blindPaarStarten(fahrer, copilot)
+	local r = lektionStarten(fahrer, "blind")
+	if r.fehler then return false, "Your partner can't start right now – try again." end
+	local st = lektionen[fahrer]
+	-- co-pilot first, then the driver: the route starts as soon as the driver sits
+	if not (st.copilotEinsetzen and st.copilotEinsetzen(copilot, true)) then
+		lektionBeenden(fahrer, false, "Blind Drive cancelled (the partner could not get in).")
+		return false, "Could not put you into the car – try again."
+	end
+	local hf = fahrer.Character and fahrer.Character:FindFirstChildOfClass("Humanoid")
+	if hf then
+		if hf.SeatPart then hf.Sit = false end
+		st.sitz:Sit(hf)
+	end
+	fahrEvent:FireClient(fahrer, { typ = "chaos", titel = "🎲 PARTNER FOUND!", text = copilot.DisplayName .. " is your co-pilot. You drive – listen to them!", farbe = "gruen" })
+	fahrEvent:FireClient(copilot, { typ = "chaos", titel = "🗺 YOU'RE THE CO-PILOT!", text = ("Tell %s where to drive – only you can see the route!"):format(fahrer.DisplayName), farbe = "gruen" })
+	return true
+end
 local blindAufruf = -math.huge
 local BLIND_WARTEZEIT = 180
 local function blindPartnerSuchen(p)
@@ -5093,20 +5114,8 @@ local function blindPartnerSuchen(p)
 	end
 	table.remove(blindWarte, 1)
 	local fahrer = partner.p
-	local r = lektionStarten(fahrer, "blind")
-	if r.fehler then return { fehler = "Your partner can't start right now – try again." } end
-	local st = lektionen[fahrer]
-	-- co-pilot first, then the driver: the route starts as soon as the driver sits
-	if not (st.copilotEinsetzen and st.copilotEinsetzen(p, true)) then
-		lektionBeenden(fahrer, false, "Blind Drive cancelled (the partner could not get in).")
-		return { fehler = "Could not put you into the car – try again." }
-	end
-	local hf = fahrer.Character and fahrer.Character:FindFirstChildOfClass("Humanoid")
-	if hf then
-		if hf.SeatPart then hf.Sit = false end
-		st.sitz:Sit(hf)
-	end
-	fahrEvent:FireClient(fahrer, { typ = "chaos", titel = "🎲 PARTNER FOUND!", text = p.DisplayName .. " is your co-pilot. You drive – listen to them!", farbe = "gruen" })
+	local ok, fehler = blindPaarStarten(fahrer, p)
+	if not ok then return { fehler = fehler } end
 	Beta.ereignis(p, "Blind partner matched")
 	return { text = ("Partner found! You're %s's co-pilot – tell them where to drive."):format(fahrer.DisplayName), gefunden = true }
 end
@@ -5507,6 +5516,17 @@ Party.starten({ fahrEvent = fahrEvent, geldGeben = geldGeben, xpGeben = xpGeben,
 	zufallsRoute = function() return LEKTIONEN.PRUEFUNGEN[math.random(#LEKTIONEN.PRUEFUNGEN)] end,
 	lektionStarten = function(p, art, nr, party) return lektionStarten(p, art, nr, party) end,
 	lektionAbbrechen = function(p, text) if lektionen[p] then lektionBeenden(p, false, text) end end,
+	-- put a race driver straight into their car (green party zone)
+	hinsetzen = function(p)
+		local st = lektionen[p]
+		local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+		if st and st.sitz and hum and not hum.SeatPart then st.sitz:Sit(hum) end
+	end,
+})
+Zonen.starten({ fahrEvent = fahrEvent, Party = Party, Beta = Beta,
+	beschaeftigt = function(p) return lektionen[p] ~= nil or jobs[p] ~= nil end,
+	blindPaar = blindPaarStarten,
+	spawn = workspace:FindFirstChild("FahrschulSpawn"),
 })
 Belohnungen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent, geaendert = geaendert, Shop = Shop })
 
@@ -8170,33 +8190,33 @@ local Shop = {}
 
 -- one-time purchases (keep forever)
 Shop.PASSES = {
-	{ key = "vip", id = 0, preis = 399, icon = "👑", name = "VIP",
+	{ key = "vip", id = 2045876474, preis = 399, icon = "👑", name = "VIP",
 		text = "2x coins from every job and reward, golden VIP tag, 2 VIP paint colors." },
-	{ key = "xp2", id = 0, preis = 249, icon = "⚡", name = "2x XP",
+	{ key = "xp2", id = 2045510483, preis = 249, icon = "⚡", name = "2x XP",
 		text = "Level up twice as fast – unlock the big trucks and cars sooner." },
-	{ key = "nacht", id = 0, preis = 699, icon = "🌙", name = "Vanta GS Night Edition",
+	{ key = "nacht", id = 2045372495, preis = 699, icon = "🌙", name = "Vanta GS Night Edition",
 		text = "Exclusive car: midnight black, gold rims, purple underglow, 195 km/h. Only with this pass." },
 	{ key = "garage", id = 0, preis = 199, icon = "🎨", name = "Paint Studio",
 		text = "6 exclusive paint colors for all your cars." },
-	{ key = "banane", id = 0, preis = 149, icon = "🍌", name = "Banana Launcher",
+	{ key = "banane", id = 2045894480, preis = 149, icon = "🍌", name = "Banana Launcher",
 		text = "Press B (or the 🍌 button) while driving to drop banana peels behind your car. Watch your friends spin out!" },
-	{ key = "hupen", id = 0, preis = 99, icon = "📯", name = "Funny Horn Pack",
+	{ key = "hupen", id = 2044832494, preis = 99, icon = "📯", name = "Funny Horn Pack",
 		text = "4 crazy horns for every car: clown, duck, air horn and fanfare. Press H to honk – everybody hears it!" },
 }
 
 -- can be bought again and again (except the starter pack)
 Shop.PRODUKTE = {
-	{ key = "starter", id = 0, preis = 99, name = "Starter Pack", geld = 7500, boost = 30, einmal = true,
+	{ key = "starter", id = 3720579126, preis = 99, name = "Starter Pack", geld = 7500, boost = 30, einmal = true,
 		text = "7,500 coins + 30 min 2x coins. Only once per player!" },
-	{ key = "boost", id = 0, preis = 79, name = "2x Coins – 30 min", boost = 30, text = "Double coins for 30 minutes of play." },
-	{ key = "ufo", id = 0, preis = 49, name = "👽 Alien Invasion", chaos = "ufo", tag = "FUN",
+	{ key = "boost", id = 3720579213, preis = 79, name = "2x Coins – 30 min", boost = 30, text = "Double coins for 30 minutes of play." },
+	{ key = "ufo", id = 3720579264, preis = 49, name = "👽 Alien Invasion", chaos = "ufo", tag = "FUN",
 		text = "A UFO beams up EVERY driver on the server – with your name on it!" },
-	{ key = "bananen", id = 0, preis = 29, name = "🍌 Banana Rain", chaos = "bananen", tag = "FUN",
+	{ key = "bananen", id = 3720579331, preis = 29, name = "🍌 Banana Rain", chaos = "bananen", tag = "FUN",
 		text = "Banana peels rain down in front of every driver on the server!" },
-	{ key = "coins1", id = 0, preis = 49, name = "2,500 coins", geld = 2500 },
-	{ key = "coins2", id = 0, preis = 179, name = "10,000 coins", geld = 10000 },
-	{ key = "coins3", id = 0, preis = 449, name = "30,000 coins", geld = 30000, tag = "POPULAR" },
-	{ key = "coins4", id = 0, preis = 1199, name = "100,000 coins", geld = 100000, tag = "BEST VALUE" },
+	{ key = "coins1", id = 3720579454, preis = 49, name = "2,500 coins", geld = 2500 },
+	{ key = "coins2", id = 3720579561, preis = 179, name = "10,000 coins", geld = 10000 },
+	{ key = "coins3", id = 3720579673, preis = 449, name = "30,000 coins", geld = 30000, tag = "POPULAR" },
+	{ key = "coins4", id = 3720579782, preis = 1199, name = "100,000 coins", geld = 100000, tag = "BEST VALUE" },
 }
 
 -- bonus shares on earned coins / XP (purchases and admin money never get a bonus)
@@ -10097,6 +10117,25 @@ starten = function()
 	end)
 end
 Party.jetztStarten = function() starten() end -- (tests)
+Party.minimum = minimum
+
+-- green party zone: these players start right now (joins an open 🏁 lobby if there is one)
+function Party.mitSpielern(liste)
+	if rennen then return nil end
+	if lobby then
+		for _, sp in liste do
+			if #lobby.spieler < Party.MAX and not table.find(lobby.spieler, sp) then table.insert(lobby.spieler, sp) end
+		end
+	else
+		lobby = { spieler = table.clone(liste), ende = os.clock() }
+	end
+	starten()
+	local r = rennen
+	if r and ctx.hinsetzen then
+		for _, sp in r.spieler do ctx.hinsetzen(sp) end
+	end
+	return r
+end
 
 -- a lesson of the race ended (parked = erfolg, or cancelled / left the car)
 function Party.fertig(p, st, erfolg)
@@ -10391,6 +10430,221 @@ function Beta.starten(k)
 end
 
 return Beta
+]=====])
+neu("ModuleScript", "Zonen", server, [=====[
+-- 🟢 Start zones (v58): two green areas in front of the driving school. Walk in, wait for other players, go!
+--   🙈 BLIND DRIVE – starts as soon as 2 players stand in it (who came first drives).
+--   🏁 PARTY TEST  – from 2 players a countdown runs (full with 4 = starts right away).
+-- The sign above each zone shows how many players are waiting.
+local Players = game:GetService("Players")
+
+local Zonen = {}
+Zonen.RADIUS = 5
+Zonen.TAKT = 0.3
+Zonen.PARTY_COUNTDOWN = 15
+Zonen.PARTY_VOLL = 3       -- seconds left when the party zone is full
+
+local ctx
+local zonen = {}           -- [1] = blind, [2] = party
+Zonen.liste = function() return zonen end
+
+local GRUEN = Color3.fromRGB(60, 255, 120)
+
+local function teil(name, groesse, cf, farbe, material, form, eltern)
+	local t = Instance.new("Part")
+	t.Name = name
+	t.Size = groesse
+	t.CFrame = cf
+	t.Color = farbe
+	t.Material = material
+	t.Shape = form or Enum.PartType.Block
+	t.Anchored = true
+	t.CanCollide = false
+	t.CanQuery = false
+	t.CanTouch = false
+	t.CastShadow = false
+	t.Parent = eltern
+	return t
+end
+
+local function zoneBauen(ordner, name, pos, titel, farbeTitel)
+	local m = Instance.new("Model")
+	m.Name = name
+	local boden = teil("Flaeche", Vector3.new(0.1, Zonen.RADIUS * 2, Zonen.RADIUS * 2),
+		CFrame.new(pos + Vector3.new(0, 0.06, 0)) * CFrame.Angles(0, 0, math.rad(90)), GRUEN, Enum.Material.Neon, Enum.PartType.Cylinder, m)
+	boden.Transparency = 0.15
+	local licht = teil("Licht", Vector3.new(6, Zonen.RADIUS * 2, Zonen.RADIUS * 2),
+		CFrame.new(pos + Vector3.new(0, 3.1, 0)) * CFrame.Angles(0, 0, math.rad(90)), GRUEN, Enum.Material.Neon, Enum.PartType.Cylinder, m)
+	licht.Transparency = 0.88
+	local anker = teil("Schild", Vector3.new(1, 1, 1), CFrame.new(pos + Vector3.new(0, 8.5, 0)), GRUEN, Enum.Material.SmoothPlastic, nil, m)
+	anker.Transparency = 1
+	local g = Instance.new("BillboardGui")
+	g.Name = "Anzeige"
+	g.Size = UDim2.fromScale(12, 4.6) -- in studs: shrinks with distance, the two signs never overlap
+	g.MaxDistance = 160
+	g.LightInfluence = 0
+	g.Parent = anker
+	local kopf = Instance.new("TextLabel")
+	kopf.Name = "Titel"
+	kopf.Size = UDim2.new(1, 0, 0.45, 0)
+	kopf.BackgroundTransparency = 1
+	kopf.Font = Enum.Font.FredokaOne
+	kopf.TextScaled = true
+	kopf.TextColor3 = farbeTitel
+	kopf.TextStrokeTransparency = 0
+	kopf.Text = titel
+	kopf.Parent = g
+	local zahl = Instance.new("TextLabel")
+	zahl.Name = "Status"
+	zahl.Position = UDim2.fromScale(0, 0.45)
+	zahl.Size = UDim2.new(1, 0, 0.32, 0)
+	zahl.BackgroundTransparency = 1
+	zahl.Font = Enum.Font.FredokaOne
+	zahl.TextScaled = true
+	zahl.TextColor3 = Color3.new(1, 1, 1)
+	zahl.TextStrokeTransparency = 0
+	zahl.Parent = g
+	local info = zahl:Clone()
+	info.Name = "Info"
+	info.Position = UDim2.fromScale(0, 0.77)
+	info.Size = UDim2.new(1, 0, 0.23, 0)
+	info.Font = Enum.Font.GothamBold
+	info.TextColor3 = Color3.fromRGB(220, 230, 225)
+	info.Parent = g
+	m.Parent = ordner
+	return { model = m, pos = pos, status = zahl, info = info, drin = {}, sperre = {} }
+end
+
+local function setzen(z, status, info)
+	if z.status.Text ~= status then z.status.Text = status end
+	if z.info.Text ~= info then z.info.Text = info end
+end
+
+-- player stands on the zone, on foot, and is free
+local function stehtDrin(z, p)
+	local ch = p.Character
+	local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+	local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+	if not hum or not hrp or hum.Health <= 0 or hum.SeatPart then return false end
+	local d = hrp.Position - z.pos
+	if math.abs(d.Y) > 7 or Vector3.new(d.X, 0, d.Z).Magnitude > Zonen.RADIUS + 0.5 then return false end
+	return not ctx.beschaeftigt(p)
+end
+
+-- keeps z.drin in arrival order; new players get a short hint
+local function aktualisieren(z, hinweis)
+	for i = #z.drin, 1, -1 do
+		if not z.drin[i].Parent or not stehtDrin(z, z.drin[i]) then table.remove(z.drin, i) end
+	end
+	for _, p in Players:GetPlayers() do
+		local gesperrt = z.sperre[p] and os.clock() < z.sperre[p]
+		if not gesperrt and not table.find(z.drin, p) and stehtDrin(z, p) then
+			table.insert(z.drin, p)
+			ctx.fahrEvent:FireClient(p, { typ = "hinweis", text = hinweis, farbe = "gruen" })
+		end
+	end
+end
+
+function Zonen.tick()
+	local blind, party = zonen[1], zonen[2]
+	if blind then
+		aktualisieren(blind, "🙈 Blind Drive: waiting for a second player – bring a friend or wait here!")
+		while #blind.drin >= 2 do
+			local fahrer = table.remove(blind.drin, 1)
+			local copilot = table.remove(blind.drin, 1)
+			blind.gestartet = (blind.gestartet or 0) + 1
+			task.spawn(function()
+				local ok, fehler = ctx.blindPaar(fahrer, copilot)
+				if ok then
+					if ctx.Beta then ctx.Beta.ereignis(fahrer, "Zone blind drive") ctx.Beta.ereignis(copilot, "Zone blind drive") end
+				else
+					-- short pause, otherwise both would be retried (and told) every few frames
+					for _, sp in { fahrer, copilot } do
+						blind.sperre[sp] = os.clock() + 6
+						if sp.Parent then ctx.fahrEvent:FireClient(sp, { typ = "hinweis", text = fehler or "Could not start – try again." }) end
+					end
+				end
+			end)
+		end
+		if #blind.drin == 1 then
+			setzen(blind, "1/2 PLAYERS", "Waiting for a partner…")
+		else
+			setzen(blind, "0/2 PLAYERS", "One drives, one navigates")
+		end
+	end
+	if party then
+		aktualisieren(party, "🏁 Party test: the race starts when 2–4 players stand here!")
+		local Party = ctx.Party
+		local _, rennen = Party.zustand()
+		local n = #party.drin
+		local mindest = Party.minimum()
+		if rennen then
+			party.ende = nil
+			setzen(party, ("%d/%d PLAYERS"):format(math.min(n, Party.MAX), Party.MAX), "A race is running – next one soon!")
+		elseif n >= mindest then
+			local jetzt = os.clock()
+			if not party.ende then party.ende = jetzt + Zonen.PARTY_COUNTDOWN end
+			if n >= Party.MAX then party.ende = math.min(party.ende, jetzt + Zonen.PARTY_VOLL) end
+			local rest = math.max(0, math.ceil(party.ende - jetzt))
+			setzen(party, ("%d/%d PLAYERS"):format(math.min(n, Party.MAX), Party.MAX), ("Starts in %d s!"):format(rest))
+			if jetzt >= party.ende then
+				party.ende = nil
+				local liste = {}
+				for i = 1, math.min(n, Party.MAX) do liste[i] = party.drin[i] end
+				for _ = 1, #liste do table.remove(party.drin, 1) end
+				party.gestartet = (party.gestartet or 0) + 1
+				local r = Party.mitSpielern(liste)
+				for _, sp in liste do
+					if not (r and table.find(r.spieler, sp)) then party.sperre[sp] = os.clock() + 6 end
+				end
+				if r and ctx.Beta then
+					for _, sp in r.spieler do ctx.Beta.ereignis(sp, "Zone party test") end
+				end
+			end
+		else
+			party.ende = nil
+			setzen(party, ("%d/%d PLAYERS"):format(n, Party.MAX), n == 0 and "Race your friends!" or "Waiting for more players…")
+		end
+	end
+end
+
+function Zonen.starten(c)
+	ctx = c
+	Players.PlayerRemoving:Connect(function(p)
+		for _, z in zonen do z.sperre[p] = nil end
+	end)
+	local spawn = c.spawn
+	if not spawn then
+		warn("[Driving School] FahrschulSpawn missing – no start zones")
+		return
+	end
+	local alt = workspace:FindFirstChild("Startzonen")
+	if alt then alt:Destroy() end
+	local ordner = Instance.new("Folder")
+	ordner.Name = "Startzonen"
+	ordner.Parent = workspace
+	-- left and right of the entrance, between the door and the first parking bays
+	local function bodenBei(lokal)
+		local p = (spawn.CFrame * CFrame.new(lokal)).Position
+		local par = RaycastParams.new()
+		par.FilterType = Enum.RaycastFilterType.Include
+		par.FilterDescendantsInstances = { workspace:FindFirstChild("Karte") or workspace, workspace.Terrain }
+		local hit = workspace:Raycast(Vector3.new(p.X, spawn.Position.Y + 8, p.Z), Vector3.new(0, -30, 0), par)
+		return Vector3.new(p.X, hit and hit.Position.Y or spawn.Position.Y - 0.5, p.Z)
+	end
+	zonen[1] = zoneBauen(ordner, "BlindDrive", bodenBei(Vector3.new(-10, 0, -2)), "🙈 BLIND DRIVE", Color3.fromRGB(255, 210, 60))
+	zonen[2] = zoneBauen(ordner, "PartyTest", bodenBei(Vector3.new(10, 0, -2)), "🏁 PARTY TEST", Color3.fromRGB(120, 220, 255))
+	Zonen.tick()
+	task.spawn(function()
+		while ordner.Parent do
+			task.wait(Zonen.TAKT)
+			local ok, err = pcall(Zonen.tick)
+			if not ok then warn("[Driving School] Startzonen: " .. tostring(err)) end
+		end
+	end)
+end
+
+return Zonen
 ]=====])
 neu("ModuleScript", "Karosserien", server, [=====[
 -- GENERATED by tools/mesh/*.py - do not edit by hand.
@@ -10826,7 +11080,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v57 loaded")
+print("[Driving School] client v58 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -15417,7 +15671,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v57 loading")
+	print("[Driving School] start screen v58 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -15637,4 +15891,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v57 installed. Press F5 to test.")
+print("License system v58 installed. Press F5 to test.")

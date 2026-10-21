@@ -22,6 +22,7 @@ local Belohnungen = require(script:WaitForChild("Belohnungen"))
 local Chaos = require(script:WaitForChild("Chaos"))
 local Party = require(script:WaitForChild("Party"))
 local Beta = require(script:WaitForChild("Beta"))
+local Zonen = require(script:WaitForChild("Zonen"))
 local Hupen = require(ordner:WaitForChild("Hupen"))
 local Verkehr = require(ordner:WaitForChild("Verkehr"))
 local verkehrEvent = ordner:WaitForChild("VerkehrDaten")
@@ -3171,6 +3172,26 @@ end
 -- 🎲 Blind Drive "Find a partner" (v56): two players without a friend get matched on the server.
 -- The one who waited longer drives, the other one becomes the co-pilot. Both are put into the car.
 local blindWarte = {}   -- { { p = player, seit = clock } }
+-- starts Blind Drive for two players: fahrer drives, copilot navigates; both are put into the car
+-- (used by "Find a partner" and by the green Blind Drive zone)
+local function blindPaarStarten(fahrer, copilot)
+	local r = lektionStarten(fahrer, "blind")
+	if r.fehler then return false, "Your partner can't start right now – try again." end
+	local st = lektionen[fahrer]
+	-- co-pilot first, then the driver: the route starts as soon as the driver sits
+	if not (st.copilotEinsetzen and st.copilotEinsetzen(copilot, true)) then
+		lektionBeenden(fahrer, false, "Blind Drive cancelled (the partner could not get in).")
+		return false, "Could not put you into the car – try again."
+	end
+	local hf = fahrer.Character and fahrer.Character:FindFirstChildOfClass("Humanoid")
+	if hf then
+		if hf.SeatPart then hf.Sit = false end
+		st.sitz:Sit(hf)
+	end
+	fahrEvent:FireClient(fahrer, { typ = "chaos", titel = "🎲 PARTNER FOUND!", text = copilot.DisplayName .. " is your co-pilot. You drive – listen to them!", farbe = "gruen" })
+	fahrEvent:FireClient(copilot, { typ = "chaos", titel = "🗺 YOU'RE THE CO-PILOT!", text = ("Tell %s where to drive – only you can see the route!"):format(fahrer.DisplayName), farbe = "gruen" })
+	return true
+end
 local blindAufruf = -math.huge
 local BLIND_WARTEZEIT = 180
 local function blindPartnerSuchen(p)
@@ -3201,20 +3222,8 @@ local function blindPartnerSuchen(p)
 	end
 	table.remove(blindWarte, 1)
 	local fahrer = partner.p
-	local r = lektionStarten(fahrer, "blind")
-	if r.fehler then return { fehler = "Your partner can't start right now – try again." } end
-	local st = lektionen[fahrer]
-	-- co-pilot first, then the driver: the route starts as soon as the driver sits
-	if not (st.copilotEinsetzen and st.copilotEinsetzen(p, true)) then
-		lektionBeenden(fahrer, false, "Blind Drive cancelled (the partner could not get in).")
-		return { fehler = "Could not put you into the car – try again." }
-	end
-	local hf = fahrer.Character and fahrer.Character:FindFirstChildOfClass("Humanoid")
-	if hf then
-		if hf.SeatPart then hf.Sit = false end
-		st.sitz:Sit(hf)
-	end
-	fahrEvent:FireClient(fahrer, { typ = "chaos", titel = "🎲 PARTNER FOUND!", text = p.DisplayName .. " is your co-pilot. You drive – listen to them!", farbe = "gruen" })
+	local ok, fehler = blindPaarStarten(fahrer, p)
+	if not ok then return { fehler = fehler } end
 	Beta.ereignis(p, "Blind partner matched")
 	return { text = ("Partner found! You're %s's co-pilot – tell them where to drive."):format(fahrer.DisplayName), gefunden = true }
 end
@@ -3615,6 +3624,17 @@ Party.starten({ fahrEvent = fahrEvent, geldGeben = geldGeben, xpGeben = xpGeben,
 	zufallsRoute = function() return LEKTIONEN.PRUEFUNGEN[math.random(#LEKTIONEN.PRUEFUNGEN)] end,
 	lektionStarten = function(p, art, nr, party) return lektionStarten(p, art, nr, party) end,
 	lektionAbbrechen = function(p, text) if lektionen[p] then lektionBeenden(p, false, text) end end,
+	-- put a race driver straight into their car (green party zone)
+	hinsetzen = function(p)
+		local st = lektionen[p]
+		local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+		if st and st.sitz and hum and not hum.SeatPart then st.sitz:Sit(hum) end
+	end,
+})
+Zonen.starten({ fahrEvent = fahrEvent, Party = Party, Beta = Beta,
+	beschaeftigt = function(p) return lektionen[p] ~= nil or jobs[p] ~= nil end,
+	blindPaar = blindPaarStarten,
+	spawn = workspace:FindFirstChild("FahrschulSpawn"),
 })
 Belohnungen.starten({ daten = daten, geldGeben = geldGeben, xpGeben = xpGeben, fahrEvent = fahrEvent, geaendert = geaendert, Shop = Shop })
 

@@ -520,6 +520,8 @@ function Instance.new(klasse, eltern)
 	if klasse == "Humanoid" then
 		o.__props.HipHeight = 2
 		o.__props.WalkSpeed = 16
+		o.__props.Health = 100
+		o.__props.MaxHealth = 100
 	end
 	if klasse == "Animator" then end
 	if eltern then o.Parent = eltern end
@@ -546,7 +548,7 @@ function M.dienst(n)
 		methoden.CreateHumanoidModelFromDescription = function(x, desc, typ)
 			if desc then M.npcBeschreibungen = M.npcBeschreibungen or {} table.insert(M.npcBeschreibungen, desc) end
 			local m = neueInstanz("Model")
-			local hum = neueInstanz("Humanoid") hum.__props.HipHeight = 2 hum.Parent = m
+			local hum = neueInstanz("Humanoid") hum.__props.HipHeight = 2 hum.__props.Health = 100 hum.Parent = m
 			local w = Instance.new("Part") w.Name = "HumanoidRootPart" w.Size = V.new(2, 2, 1) w.Parent = m
 			local kopf = Instance.new("Part") kopf.Name = "Head" kopf.Size = V.new(1, 1, 1) kopf.Parent = m
 			for _, n in { "LeftLowerLeg", "RightLowerLeg", "LeftFoot", "RightFoot", "UpperTorso" } do local t = Instance.new("Part") t.Name = n t.Parent = m end

@@ -1,5 +1,14 @@
 # Changelog
 
+## v58 – Grüne Startzonen, Shop live
+- **🟢 Startzonen vor der Fahrschule** (`src/Zonen.lua`, Server-Modul): links/rechts vom Eingang je eine grüne Fläche mit Schild über der Fläche.
+  - **🙈 BLIND DRIVE**: Schild zeigt „0/2 PLAYERS“ → „1/2 – Waiting for a partner…“. Sobald 2 Spieler drinstehen, startet Blind Drive; wer zuerst da war, fährt, der andere ist Co-Pilot. Beide werden direkt ins Auto gesetzt.
+  - **🏁 PARTY TEST**: ab 2 Spielern 15 s Countdown („2/4 PLAYERS · Starts in 12 s!“), bei 4 Spielern nach 3 s. Alle sitzen sofort in ihrem Auto. Läuft schon ein Rennen, steht das auf dem Schild.
+  - Zählt nur Spieler zu Fuß, die keine Lektion/keinen Job haben. Klappt der Start nicht, 6 s Pause statt Dauer-Versuchen.
+  - Gemeinsamer Start für Partnersuche und Zone: `blindPaarStarten` (Server), `Party.mitSpielern` (Party). Test 32.
+- **Shop:** 13 echte IDs (5 Passes, 8 Produkte) eingetragen und in Studio geprüft. „Paint Studio“ fehlt noch (zeigt „soon“).
+- Mock: Humanoid hat jetzt `Health`/`MaxHealth`.
+
 ## v57 – Neue Autos für Verkehr und Parkplätze
 - 5 eigene Auto-Designs (Kleinwagen, Limousine, SUV, Transporter, Koffer-Lkw) mit runder Karosserie, Radläufen, Scheiben, Lichtern, Spiegeln, Felgen: `tools/blender/auto_*.py` (laufen in Blender und ohne Blender über `tools/blender/auto_obj.py`) → `dist/mesh/autos/*.obj` (je ~2.300–3.000 Dreiecke, für Handys) + Vorschaubilder.
 - NPC-Verkehr nutzt die neuen Autos, sobald sie in `ReplicatedStorage.Fuehrerschein.Autos` liegen (Lackfarbe/Firmenfarbe wie bisher, unsichtbarer Kollisionskörper). Ohne Vorlagen bleiben die alten Klotz-Autos – nichts geht kaputt.

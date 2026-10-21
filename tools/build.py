@@ -82,6 +82,8 @@ neu("ModuleScript", "Party", server, [=====[
 ''' + src("Party.lua") + ''']=====])
 neu("ModuleScript", "Beta", server, [=====[
 ''' + src("Beta.lua") + ''']=====])
+neu("ModuleScript", "Zonen", server, [=====[
+''' + src("Zonen.lua") + ''']=====])
 neu("ModuleScript", "Karosserien", server, [=====[
 ''' + src("Karosserien.lua") + ''']=====])
 server.Parent = SSS
@@ -125,7 +127,7 @@ rs = item("Folder", "Fuehrerschein", [
     item("ModuleScript", "BetaClient", quelle=src("BetaClient.lua")),
 ])
 server = item("Script", "FuehrerscheinServer", [
-    item("ModuleScript", n, quelle=src(n + ".lua")) for n in ["Fragen", "Auto", "Fahrstunden", "Strafen", "Umwelt", "Fahrzeugpflege", "Missionen", "Shop", "Belohnungen", "Chaos", "Party", "Beta", "Karosserien"]
+    item("ModuleScript", n, quelle=src(n + ".lua")) for n in ["Fragen", "Auto", "Fahrstunden", "Strafen", "Umwelt", "Fahrzeugpflege", "Missionen", "Shop", "Belohnungen", "Chaos", "Party", "Beta", "Zonen", "Karosserien"]
 ], quelle=src("Server.lua"), disabled=True)
 client = item("LocalScript", "FuehrerscheinClient", quelle=src("Client.lua"))
 modell = item("Folder", "DrivingSchoolInstall", [rs, server, client])

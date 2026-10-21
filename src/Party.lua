@@ -85,6 +85,25 @@ starten = function()
 	end)
 end
 Party.jetztStarten = function() starten() end -- (tests)
+Party.minimum = minimum
+
+-- green party zone: these players start right now (joins an open 🏁 lobby if there is one)
+function Party.mitSpielern(liste)
+	if rennen then return nil end
+	if lobby then
+		for _, sp in liste do
+			if #lobby.spieler < Party.MAX and not table.find(lobby.spieler, sp) then table.insert(lobby.spieler, sp) end
+		end
+	else
+		lobby = { spieler = table.clone(liste), ende = os.clock() }
+	end
+	starten()
+	local r = rennen
+	if r and ctx.hinsetzen then
+		for _, sp in r.spieler do ctx.hinsetzen(sp) end
+	end
+	return r
+end
 
 -- a lesson of the race ended (parked = erfolg, or cancelled / left the car)
 function Party.fertig(p, st, erfolg)

@@ -179,7 +179,7 @@ class Auto:
             zeilen.append(f"g {g}")
             for x, y, z in V:
                 zeilen.append(f"v {x:.4f} {z:.4f} {-y:.4f}")
-            for f in F:
+            for f in _nach_aussen(V, F):
                 zeilen.append("f " + " ".join(str(basis + i) for i in f))
             basis += len(V)
         open(pfad, "w").write("\n".join(zeilen) + "\n")
@@ -236,6 +236,30 @@ class Auto:
             sub[neu] = z[neu]
             bild[y0:y1, x0:x1][neu] = farbe
         Image.fromarray((bild * 255).astype(np.uint8)).save(pfad)
+
+
+def _nach_aussen(V, F):
+    """v62: Flächen jeder geschlossenen Teilform nach außen drehen (Roblox zeichnet nur die Vorderseite;
+    vorher zeigten die meisten Flächen nach innen -> Autos wirkten hohl/durchsichtig).
+    Teilformen = über gemeinsame Punkte verbundene Flächen; negatives Volumen -> Reihenfolge umkehren."""
+    eltern = list(range(len(V)))
+    def wurzel(i):
+        while eltern[i] != i:
+            eltern[i] = eltern[eltern[i]]
+            i = eltern[i]
+        return i
+    for f in F:
+        for i in f[1:]:
+            a, b = wurzel(f[0]), wurzel(i)
+            if a != b: eltern[a] = b
+    P = np.array(V, dtype=float)
+    vol = {}
+    for f in F:
+        a = P[f[0]]
+        s = sum(np.dot(a, np.cross(P[f[k]], P[f[k + 1]])) for k in range(1, len(f) - 1))
+        r = wurzel(f[0])
+        vol[r] = vol.get(r, 0.0) + s
+    return [tuple(reversed(f)) if vol[wurzel(f[0])] < 0 else tuple(f) for f in F]
 
 
 def laden(skript, detail=1.0):

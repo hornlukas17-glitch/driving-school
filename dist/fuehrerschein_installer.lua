@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v61
+--  DRIVER'S LICENSE SYSTEM v62
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -309,7 +309,7 @@ local FIRMEN = { "FRESH FOODS", "BUILDMAX", "CITY MOVERS", "SUNNY DAIRY", "TECHS
 -- Without templates the old block cars below are built (nothing breaks).
 Verkehr.VORLAGEN_NAMEN = { kleinwagen = "Kleinwagen", limousine = "Limousine", suv = "SUV", transporter = "Transporter", lkw = "Lkw" }
 local GRUPPEN = {
-	Glas = { Color3.fromRGB(35, 45, 60), Enum.Material.Glass, 0.15 },
+	Glas = { Color3.fromRGB(30, 38, 48), Enum.Material.SmoothPlastic, 0.18 }, -- v62: Glass rendered light blue and see-through (hollow car)
 	Schwarz = { Color3.fromRGB(28, 28, 32), Enum.Material.SmoothPlastic },
 	Reifen = { Color3.fromRGB(22, 22, 24), Enum.Material.SmoothPlastic },
 	Felge = { Color3.fromRGB(175, 178, 185), Enum.Material.Metal },
@@ -11771,7 +11771,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v61 loaded")
+print("[Driving School] client v62 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -16365,7 +16365,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v61 loading")
+	print("[Driving School] start screen v62 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -16585,4 +16585,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v61 installed. Press F5 to test.")
+print("License system v62 installed. Press F5 to test.")

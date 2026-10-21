@@ -155,7 +155,7 @@ local FIRMEN = { "FRESH FOODS", "BUILDMAX", "CITY MOVERS", "SUNNY DAIRY", "TECHS
 -- Without templates the old block cars below are built (nothing breaks).
 Verkehr.VORLAGEN_NAMEN = { kleinwagen = "Kleinwagen", limousine = "Limousine", suv = "SUV", transporter = "Transporter", lkw = "Lkw" }
 local GRUPPEN = {
-	Glas = { Color3.fromRGB(35, 45, 60), Enum.Material.Glass, 0.15 },
+	Glas = { Color3.fromRGB(30, 38, 48), Enum.Material.SmoothPlastic, 0.18 }, -- v62: Glass rendered light blue and see-through (hollow car)
 	Schwarz = { Color3.fromRGB(28, 28, 32), Enum.Material.SmoothPlastic },
 	Reifen = { Color3.fromRGB(22, 22, 24), Enum.Material.SmoothPlastic },
 	Felge = { Color3.fromRGB(175, 178, 185), Enum.Material.Metal },

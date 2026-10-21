@@ -1,5 +1,11 @@
 # Changelog
 
+## v62 – Neue Autos nicht mehr „hohl“
+- **Ursache (gemessen):** Die Flächen der neuen Auto-OBJ (`tools/blender/auto_obj.py`) zeigten großteils nach innen. Roblox zeichnet nur Vorderseiten → man sah in die Karosserie hinein (Kabine hell/durchsichtig, Dach schwebend). Betraf alle fünf neuen Autos, bei der Limousine am auffälligsten.
+- **In Studio behoben:** `DoubleSided = true` an allen 2347 MeshParts der Vorlagen, Duplikate und 213 Parkautos (Vorher/Nachher-Screenshot geprüft). NPC-Autos sind Kopien der Vorlagen und erben das. Kein Neu-Import nötig.
+- **Export korrigiert:** `obj_schreiben` dreht jede geschlossene Teilform nach außen (Volumen-Vorzeichen). Neue OBJ in `dist/mesh/autos/`. `tools/mesh_pruefen.py` läuft in `check.sh` und schlägt bei nach innen gedrehten Teilformen an.
+- Glas der neuen Autos dunkel (SmoothPlastic 30/38/48, Spiegelung 0,18) statt hellblau (`Verkehr.lua` GRUPPEN + Parkautos in Studio).
+
 ## v61 – KI-Beifahrer, Bot-Gegner, VIP-Name, KI-Sabotage
 - **Startzonen in der Mitte des Parkplatzes** (Fahrgasse zwischen den Buchtreihen).
 - **🤖 KI-Beifahrer „Robo-Rita“ (Blind Drive):** Wer 15 s allein in der Blind-Drive-Zone steht, fährt mit der KI (Schild zählt herunter). Auch im 🙈-Menü: „With the AI co-pilot“. Die KI kennt nur die Lage des nächsten Tors: „STRAIGHT ON“ solange es weit vorne liegt, dann LEFT/RIGHT, beim Parken STOP; gleiches Kommando höchstens alle 5 s. Halbe Coins gegenüber einem echten Partner. Ein Freund kann sich jederzeit dazusetzen.

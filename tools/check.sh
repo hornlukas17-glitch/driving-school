@@ -22,6 +22,7 @@ for f in src/*.lua; do
   n=$(wc -c < "$f")
   if [ "$n" -ge 195000 ]; then echo "  ✗ $f hat $n Zeichen (Roblox-Grenze 200.000, Puffer 5.000) – Teile in ein Modul auslagern"; fehler=1; fi
 done
+python3 tools/mesh_pruefen.py || fehler=1
 [ $fehler = 0 ] || exit 1
 [ "${1:-}" = "--schnell" ] && exit 0
 echo "== Build"

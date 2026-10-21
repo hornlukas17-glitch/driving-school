@@ -1913,10 +1913,10 @@ function SpassClient.starten(k)
 			if hum.SeatPart then aufstehen() hum:ChangeState(Enum.HumanoidStateType.Physics) end
 		end)
 		if typeof(info.stoss) == "Vector3" then
-			-- set over a few frames: right after standing up a single push gets lost (measured in Studio)
+			-- set over ~15 frames: right after standing up a single push gets lost (measured in Studio)
 			task.spawn(function()
 				local dreh = Vector3.new(math.random(-6, 6), math.random(-3, 3), math.random(-6, 6))
-				for _ = 1, 4 do
+				for _ = 1, 15 do -- ~0.25 s: the joint changes from the server arrive a moment later and eat a shorter push
 					if not hrp.Parent then return end
 					hrp.AssemblyLinearVelocity = info.stoss
 					hrp.AssemblyAngularVelocity = dreh

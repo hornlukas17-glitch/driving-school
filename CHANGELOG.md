@@ -10,6 +10,7 @@
   - Den eigenen Charakter simuliert der Client: er setzt sich sofort wieder hin bzw. fiel auf den Beifahrersitz → alle Sitze des Autos werden während des Ragdolls gesperrt (vorher Insassen einsammeln und als „Ragdoll“ markieren, denn Sperren wirft sofort raus), der Client steht selbst auf, hebt die Figur übers Dach und setzt den Schwung über 4 Frames (einmal gesetzt ging er verloren).
   - Ein gelöstes Halsgelenk tötet Roblox-Figuren (`RequiresNeck`) → Hals bleibt fest, Prüfung während des Flugs aus.
   - Während des Ragdolls keine Meldung „You left the vehicle…“.
+  - Schwung wird ~15 Frames lang gesetzt (4 reichten nicht, die Gelenk-Änderungen vom Server kommen kurz danach an). Endtest in Studio: Figur fliegt aus dem Auto (~6–20 Studs), -45 HP, nach 3 s wieder auf dem Sitz, keine Skriptfehler.
 - Mock: `Sit` zieht die Figur zum Sitz, Entfernen der `SeatWeld` und `Disabled = true` lassen aufstehen (wie Roblox). Test 34.
 
 ## v59 – Fahrschulauto verschwindet nicht mehr, mehr Fahrlehrer-Gags

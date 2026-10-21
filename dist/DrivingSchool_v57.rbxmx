@@ -335,7 +335,16 @@ function Verkehr.ausVorlage(vorlage, laenge, farbe, akzent)
 	koerper.CanQuery = false
 	koerper.CanTouch = false
 	koerper.Parent = m
-	local drehen = CFrame.Angles(0, math.pi, 0) -- OBJ front = +Z, traffic front = -Z
+	-- front = where the indicators ("Blinker", only at the front) are; traffic front = -Z.
+	-- (The Studio importer turned our OBJ so that the front already points to -Z; without indicators assume +Z.)
+	local vorneZ = 1
+	for _, t in vorlage:GetDescendants() do
+		if t:IsA("BasePart") and gruppeVon(t.Name) == "Blinker" then
+			vorneZ = anker.CFrame:PointToObjectSpace(t.Position).Z < 0 and -1 or 1
+			break
+		end
+	end
+	local drehen = vorneZ > 0 and CFrame.Angles(0, math.pi, 0) or CFrame.new()
 	for _, t in vorlage:GetDescendants() do
 		if t:IsA("BasePart") and t ~= anker then
 			local g = gruppeVon(t.Name)

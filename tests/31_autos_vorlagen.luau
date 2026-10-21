@@ -35,4 +35,13 @@ pruefe("origin on the anchor (not at the importer's position)", math.abs(lack.Po
 pruefe("headlight is neon", licht.Material == Enum.Material.Neon)
 pruefe("mesh parts don't collide, invisible body does", not lack.CanCollide and m:FindFirstChild("Karosserie").CanCollide and m:FindFirstChild("Karosserie").Transparency == 1)
 pruefe("art without template stays a block car", Verkehr.modell("kleinwagen", 1, 1):FindFirstChild("Lack") == nil)
+-- like Studio's importer: front already at -Z (indicators there) -> not turned again
+local v2 = v:Clone() v2.Name = "SUV" v2.Parent = ordner
+for _, x in v2:GetChildren() do
+	if x.Name == "Licht.001" then x.CFrame = CFrame.new(versatz + Vector3.new(1, 1.2, -3.6)) end
+	if x.Name == "Ruecklicht" then x.CFrame = CFrame.new(versatz + Vector3.new(1, 1.2, 3.6)) end
+end
+local b = Instance.new("Part") b.Name = "Blinker" b.Size = Vector3.new(0.2, 0.2, 0.1) b.CFrame = CFrame.new(versatz + Vector3.new(1.6, 1.2, -3.55)) b.Parent = v2
+local m2 = Verkehr.modell("suv", 1, 1)
+pruefe("importer orientation detected via indicators (front stays -Z)", m2:FindFirstChild("Licht").Position.Z < 0 and m2:FindFirstChild("Blinker").Position.Z < 0)
 print("templates ok")

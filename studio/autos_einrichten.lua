@@ -9,6 +9,18 @@ CHS:SetWaypoint("Vor Autos einrichten")
 local bericht = {}
 local NAMEN = { "Kleinwagen", "Limousine", "SUV", "Transporter", "Lkw" }
 
+-- 0) mehrfach importierte Modelle in den ServerStorage (nichts löschen), je Name bleibt eins
+local dup = SS:FindFirstChild("Autos_Duplikate") or Instance.new("Folder")
+dup.Name = "Autos_Duplikate"
+dup.Parent = SS
+local gesehen, verschoben = {}, 0
+for _, m in workspace:GetChildren() do
+	if m:IsA("Model") and table.find(NAMEN, m.Name) then
+		if gesehen[m.Name] then m.Parent = dup verschoben += 1 else gesehen[m.Name] = true end
+	end
+end
+table.insert(bericht, "Duplikate nach ServerStorage.Autos_Duplikate: " .. verschoben)
+
 -- 1) Vorlagen nach ReplicatedStorage.Fuehrerschein.Autos (der Client baut daraus den NPC-Verkehr)
 local ordner = RS.Fuehrerschein:FindFirstChild("Autos") or Instance.new("Folder")
 ordner.Name = "Autos"

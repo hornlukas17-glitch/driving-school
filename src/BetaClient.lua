@@ -48,11 +48,13 @@ function BetaClient.starten(k)
 	kommandoGui.Name = "FahrlehrerKommando"
 	kommandoGui.ResetOnSpawn = false
 	kommandoGui.DisplayOrder = 6
+	kommandoGui.IgnoreGuiInset = true
 	kommandoGui.Parent = spieler.PlayerGui
+	local KOMMANDO_Y = 104 -- v63: high up, right under the instruction box + warning line
 	local kommandoText = Instance.new("TextLabel")
 	kommandoText.AnchorPoint = Vector2.new(0.5, 0)
-	kommandoText.Position = UDim2.new(0.5, 0, 0.4, 0) -- v61: below the chaos banners (they overlapped)
-	kommandoText.Size = UDim2.new(0.6, 0, 0, 70)
+	kommandoText.Position = UDim2.new(0.5, 0, 0, KOMMANDO_Y)
+	kommandoText.Size = UDim2.new(0.6, 0, 0, 60)
 	kommandoText.BackgroundTransparency = 1
 	kommandoText.Font = Enum.Font.FredokaOne
 	kommandoText.TextScaled = true
@@ -71,19 +73,42 @@ function BetaClient.starten(k)
 	kommandoVon.Parent = kommandoText
 	local kommandoSkala = Instance.new("UIScale")
 	kommandoSkala.Parent = kommandoText
-	local KOMMANDO_FARBEN = { gelb = Color3.fromRGB(255, 210, 40), rot = Color3.fromRGB(255, 80, 80), gruen = Color3.fromRGB(90, 235, 110) }
+	local KOMMANDO_FARBEN = { gelb = Color3.fromRGB(255, 210, 40), rot = Color3.fromRGB(255, 80, 80), gruen = Color3.fromRGB(90, 235, 110), weiss = Color3.fromRGB(235, 240, 250) }
 	local kommandoNr = 0
+	local TS = game:GetService("TweenService")
 	local function kommandoZeigen(info)
 		kommandoNr += 1
 		local nr = kommandoNr
+		-- a chaos banner is on screen and would cover the command -> sit right below it
+		local y = KOMMANDO_Y
+		local chaos = spieler.PlayerGui:FindFirstChild("ChaosBanner")
+		local box = chaos and chaos:FindFirstChild("Box")
+		if box and box.Visible then
+			-- AbsolutePosition is measured below the Roblox top bar, our Position from the very top
+			local oben = box.AbsolutePosition.Y + game:GetService("GuiService"):GetGuiInset().Y
+			if oben < y + 90 and oben + box.AbsoluteSize.Y > y then y = oben + box.AbsoluteSize.Y + 6 end
+		end
+		kommandoText.Position = UDim2.new(0.5, 0, 0, y)
 		kommandoText.Text = info.text or ""
 		kommandoText.TextColor3 = KOMMANDO_FARBEN[info.farbe] or KOMMANDO_FARBEN.gelb
 		kommandoVon.Text = (info.von or "Your friend") .. " (Instructor)"
 		kommandoText.Visible = true
-		kommandoSkala.Scale = 0.5
-		game:GetService("TweenService"):Create(kommandoSkala, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-		task.delay(1.8, function()
-			if kommandoNr == nr then kommandoText.Visible = false end
+		-- v63: soft fade-in instead of a pop, stays longer (3 s), then fades out
+		kommandoText.TextTransparency, kommandoText.TextStrokeTransparency = 1, 1
+		kommandoVon.TextTransparency = 1
+		kommandoSkala.Scale = 0.85
+		local rein = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		TS:Create(kommandoSkala, rein, { Scale = 1 }):Play()
+		TS:Create(kommandoText, rein, { TextTransparency = 0, TextStrokeTransparency = 0 }):Play()
+		TS:Create(kommandoVon, rein, { TextTransparency = 0 }):Play()
+		task.delay(3, function()
+			if kommandoNr ~= nr then return end
+			local raus = TweenInfo.new(0.4)
+			TS:Create(kommandoText, raus, { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+			TS:Create(kommandoVon, raus, { TextTransparency = 1 }):Play()
+			task.delay(0.45, function()
+				if kommandoNr == nr then kommandoText.Visible = false end
+			end)
 		end)
 	end
 

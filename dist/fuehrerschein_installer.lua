@@ -1,5 +1,5 @@
 -- =====================================================================
---  DRIVER'S LICENSE SYSTEM v62
+--  DRIVER'S LICENSE SYSTEM v63
 --  (receptionist, theory test, 5 driving lessons, driving test, truck license,
 --   truck jobs with levels, pizza job, villas, car dealership, police, speed cameras + penalty points, day/night + weather, XP, Drive Coins, NPC traffic)
 --  Run once in the command bar (no test may be running).
@@ -1580,11 +1580,13 @@ function BetaClient.starten(k)
 	kommandoGui.Name = "FahrlehrerKommando"
 	kommandoGui.ResetOnSpawn = false
 	kommandoGui.DisplayOrder = 6
+	kommandoGui.IgnoreGuiInset = true
 	kommandoGui.Parent = spieler.PlayerGui
+	local KOMMANDO_Y = 104 -- v63: high up, right under the instruction box + warning line
 	local kommandoText = Instance.new("TextLabel")
 	kommandoText.AnchorPoint = Vector2.new(0.5, 0)
-	kommandoText.Position = UDim2.new(0.5, 0, 0.4, 0) -- v61: below the chaos banners (they overlapped)
-	kommandoText.Size = UDim2.new(0.6, 0, 0, 70)
+	kommandoText.Position = UDim2.new(0.5, 0, 0, KOMMANDO_Y)
+	kommandoText.Size = UDim2.new(0.6, 0, 0, 60)
 	kommandoText.BackgroundTransparency = 1
 	kommandoText.Font = Enum.Font.FredokaOne
 	kommandoText.TextScaled = true
@@ -1603,19 +1605,42 @@ function BetaClient.starten(k)
 	kommandoVon.Parent = kommandoText
 	local kommandoSkala = Instance.new("UIScale")
 	kommandoSkala.Parent = kommandoText
-	local KOMMANDO_FARBEN = { gelb = Color3.fromRGB(255, 210, 40), rot = Color3.fromRGB(255, 80, 80), gruen = Color3.fromRGB(90, 235, 110) }
+	local KOMMANDO_FARBEN = { gelb = Color3.fromRGB(255, 210, 40), rot = Color3.fromRGB(255, 80, 80), gruen = Color3.fromRGB(90, 235, 110), weiss = Color3.fromRGB(235, 240, 250) }
 	local kommandoNr = 0
+	local TS = game:GetService("TweenService")
 	local function kommandoZeigen(info)
 		kommandoNr += 1
 		local nr = kommandoNr
+		-- a chaos banner is on screen and would cover the command -> sit right below it
+		local y = KOMMANDO_Y
+		local chaos = spieler.PlayerGui:FindFirstChild("ChaosBanner")
+		local box = chaos and chaos:FindFirstChild("Box")
+		if box and box.Visible then
+			-- AbsolutePosition is measured below the Roblox top bar, our Position from the very top
+			local oben = box.AbsolutePosition.Y + game:GetService("GuiService"):GetGuiInset().Y
+			if oben < y + 90 and oben + box.AbsoluteSize.Y > y then y = oben + box.AbsoluteSize.Y + 6 end
+		end
+		kommandoText.Position = UDim2.new(0.5, 0, 0, y)
 		kommandoText.Text = info.text or ""
 		kommandoText.TextColor3 = KOMMANDO_FARBEN[info.farbe] or KOMMANDO_FARBEN.gelb
 		kommandoVon.Text = (info.von or "Your friend") .. " (Instructor)"
 		kommandoText.Visible = true
-		kommandoSkala.Scale = 0.5
-		game:GetService("TweenService"):Create(kommandoSkala, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-		task.delay(1.8, function()
-			if kommandoNr == nr then kommandoText.Visible = false end
+		-- v63: soft fade-in instead of a pop, stays longer (3 s), then fades out
+		kommandoText.TextTransparency, kommandoText.TextStrokeTransparency = 1, 1
+		kommandoVon.TextTransparency = 1
+		kommandoSkala.Scale = 0.85
+		local rein = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		TS:Create(kommandoSkala, rein, { Scale = 1 }):Play()
+		TS:Create(kommandoText, rein, { TextTransparency = 0, TextStrokeTransparency = 0 }):Play()
+		TS:Create(kommandoVon, rein, { TextTransparency = 0 }):Play()
+		task.delay(3, function()
+			if kommandoNr ~= nr then return end
+			local raus = TweenInfo.new(0.4)
+			TS:Create(kommandoText, raus, { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+			TS:Create(kommandoVon, raus, { TextTransparency = 1 }):Play()
+			task.delay(0.45, function()
+				if kommandoNr == nr then kommandoText.Visible = false end
+			end)
 		end)
 	end
 
@@ -10799,13 +10824,16 @@ function Beta.kiRichtung(cf, ziel, parken)
 	local rel = cf:PointToObjectSpace(Vector3.new(ziel.X, cf.Position.Y, ziel.Z))
 	local dist = Vector3.new(rel.X, 0, rel.Z).Magnitude
 	local winkel = math.deg(math.atan2(rel.X, -rel.Z)) -- 0 = straight ahead (front = -Z), + = right
+	-- v63: turns are called earlier; while the gate is still far away the second value says "soon" (pre-warning)
 	if parken and dist < 30 then return "stopp" end
+	if parken and dist < 70 and math.abs(winkel) < 30 then return "stopp", true end
 	if math.abs(winkel) > 100 then return winkel > 0 and "rechts" or "links" end -- behind us: turn around
-	if dist > 70 and math.abs(winkel) < 60 then return "gerade" end
-	if winkel > 25 then return "rechts" end
-	if winkel < -25 then return "links" end
+	if dist > 130 and math.abs(winkel) < 50 then return "gerade" end
+	if winkel > 15 then return "rechts", dist > 70 end
+	if winkel < -15 then return "links", dist > 70 end
 	return "gerade"
 end
+Beta.KI_BALD = { links = "◀ LEFT SOON", rechts = "RIGHT SOON ▶", stopp = "🅿️ PARKING SOON" }
 function Beta.kiNavi(p, st)
 	local ki = st.blind and st.blind.ki
 	if not ki or not st.tor or not st.zielAktiv or not st.chassis then return end
@@ -10813,11 +10841,13 @@ function Beta.kiNavi(p, st)
 	if jetzt - (ki.check or 0) < Beta.KI_TAKT then return end
 	ki.check = jetzt
 	local wp = st.lektion and st.lektion.punkte and st.lektion.punkte[st.index]
-	local art = Beta.kiRichtung(st.chassis.CFrame, st.tor.pos, wp and wp.parken)
-	if art == ki.letzt and jetzt - (ki.zeit or 0) < Beta.KI_WIEDERHOLEN then return end
-	ki.letzt, ki.zeit = art, jetzt
+	local art, bald = Beta.kiRichtung(st.chassis.CFrame, st.tor.pos, wp and wp.parken)
+	local schluessel = art .. (bald and "_bald" or "")
+	if schluessel == ki.letzt and jetzt - (ki.zeit or 0) < Beta.KI_WIEDERHOLEN then return end
+	ki.letzt, ki.zeit = schluessel, jetzt
 	local def = Beta.KOMMANDOS[art]
-	ctx.fahrEvent:FireClient(p, { typ = "kommando", art = art, text = def[1], farbe = def[2], von = "🤖 " .. Beta.KI_NAME })
+	local text = bald and Beta.KI_BALD[art] or def[1]
+	ctx.fahrEvent:FireClient(p, { typ = "kommando", art = art, text = text, farbe = bald and "weiss" or def[2], bald = bald or nil, von = "🤖 " .. Beta.KI_NAME })
 end
 
 function Beta.starten(k)
@@ -11771,7 +11801,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v62 loaded")
+print("[Driving School] client v63 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -16365,7 +16395,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v62 loading")
+	print("[Driving School] start screen v63 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true
@@ -16585,4 +16615,4 @@ local SP = game:GetService("StarterPlayer")
 SP.CameraMinZoomDistance = 0.5
 SP.CameraMaxZoomDistance = 60
 
-print("License system v62 installed. Press F5 to test.")
+print("License system v63 installed. Press F5 to test.")

@@ -1,5 +1,12 @@
 # Changelog
 
+## v63 – Fahr-Anweisungen weiter oben und früher
+- **Weiter oben:** Kommandos von KI und Mitfahrern stehen jetzt direkt unter der Anweisungsbox (104 px von oben) statt in der Bildschirmmitte. Ist gerade ein Chaos-Banner an dieser Stelle, rutscht das Kommando darunter.
+- **Sanfter:** 0,3 s Einblenden statt „Aufploppen“, 3 s sichtbar (vorher 1,8 s), dann 0,4 s Ausblenden.
+- **Früher (KI Robo-Rita):** Abbiegen wird schon ab ~130 Studs Entfernung angesagt (vorher erst ab 70 Studs und 25°). Ist das Tor noch über 70 Studs weg, kommt zuerst eine weiße Vorwarnung „RIGHT SOON ▶“ / „◀ LEFT SOON“ / „🅿️ PARKING SOON“, danach das gelbe „RIGHT! ▶“.
+- Mitfahrer-Kommandos kommen, wenn der Freund drückt – früher ansagen kann nur er; Anzeige und Dauer gelten aber auch dafür.
+- Test 35 erweitert (Vorwarnung, Parken bald). Studio-Play-Test: Kommando erscheint oben unter der Anweisungsbox.
+
 ## v62 – Neue Autos nicht mehr „hohl“
 - **Ursache (gemessen):** Die Flächen der neuen Auto-OBJ (`tools/blender/auto_obj.py`) zeigten großteils nach innen. Roblox zeichnet nur Vorderseiten → man sah in die Karosserie hinein (Kabine hell/durchsichtig, Dach schwebend). Betraf alle fünf neuen Autos, bei der Limousine am auffälligsten.
 - **In Studio behoben:** `DoubleSided = true` an allen 2347 MeshParts der Vorlagen, Duplikate und 213 Parkautos (Vorher/Nachher-Screenshot geprüft). NPC-Autos sind Kopien der Vorlagen und erben das. Kein Neu-Import nötig.

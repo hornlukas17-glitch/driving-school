@@ -40,6 +40,14 @@ pruefe("gate near on the right -> right", Beta.kiRichtung(cf, Vector3.new(40, 0,
 pruefe("gate near on the left -> left", Beta.kiRichtung(cf, Vector3.new(-40, 0, -30)) == "links")
 pruefe("far ahead but slightly right -> still straight", Beta.kiRichtung(cf, Vector3.new(60, 0, -200)) == "gerade")
 pruefe("parking bay close -> stop", Beta.kiRichtung(cf, Vector3.new(0, 0, -20), true) == "stopp")
+-- v63: turns are announced earlier ("RIGHT SOON") while the gate is still 70-130 studs away
+local art, bald = Beta.kiRichtung(cf, Vector3.new(40, 0, -100))
+pruefe("gate 108 studs away, 22° right -> right soon", art == "rechts" and bald == true)
+art, bald = Beta.kiRichtung(cf, Vector3.new(40, 0, -30))
+pruefe("gate close -> right now (no pre-warning)", art == "rechts" and not bald)
+art, bald = Beta.kiRichtung(cf, Vector3.new(0, 0, -50), true)
+pruefe("parking bay 50 studs ahead -> parking soon", art == "stopp" and bald == true)
+pruefe("pre-warning texts exist", Beta.KI_BALD.rechts ~= nil and Beta.KI_BALD.links ~= nil and Beta.KI_BALD.stopp ~= nil)
 
 -- 3) alone in the blind zone -> AI co-pilot after the wait
 local a = M.spielerErzeugen("Lukas", 6001)

@@ -200,13 +200,16 @@ function Beta.kiRichtung(cf, ziel, parken)
 	local rel = cf:PointToObjectSpace(Vector3.new(ziel.X, cf.Position.Y, ziel.Z))
 	local dist = Vector3.new(rel.X, 0, rel.Z).Magnitude
 	local winkel = math.deg(math.atan2(rel.X, -rel.Z)) -- 0 = straight ahead (front = -Z), + = right
+	-- v63: turns are called earlier; while the gate is still far away the second value says "soon" (pre-warning)
 	if parken and dist < 30 then return "stopp" end
+	if parken and dist < 70 and math.abs(winkel) < 30 then return "stopp", true end
 	if math.abs(winkel) > 100 then return winkel > 0 and "rechts" or "links" end -- behind us: turn around
-	if dist > 70 and math.abs(winkel) < 60 then return "gerade" end
-	if winkel > 25 then return "rechts" end
-	if winkel < -25 then return "links" end
+	if dist > 130 and math.abs(winkel) < 50 then return "gerade" end
+	if winkel > 15 then return "rechts", dist > 70 end
+	if winkel < -15 then return "links", dist > 70 end
 	return "gerade"
 end
+Beta.KI_BALD = { links = "◀ LEFT SOON", rechts = "RIGHT SOON ▶", stopp = "🅿️ PARKING SOON" }
 function Beta.kiNavi(p, st)
 	local ki = st.blind and st.blind.ki
 	if not ki or not st.tor or not st.zielAktiv or not st.chassis then return end
@@ -214,11 +217,13 @@ function Beta.kiNavi(p, st)
 	if jetzt - (ki.check or 0) < Beta.KI_TAKT then return end
 	ki.check = jetzt
 	local wp = st.lektion and st.lektion.punkte and st.lektion.punkte[st.index]
-	local art = Beta.kiRichtung(st.chassis.CFrame, st.tor.pos, wp and wp.parken)
-	if art == ki.letzt and jetzt - (ki.zeit or 0) < Beta.KI_WIEDERHOLEN then return end
-	ki.letzt, ki.zeit = art, jetzt
+	local art, bald = Beta.kiRichtung(st.chassis.CFrame, st.tor.pos, wp and wp.parken)
+	local schluessel = art .. (bald and "_bald" or "")
+	if schluessel == ki.letzt and jetzt - (ki.zeit or 0) < Beta.KI_WIEDERHOLEN then return end
+	ki.letzt, ki.zeit = schluessel, jetzt
 	local def = Beta.KOMMANDOS[art]
-	ctx.fahrEvent:FireClient(p, { typ = "kommando", art = art, text = def[1], farbe = def[2], von = "🤖 " .. Beta.KI_NAME })
+	local text = bald and Beta.KI_BALD[art] or def[1]
+	ctx.fahrEvent:FireClient(p, { typ = "kommando", art = art, text = text, farbe = bald and "weiss" or def[2], bald = bald or nil, von = "🤖 " .. Beta.KI_NAME })
 end
 
 function Beta.starten(k)

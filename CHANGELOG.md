@@ -1,5 +1,10 @@
 # Changelog
 
+## v57 – Neue Autos für Verkehr und Parkplätze
+- 5 eigene Auto-Designs (Kleinwagen, Limousine, SUV, Transporter, Koffer-Lkw) mit runder Karosserie, Radläufen, Scheiben, Lichtern, Spiegeln, Felgen: `tools/blender/auto_*.py` (laufen in Blender und ohne Blender über `tools/blender/auto_obj.py`) → `dist/mesh/autos/*.obj` (je ~2.300–3.000 Dreiecke, für Handys) + Vorschaubilder.
+- NPC-Verkehr nutzt die neuen Autos, sobald sie in `ReplicatedStorage.Fuehrerschein.Autos` liegen (Lackfarbe/Firmenfarbe wie bisher, unsichtbarer Kollisionskörper). Ohne Vorlagen bleiben die alten Klotz-Autos – nichts geht kaputt.
+- `studio/autos_einrichten.lua`: verschiebt die importierten Modelle an die richtige Stelle und tauscht alle Klotz-Parkautos auf der Karte (alte Teile nach `ServerStorage.Parkautos_Alt`). Test 31.
+
 ## v56 – Partner finden, Wrong Way, Kühe zuerst
 - **🎲 Find a partner:** Der 🙈-Blind-Knopf fragt jetzt „With a friend“ oder „Find a partner“. Zwei Spieler ohne Freund werden auf dem Server zusammengebracht und direkt ins Auto gesetzt (wer länger gewartet hat, fährt). Alle anderen sehen „PARTNER WANTED“. Nochmal tippen = Suche beenden, nach 3 min läuft sie ab.
 - **🔄 Wrong Way:** Entfernt sich das Auto in Blind Drive deutlich vom nächsten Tor, bekommen Fahrer und Co-Pilot „WRONG WAY – turn around!“. Falsche Wege zählen in der Team-Wertung und stehen im Ergebnis.

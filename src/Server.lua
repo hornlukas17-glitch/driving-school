@@ -562,8 +562,9 @@ local function lektionBeenden(p, erfolg, text)
 		-- 🙈 Blind Drive: team rating for driver + co-pilot (no stars, no lesson progress)
 		local co = st.blind.copilot
 		local sek = st.blind.start and math.floor(os.clock() - st.blind.start) or 0
-		local team = Beta.blindWertung(st.fehler, erfolg, co ~= nil)
-		local info = { typ = "ende", blind = true, erfolg = erfolg, text = text, fehler = st.fehler, sek = sek, titel = team.titel,
+		local falsch = st.blind.falsch or 0
+		local team = Beta.blindWertung(st.fehler + falsch, erfolg, co ~= nil)
+		local info = { typ = "ende", blind = true, erfolg = erfolg, text = text, fehler = st.fehler, falsch = falsch, sek = sek, titel = team.titel,
 			geld = team.geld, fahrer = p.DisplayName, copilotName = co and co.DisplayName }
 		for _, wer in { p, co } do
 			if wer and wer.Parent then
@@ -865,14 +866,16 @@ local function copilotPrompt(fahrer, st, sitz, modell)
 	pp.MaxActivationDistance = 12
 	pp.RequiresLineOfSight = false
 	pp.Parent = sitz
-	pp.Triggered:Connect(function(wer)
-		if wer == fahrer or sitz.Occupant or not modell.Parent or lektionen[fahrer] ~= st then return end
+	-- also used by "Find a partner" (v56): puts a player into the co-pilot seat from anywhere
+	st.copilotEinsetzen = function(wer, vonWeitWeg)
+		if wer == fahrer or sitz.Occupant or not modell.Parent or lektionen[fahrer] ~= st then return false end
 		if lektionen[wer] or jobs[wer] then
 			fahrEvent:FireClient(wer, { typ = "hinweis", text = "Finish your own lesson or job first." })
-			return
+			return false
 		end
 		local hum = wer.Character and wer.Character:FindFirstChildOfClass("Humanoid")
-		if not hum or hum.SeatPart then return end
+		if not hum or (hum.SeatPart and not vonWeitWeg) then return false end
+		if hum.SeatPart then hum.Sit = false end
 		sitz:Sit(hum)
 		st.blind.copilot = wer
 		st.blind.solo = nil
@@ -883,7 +886,9 @@ local function copilotPrompt(fahrer, st, sitz, modell)
 		end
 		local fh = st.sitz.Occupant
 		if fh and Players:GetPlayerFromCharacter(fh.Parent) == fahrer then st.losfahren() end
-	end)
+		return true
+	end
+	pp.Triggered:Connect(function(wer) st.copilotEinsetzen(wer) end)
 	sitz:GetPropertyChangedSignal("Occupant"):Connect(function()
 		pp.Enabled = sitz.Occupant == nil
 		if sitz.Occupant == nil and st.blind.copilot and lektionen[fahrer] == st then
@@ -1452,6 +1457,20 @@ RunService.Heartbeat:Connect(function(dt)
 		local wp = st.lektion.punkte[st.index]
 		local abstand = (Vector3.new(wp.x, pos.Y, wp.z) - pos).Magnitude
 		local amTor = st.tor and Regeln.durchTor(pos, st.tor.pos, st.tor.dir, st.tor.breite, st.tor.r)
+		if st.blind and st.tor and st.zielAktiv then
+			-- 🙈 Blind Drive (v56): driving away from the next gate = wrong way (hint for both; counts for the team rating)
+			local zumTor = (Vector3.new(st.tor.pos.X, pos.Y, st.tor.pos.Z) - pos).Magnitude
+			if st.blind.torNr ~= st.index then st.blind.torNr, st.blind.naechst = st.index, zumTor end
+			st.blind.naechst = math.min(st.blind.naechst, zumTor)
+			if zumTor > st.blind.naechst + 70 and os.clock() - (st.blind.falschZeit or 0) > 10 then
+				st.blind.falschZeit, st.blind.naechst = os.clock(), zumTor
+				st.blind.falsch = (st.blind.falsch or 0) + 1
+				local info = { typ = "chaos", titel = "🔄 WRONG WAY!", text = "You're driving away from the next gate – turn around!", farbe = "rot" }
+				fahrEvent:FireClient(p, info)
+				local co = st.blind.copilot
+				if co and co.Parent then fahrEvent:FireClient(co, info) end
+			end
+		end
 		if wp.parken then
 			if not st.parkPhase and (abstand < (wp.r or 16) or amTor or (wp.lkw and Regeln.imDepot(pos) and pos.Z > 335)) then
 				st.parkPhase = true
@@ -3149,6 +3168,58 @@ end
 -- ---------------------------------------------------------------
 -- Requests from players
 -- ---------------------------------------------------------------
+-- 🎲 Blind Drive "Find a partner" (v56): two players without a friend get matched on the server.
+-- The one who waited longer drives, the other one becomes the co-pilot. Both are put into the car.
+local blindWarte = {}   -- { { p = player, seit = clock } }
+local blindAufruf = -math.huge
+local BLIND_WARTEZEIT = 180
+local function blindPartnerSuchen(p)
+	for i = #blindWarte, 1, -1 do
+		local w = blindWarte[i]
+		if not w.p.Parent or os.clock() - w.seit > BLIND_WARTEZEIT or lektionen[w.p] or jobs[w.p] then table.remove(blindWarte, i) end
+	end
+	for i, w in blindWarte do
+		if w.p == p then
+			table.remove(blindWarte, i)
+			return { text = "You left the partner search.", aus = true }
+		end
+	end
+	if lektionen[p] or jobs[p] then return { fehler = "Finish your lesson or job first." } end
+	local partner = blindWarte[1]
+	if not partner then
+		table.insert(blindWarte, { p = p, seit = os.clock() })
+		if os.clock() - blindAufruf > 30 then
+			blindAufruf = os.clock()
+			for _, sp in Players:GetPlayers() do
+				if sp ~= p then
+					fahrEvent:FireClient(sp, { typ = "chaos", titel = "🙈 BLIND DRIVE PARTNER WANTED", text = p.DisplayName .. " needs a co-pilot – tap 🙈 Blind → Find a partner!", farbe = "lila" })
+				end
+			end
+		end
+		Beta.ereignis(p, "Blind partner search")
+		return { text = "Looking for a partner… As soon as another player taps \"Find a partner\", you both get put into the car. Tap again to stop searching.", warten = true }
+	end
+	table.remove(blindWarte, 1)
+	local fahrer = partner.p
+	local r = lektionStarten(fahrer, "blind")
+	if r.fehler then return { fehler = "Your partner can't start right now – try again." } end
+	local st = lektionen[fahrer]
+	-- co-pilot first, then the driver: the route starts as soon as the driver sits
+	if not (st.copilotEinsetzen and st.copilotEinsetzen(p, true)) then
+		lektionBeenden(fahrer, false, "Blind Drive cancelled (the partner could not get in).")
+		return { fehler = "Could not put you into the car – try again." }
+	end
+	local hf = fahrer.Character and fahrer.Character:FindFirstChildOfClass("Humanoid")
+	if hf then
+		if hf.SeatPart then hf.Sit = false end
+		st.sitz:Sit(hf)
+	end
+	fahrEvent:FireClient(fahrer, { typ = "chaos", titel = "🎲 PARTNER FOUND!", text = p.DisplayName .. " is your co-pilot. You drive – listen to them!", farbe = "gruen" })
+	Beta.ereignis(p, "Blind partner matched")
+	return { text = ("Partner found! You're %s's co-pilot – tell them where to drive."):format(fahrer.DisplayName), gefunden = true }
+end
+Beta.blindWarteliste = function() return blindWarte end
+
 aktion.OnServerInvoke = function(p, was, eingabe)
 	local d = daten[p]
 	if not d then
@@ -3459,6 +3530,8 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 	-- v55: 🙈 Blind Drive (a friend navigates from the passenger seat)
 	elseif was == "blindStarten" then
 		return lektionStarten(p, "blind")
+	elseif was == "blindPartner" then
+		return blindPartnerSuchen(p)
 
 	-- v54 beta tools (checked in Beta.lua)
 	elseif was == "code" then

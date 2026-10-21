@@ -1458,9 +1458,9 @@ function BetaClient.starten(k)
 	do
 		local UISF = game:GetService("UserInputService")
 		local KNOEPFE = {
-			{ "links", "⬅ LEFT", Color3.fromRGB(230, 170, 30) },
-			{ "gerade", "⬆ STRAIGHT", Color3.fromRGB(230, 170, 30) },
-			{ "rechts", "RIGHT ➡", Color3.fromRGB(230, 170, 30) },
+			{ "links", "◀ LEFT", Color3.fromRGB(230, 170, 30) },
+			{ "gerade", "▲ STRAIGHT", Color3.fromRGB(230, 170, 30) },
+			{ "rechts", "RIGHT ▶", Color3.fromRGB(230, 170, 30) },
 			{ "stopp", "✋ STOP", Color3.fromRGB(200, 60, 60) },
 			{ "langsam", "🐢 SLOW", Color3.fromRGB(200, 60, 60) },
 			{ "super", "👍 NICE", GRUEN },
@@ -1640,7 +1640,7 @@ function BetaClient.starten(k)
 				local hrp = spieler.Character and spieler.Character:FindFirstChild("HumanoidRootPart")
 				if hrp then
 					local m = Vector3.new(coZiel.X - hrp.Position.X, 0, coZiel.Z - hrp.Position.Z).Magnitude
-					coWeite.Text = m < 25 and "➡ NOW!" or ("Next gate in %d m"):format(math.floor(m / 5 + 0.5) * 5)
+					coWeite.Text = m < 25 and "▶ NOW!" or ("Next gate in %d m"):format(math.floor(m / 5 + 0.5) * 5)
 				end
 				local kam = workspace.CurrentCamera
 				coSkala.Scale = math.clamp(((kam and kam.ViewportSize.X or 1000) - 20) / 460, 0.6, 1)
@@ -1675,8 +1675,8 @@ function BetaClient.starten(k)
 				return true
 			end
 			local zeit = ("%d:%02d"):format(math.floor((info.sek or 0) / 60), (info.sek or 0) % 60)
-			local text = ("<font size=\"26\" color=\"#ffd23c\"><b>%s</b></font>\n\n🙈 Driver: <b>%s</b>   🗺 Co-pilot: <b>%s</b>\nMistakes: <b>%d</b>   ·   Time: <b>%s</b>%s"):format(
-				info.titel or "", info.fahrer or "?", info.copilotName or "–", info.fehler or 0, zeit,
+			local text = ("<font size=\"26\" color=\"#ffd23c\"><b>%s</b></font>\n\n🙈 Driver: <b>%s</b>   🗺 Co-pilot: <b>%s</b>\nMistakes: <b>%d</b>   ·   Wrong ways: <b>%d</b>   ·   Time: <b>%s</b>%s"):format(
+				info.titel or "", info.fahrer or "?", info.copilotName or "–", info.fehler or 0, info.falsch or 0, zeit,
 				(info.geld or 0) > 0 and ("\n\n+%d coins each"):format(info.geld) or "")
 			local knoepfe = { { text = "Close", farbe = GRUEN, klick = k.schliessen } }
 			if not info.copilot then
@@ -1688,15 +1688,33 @@ function BetaClient.starten(k)
 		return false
 	end
 
-	function BetaClient.blindKnopf()
+	local function mitFreund()
 		local r = frage("blindStarten")
 		if r.fehler then
 			warnen(r.fehler, Color3.fromRGB(200, 140, 30))
 		else
-			k.zeige("🙈 Blind Drive", (r.text or "") .. "\n\n<b>How it works:</b> you drive, but you can't see the route. Your friend sits next to you (\"Be the co-pilot\" at the passenger door), sees the map and tells you where to go.", {
+			k.zeige("🙈 Blind Drive", (r.text or "") .. "\n\nYour friend: walk to the passenger door and press <b>\"Be the co-pilot\"</b>.", {
 				{ text = "Let's go!", farbe = GRUEN, klick = k.schliessen },
 			}, "dialog")
 		end
+	end
+	local function partnerSuchen()
+		local r = frage("blindPartner")
+		if r.fehler then
+			warnen(r.fehler, Color3.fromRGB(200, 140, 30))
+		else
+			k.schliessen()
+			warnen("🎲 " .. (r.text or ""), r.aus and Color3.fromRGB(200, 140, 30) or GRUEN)
+		end
+	end
+	function BetaClient.blindKnopf()
+		k.zeige("🙈 Blind Drive",
+			"<b>One drives, one navigates.</b>\nThe driver can't see the route – the co-pilot sees the map and tells them where to go.\n\n"
+				.. "👥 <b>With a friend:</b> you drive, your friend sits next to you.\n🎲 <b>Find a partner:</b> we match you with another player on this server.", {
+				{ text = "👥 With a friend", farbe = GRUEN, klick = mitFreund },
+				{ text = "🎲 Find a partner", farbe = BLAU, klick = partnerSuchen },
+				{ text = "Close", farbe = Color3.fromRGB(70, 75, 85), klick = k.schliessen },
+			}, "dialog")
 	end
 	return BetaClient
 end
@@ -2266,8 +2284,9 @@ local function lektionBeenden(p, erfolg, text)
 		-- 🙈 Blind Drive: team rating for driver + co-pilot (no stars, no lesson progress)
 		local co = st.blind.copilot
 		local sek = st.blind.start and math.floor(os.clock() - st.blind.start) or 0
-		local team = Beta.blindWertung(st.fehler, erfolg, co ~= nil)
-		local info = { typ = "ende", blind = true, erfolg = erfolg, text = text, fehler = st.fehler, sek = sek, titel = team.titel,
+		local falsch = st.blind.falsch or 0
+		local team = Beta.blindWertung(st.fehler + falsch, erfolg, co ~= nil)
+		local info = { typ = "ende", blind = true, erfolg = erfolg, text = text, fehler = st.fehler, falsch = falsch, sek = sek, titel = team.titel,
 			geld = team.geld, fahrer = p.DisplayName, copilotName = co and co.DisplayName }
 		for _, wer in { p, co } do
 			if wer and wer.Parent then
@@ -2569,14 +2588,16 @@ local function copilotPrompt(fahrer, st, sitz, modell)
 	pp.MaxActivationDistance = 12
 	pp.RequiresLineOfSight = false
 	pp.Parent = sitz
-	pp.Triggered:Connect(function(wer)
-		if wer == fahrer or sitz.Occupant or not modell.Parent or lektionen[fahrer] ~= st then return end
+	-- also used by "Find a partner" (v56): puts a player into the co-pilot seat from anywhere
+	st.copilotEinsetzen = function(wer, vonWeitWeg)
+		if wer == fahrer or sitz.Occupant or not modell.Parent or lektionen[fahrer] ~= st then return false end
 		if lektionen[wer] or jobs[wer] then
 			fahrEvent:FireClient(wer, { typ = "hinweis", text = "Finish your own lesson or job first." })
-			return
+			return false
 		end
 		local hum = wer.Character and wer.Character:FindFirstChildOfClass("Humanoid")
-		if not hum or hum.SeatPart then return end
+		if not hum or (hum.SeatPart and not vonWeitWeg) then return false end
+		if hum.SeatPart then hum.Sit = false end
 		sitz:Sit(hum)
 		st.blind.copilot = wer
 		st.blind.solo = nil
@@ -2587,7 +2608,9 @@ local function copilotPrompt(fahrer, st, sitz, modell)
 		end
 		local fh = st.sitz.Occupant
 		if fh and Players:GetPlayerFromCharacter(fh.Parent) == fahrer then st.losfahren() end
-	end)
+		return true
+	end
+	pp.Triggered:Connect(function(wer) st.copilotEinsetzen(wer) end)
 	sitz:GetPropertyChangedSignal("Occupant"):Connect(function()
 		pp.Enabled = sitz.Occupant == nil
 		if sitz.Occupant == nil and st.blind.copilot and lektionen[fahrer] == st then
@@ -3156,6 +3179,20 @@ RunService.Heartbeat:Connect(function(dt)
 		local wp = st.lektion.punkte[st.index]
 		local abstand = (Vector3.new(wp.x, pos.Y, wp.z) - pos).Magnitude
 		local amTor = st.tor and Regeln.durchTor(pos, st.tor.pos, st.tor.dir, st.tor.breite, st.tor.r)
+		if st.blind and st.tor and st.zielAktiv then
+			-- 🙈 Blind Drive (v56): driving away from the next gate = wrong way (hint for both; counts for the team rating)
+			local zumTor = (Vector3.new(st.tor.pos.X, pos.Y, st.tor.pos.Z) - pos).Magnitude
+			if st.blind.torNr ~= st.index then st.blind.torNr, st.blind.naechst = st.index, zumTor end
+			st.blind.naechst = math.min(st.blind.naechst, zumTor)
+			if zumTor > st.blind.naechst + 70 and os.clock() - (st.blind.falschZeit or 0) > 10 then
+				st.blind.falschZeit, st.blind.naechst = os.clock(), zumTor
+				st.blind.falsch = (st.blind.falsch or 0) + 1
+				local info = { typ = "chaos", titel = "🔄 WRONG WAY!", text = "You're driving away from the next gate – turn around!", farbe = "rot" }
+				fahrEvent:FireClient(p, info)
+				local co = st.blind.copilot
+				if co and co.Parent then fahrEvent:FireClient(co, info) end
+			end
+		end
 		if wp.parken then
 			if not st.parkPhase and (abstand < (wp.r or 16) or amTor or (wp.lkw and Regeln.imDepot(pos) and pos.Z > 335)) then
 				st.parkPhase = true
@@ -4853,6 +4890,58 @@ end
 -- ---------------------------------------------------------------
 -- Requests from players
 -- ---------------------------------------------------------------
+-- 🎲 Blind Drive "Find a partner" (v56): two players without a friend get matched on the server.
+-- The one who waited longer drives, the other one becomes the co-pilot. Both are put into the car.
+local blindWarte = {}   -- { { p = player, seit = clock } }
+local blindAufruf = -math.huge
+local BLIND_WARTEZEIT = 180
+local function blindPartnerSuchen(p)
+	for i = #blindWarte, 1, -1 do
+		local w = blindWarte[i]
+		if not w.p.Parent or os.clock() - w.seit > BLIND_WARTEZEIT or lektionen[w.p] or jobs[w.p] then table.remove(blindWarte, i) end
+	end
+	for i, w in blindWarte do
+		if w.p == p then
+			table.remove(blindWarte, i)
+			return { text = "You left the partner search.", aus = true }
+		end
+	end
+	if lektionen[p] or jobs[p] then return { fehler = "Finish your lesson or job first." } end
+	local partner = blindWarte[1]
+	if not partner then
+		table.insert(blindWarte, { p = p, seit = os.clock() })
+		if os.clock() - blindAufruf > 30 then
+			blindAufruf = os.clock()
+			for _, sp in Players:GetPlayers() do
+				if sp ~= p then
+					fahrEvent:FireClient(sp, { typ = "chaos", titel = "🙈 BLIND DRIVE PARTNER WANTED", text = p.DisplayName .. " needs a co-pilot – tap 🙈 Blind → Find a partner!", farbe = "lila" })
+				end
+			end
+		end
+		Beta.ereignis(p, "Blind partner search")
+		return { text = "Looking for a partner… As soon as another player taps \"Find a partner\", you both get put into the car. Tap again to stop searching.", warten = true }
+	end
+	table.remove(blindWarte, 1)
+	local fahrer = partner.p
+	local r = lektionStarten(fahrer, "blind")
+	if r.fehler then return { fehler = "Your partner can't start right now – try again." } end
+	local st = lektionen[fahrer]
+	-- co-pilot first, then the driver: the route starts as soon as the driver sits
+	if not (st.copilotEinsetzen and st.copilotEinsetzen(p, true)) then
+		lektionBeenden(fahrer, false, "Blind Drive cancelled (the partner could not get in).")
+		return { fehler = "Could not put you into the car – try again." }
+	end
+	local hf = fahrer.Character and fahrer.Character:FindFirstChildOfClass("Humanoid")
+	if hf then
+		if hf.SeatPart then hf.Sit = false end
+		st.sitz:Sit(hf)
+	end
+	fahrEvent:FireClient(fahrer, { typ = "chaos", titel = "🎲 PARTNER FOUND!", text = p.DisplayName .. " is your co-pilot. You drive – listen to them!", farbe = "gruen" })
+	Beta.ereignis(p, "Blind partner matched")
+	return { text = ("Partner found! You're %s's co-pilot – tell them where to drive."):format(fahrer.DisplayName), gefunden = true }
+end
+Beta.blindWarteliste = function() return blindWarte end
+
 aktion.OnServerInvoke = function(p, was, eingabe)
 	local d = daten[p]
 	if not d then
@@ -5163,6 +5252,8 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 	-- v55: 🙈 Blind Drive (a friend navigates from the passenger seat)
 	elseif was == "blindStarten" then
 		return lektionStarten(p, "blind")
+	elseif was == "blindPartner" then
+		return blindPartnerSuchen(p)
 
 	-- v54 beta tools (checked in Beta.lua)
 	elseif was == "code" then
@@ -9213,6 +9304,8 @@ end
 function Chaos.eventStarten(p, st, art)
 	local c = st.chaos
 	if not c or c.event then return nil end
+	-- v56: the very first event of lesson 1 is always the cows – the funniest "what is going on?!" moment for new players
+	if not art and st.nr == 1 and c.anzahl == 0 and not c.frei and EVENTS.kuehe then art = "kuehe" end
 	art = art or wuerfeln(st)
 	if art == "gag" and not c.lehrer.gags then art = "banane" end -- no instructor in your own car
 	local ev = EVENTS[art]
@@ -10023,9 +10116,9 @@ end
 -- Only fixed commands (no free text = nothing to moderate, works without chat).
 -- ---------------------------------------------------------------
 Beta.KOMMANDOS = {
-	links = { "⬅ LEFT!", "gelb" },
-	gerade = { "⬆ STRAIGHT ON!", "gelb" },
-	rechts = { "RIGHT! ➡", "gelb" },
+	links = { "◀ LEFT!", "gelb" },
+	gerade = { "▲ STRAIGHT ON!", "gelb" },
+	rechts = { "RIGHT! ▶", "gelb" },
 	stopp = { "✋ STOP!", "rot" },
 	langsam = { "🐢 SLOW DOWN!", "rot" },
 	super = { "👍 NICE DRIVING!", "gruen" },
@@ -10533,7 +10626,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local spieler = Players.LocalPlayer
-print("[Driving School] client v55 loaded")
+print("[Driving School] client v56 loaded")
 local ordner = RS:WaitForChild("Fuehrerschein")
 local aktion = ordner:WaitForChild("Aktion")
 local oeffnen = ordner:WaitForChild("Oeffnen")
@@ -15124,7 +15217,7 @@ end
 
 -- Start screen
 do
-	print("[Driving School] start screen v55 loading")
+	print("[Driving School] start screen v56 loading")
 	local menue = Instance.new("ScreenGui")
 	menue.Name = "Startbildschirm"
 	menue.IgnoreGuiInset = true

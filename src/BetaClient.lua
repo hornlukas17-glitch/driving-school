@@ -91,9 +91,9 @@ function BetaClient.starten(k)
 	do
 		local UISF = game:GetService("UserInputService")
 		local KNOEPFE = {
-			{ "links", "⬅ LEFT", Color3.fromRGB(230, 170, 30) },
-			{ "gerade", "⬆ STRAIGHT", Color3.fromRGB(230, 170, 30) },
-			{ "rechts", "RIGHT ➡", Color3.fromRGB(230, 170, 30) },
+			{ "links", "◀ LEFT", Color3.fromRGB(230, 170, 30) },
+			{ "gerade", "▲ STRAIGHT", Color3.fromRGB(230, 170, 30) },
+			{ "rechts", "RIGHT ▶", Color3.fromRGB(230, 170, 30) },
 			{ "stopp", "✋ STOP", Color3.fromRGB(200, 60, 60) },
 			{ "langsam", "🐢 SLOW", Color3.fromRGB(200, 60, 60) },
 			{ "super", "👍 NICE", GRUEN },
@@ -273,7 +273,7 @@ function BetaClient.starten(k)
 				local hrp = spieler.Character and spieler.Character:FindFirstChild("HumanoidRootPart")
 				if hrp then
 					local m = Vector3.new(coZiel.X - hrp.Position.X, 0, coZiel.Z - hrp.Position.Z).Magnitude
-					coWeite.Text = m < 25 and "➡ NOW!" or ("Next gate in %d m"):format(math.floor(m / 5 + 0.5) * 5)
+					coWeite.Text = m < 25 and "▶ NOW!" or ("Next gate in %d m"):format(math.floor(m / 5 + 0.5) * 5)
 				end
 				local kam = workspace.CurrentCamera
 				coSkala.Scale = math.clamp(((kam and kam.ViewportSize.X or 1000) - 20) / 460, 0.6, 1)
@@ -308,8 +308,8 @@ function BetaClient.starten(k)
 				return true
 			end
 			local zeit = ("%d:%02d"):format(math.floor((info.sek or 0) / 60), (info.sek or 0) % 60)
-			local text = ("<font size=\"26\" color=\"#ffd23c\"><b>%s</b></font>\n\n🙈 Driver: <b>%s</b>   🗺 Co-pilot: <b>%s</b>\nMistakes: <b>%d</b>   ·   Time: <b>%s</b>%s"):format(
-				info.titel or "", info.fahrer or "?", info.copilotName or "–", info.fehler or 0, zeit,
+			local text = ("<font size=\"26\" color=\"#ffd23c\"><b>%s</b></font>\n\n🙈 Driver: <b>%s</b>   🗺 Co-pilot: <b>%s</b>\nMistakes: <b>%d</b>   ·   Wrong ways: <b>%d</b>   ·   Time: <b>%s</b>%s"):format(
+				info.titel or "", info.fahrer or "?", info.copilotName or "–", info.fehler or 0, info.falsch or 0, zeit,
 				(info.geld or 0) > 0 and ("\n\n+%d coins each"):format(info.geld) or "")
 			local knoepfe = { { text = "Close", farbe = GRUEN, klick = k.schliessen } }
 			if not info.copilot then
@@ -321,15 +321,33 @@ function BetaClient.starten(k)
 		return false
 	end
 
-	function BetaClient.blindKnopf()
+	local function mitFreund()
 		local r = frage("blindStarten")
 		if r.fehler then
 			warnen(r.fehler, Color3.fromRGB(200, 140, 30))
 		else
-			k.zeige("🙈 Blind Drive", (r.text or "") .. "\n\n<b>How it works:</b> you drive, but you can't see the route. Your friend sits next to you (\"Be the co-pilot\" at the passenger door), sees the map and tells you where to go.", {
+			k.zeige("🙈 Blind Drive", (r.text or "") .. "\n\nYour friend: walk to the passenger door and press <b>\"Be the co-pilot\"</b>.", {
 				{ text = "Let's go!", farbe = GRUEN, klick = k.schliessen },
 			}, "dialog")
 		end
+	end
+	local function partnerSuchen()
+		local r = frage("blindPartner")
+		if r.fehler then
+			warnen(r.fehler, Color3.fromRGB(200, 140, 30))
+		else
+			k.schliessen()
+			warnen("🎲 " .. (r.text or ""), r.aus and Color3.fromRGB(200, 140, 30) or GRUEN)
+		end
+	end
+	function BetaClient.blindKnopf()
+		k.zeige("🙈 Blind Drive",
+			"<b>One drives, one navigates.</b>\nThe driver can't see the route – the co-pilot sees the map and tells them where to go.\n\n"
+				.. "👥 <b>With a friend:</b> you drive, your friend sits next to you.\n🎲 <b>Find a partner:</b> we match you with another player on this server.", {
+				{ text = "👥 With a friend", farbe = GRUEN, klick = mitFreund },
+				{ text = "🎲 Find a partner", farbe = BLAU, klick = partnerSuchen },
+				{ text = "Close", farbe = Color3.fromRGB(70, 75, 85), klick = k.schliessen },
+			}, "dialog")
 	end
 	return BetaClient
 end

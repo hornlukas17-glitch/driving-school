@@ -1,5 +1,11 @@
 # Changelog
 
+## v56 – Partner finden, Wrong Way, Kühe zuerst
+- **🎲 Find a partner:** Der 🙈-Blind-Knopf fragt jetzt „With a friend“ oder „Find a partner“. Zwei Spieler ohne Freund werden auf dem Server zusammengebracht und direkt ins Auto gesetzt (wer länger gewartet hat, fährt). Alle anderen sehen „PARTNER WANTED“. Nochmal tippen = Suche beenden, nach 3 min läuft sie ab.
+- **🔄 Wrong Way:** Entfernt sich das Auto in Blind Drive deutlich vom nächsten Tor, bekommen Fahrer und Co-Pilot „WRONG WAY – turn around!“. Falsche Wege zählen in der Team-Wertung und stehen im Ergebnis.
+- **Erste Minute:** Das erste Chaos-Event in Lektion 1 ist immer die Kuhherde (stärkster „Was ist hier los?!“-Moment). Pfeile in den Kommandos als ◀ ▲ ▶ (sicher darstellbar).
+- Test 30 erweitert (Partnersuche, Wrong Way).
+
 ## v55 – 🙈 Blind Drive (Fahrer sieht nichts, Beifahrer navigiert)
 - Neuer Knopf **🙈 Blind** im Menü: Ein Fahrschulauto wartet, ein Freund setzt sich als **Co-Pilot** auf den Beifahrersitz („Be the co-pilot“). Erst dann geht es los (Prüfungsroute, ohne Voraussetzungen).
 - **Fahrer:** keine grünen Tore, keine Route auf der Minimap, nur „🙈 Listen to …!“. **Co-Pilot:** sieht Tor + Route + „Next gate in 40 m / NOW!“ und gibt Kommandos (Knöpfe/Tasten 1–6). Der Computer-Fahrlehrer sitzt hinten und kommentiert nur.

@@ -708,6 +708,8 @@ end
 function Chaos.eventStarten(p, st, art)
 	local c = st.chaos
 	if not c or c.event then return nil end
+	-- v56: the very first event of lesson 1 is always the cows – the funniest "what is going on?!" moment for new players
+	if not art and st.nr == 1 and c.anzahl == 0 and not c.frei and EVENTS.kuehe then art = "kuehe" end
 	art = art or wuerfeln(st)
 	if art == "gag" and not c.lehrer.gags then art = "banane" end -- no instructor in your own car
 	local ev = EVENTS[art]

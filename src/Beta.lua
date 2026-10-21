@@ -115,9 +115,9 @@ end
 -- Only fixed commands (no free text = nothing to moderate, works without chat).
 -- ---------------------------------------------------------------
 Beta.KOMMANDOS = {
-	links = { "⬅ LEFT!", "gelb" },
-	gerade = { "⬆ STRAIGHT ON!", "gelb" },
-	rechts = { "RIGHT! ➡", "gelb" },
+	links = { "◀ LEFT!", "gelb" },
+	gerade = { "▲ STRAIGHT ON!", "gelb" },
+	rechts = { "RIGHT! ▶", "gelb" },
 	stopp = { "✋ STOP!", "rot" },
 	langsam = { "🐢 SLOW DOWN!", "rot" },
 	super = { "👍 NICE DRIVING!", "gruen" },

@@ -86,4 +86,35 @@ pruefe("5 mistakes = couples therapy", Beta.blindWertung(5, true, true).titel:fi
 pruefe("20 mistakes = divorce", Beta.blindWertung(20, true, true).titel:find("DIVORCE") ~= nil)
 pruefe("not finished = no coins", Beta.blindWertung(0, false, true).geld == 0)
 pruefe("without co-pilot only a few coins", Beta.blindWertung(0, true, false).geld < Beta.blindWertung(0, true, true).geld)
+-- 7) 🎲 Find a partner (v56): two players without a friend get matched
+local p4 = M.spielerErzeugen("Ben", 2004)
+M.laufen(M.zeit() + 3)
+local a = frage(p3, "blindPartner")
+pruefe("first player waits: " .. tostring(a.text), a.warten == true)
+pruefe("others are told someone needs a partner", letztes(p4, "chaos", function(i) return i.titel:find("PARTNER WANTED") ~= nil end) ~= nil)
+pruefe("tap again = leave the search", frage(p3, "blindPartner").aus == true)
+frage(p3, "blindPartner")
+local b = frage(p4, "blindPartner")
+pruefe("second player gets matched: " .. tostring(b.text or b.fehler), b.gefunden == true)
+M.laufen(M.zeit() + 5)
+local auto2 = workspace:FindFirstChild("Fahrschulauto_Mia")
+local sitz2 = auto2 and auto2:FindFirstChildWhichIsA("VehicleSeat")
+local bf2 = auto2 and auto2:FindFirstChild("Beifahrersitz")
+pruefe("waiting player drives", sitz2 ~= nil and sitz2.Occupant == p3.Character.Humanoid)
+pruefe("new player is the co-pilot", bf2 ~= nil and bf2.Occupant == p4.Character.Humanoid)
+pruefe("co-pilot gets the route", letztes(p4, "ziel", function(i) return i.copilot == true end) ~= nil)
+pruefe("driver gets no route", letztes(p3, "ziel", function(i) return i.blind == true and i.pos == nil end) ~= nil)
+pruefe("busy players can't search", frage(p3, "blindPartner").fehler ~= nil)
+-- 8) wrong way (v56): driving away from the gate -> hint for both
+local chassis = auto2:FindFirstChild("Chassis", true) or sitz2
+M.laufen(M.zeit() + 1)
+local c0 = chassis.CFrame
+for i = 1, 6 do
+	auto2:PivotTo(c0 + Vector3.new(0, 0, i * 40))
+	M.laufen(M.zeit() + 0.5)
+	auto2:PivotTo(c0 - Vector3.new(0, 0, i * 40))
+	M.laufen(M.zeit() + 0.5)
+end
+pruefe("driver gets WRONG WAY", letztes(p3, "chaos", function(i) return i.titel:find("WRONG WAY") ~= nil end) ~= nil)
+pruefe("co-pilot gets WRONG WAY", letztes(p4, "chaos", function(i) return i.titel:find("WRONG WAY") ~= nil end) ~= nil)
 print("blind drive ok")

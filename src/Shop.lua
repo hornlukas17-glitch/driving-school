@@ -13,33 +13,33 @@ local Shop = {}
 
 -- one-time purchases (keep forever)
 Shop.PASSES = {
-	{ key = "vip", id = 0, preis = 399, icon = "👑", name = "VIP",
+	{ key = "vip", id = 2045876474, preis = 399, icon = "👑", name = "VIP",
 		text = "2x coins from every job and reward, golden VIP tag, 2 VIP paint colors." },
-	{ key = "xp2", id = 0, preis = 249, icon = "⚡", name = "2x XP",
+	{ key = "xp2", id = 2045510483, preis = 249, icon = "⚡", name = "2x XP",
 		text = "Level up twice as fast – unlock the big trucks and cars sooner." },
-	{ key = "nacht", id = 0, preis = 699, icon = "🌙", name = "Vanta GS Night Edition",
+	{ key = "nacht", id = 2045372495, preis = 699, icon = "🌙", name = "Vanta GS Night Edition",
 		text = "Exclusive car: midnight black, gold rims, purple underglow, 195 km/h. Only with this pass." },
 	{ key = "garage", id = 0, preis = 199, icon = "🎨", name = "Paint Studio",
 		text = "6 exclusive paint colors for all your cars." },
-	{ key = "banane", id = 0, preis = 149, icon = "🍌", name = "Banana Launcher",
+	{ key = "banane", id = 2045894480, preis = 149, icon = "🍌", name = "Banana Launcher",
 		text = "Press B (or the 🍌 button) while driving to drop banana peels behind your car. Watch your friends spin out!" },
-	{ key = "hupen", id = 0, preis = 99, icon = "📯", name = "Funny Horn Pack",
+	{ key = "hupen", id = 2044832494, preis = 99, icon = "📯", name = "Funny Horn Pack",
 		text = "4 crazy horns for every car: clown, duck, air horn and fanfare. Press H to honk – everybody hears it!" },
 }
 
 -- can be bought again and again (except the starter pack)
 Shop.PRODUKTE = {
-	{ key = "starter", id = 0, preis = 99, name = "Starter Pack", geld = 7500, boost = 30, einmal = true,
+	{ key = "starter", id = 3720579126, preis = 99, name = "Starter Pack", geld = 7500, boost = 30, einmal = true,
 		text = "7,500 coins + 30 min 2x coins. Only once per player!" },
-	{ key = "boost", id = 0, preis = 79, name = "2x Coins – 30 min", boost = 30, text = "Double coins for 30 minutes of play." },
-	{ key = "ufo", id = 0, preis = 49, name = "👽 Alien Invasion", chaos = "ufo", tag = "FUN",
+	{ key = "boost", id = 3720579213, preis = 79, name = "2x Coins – 30 min", boost = 30, text = "Double coins for 30 minutes of play." },
+	{ key = "ufo", id = 3720579264, preis = 49, name = "👽 Alien Invasion", chaos = "ufo", tag = "FUN",
 		text = "A UFO beams up EVERY driver on the server – with your name on it!" },
-	{ key = "bananen", id = 0, preis = 29, name = "🍌 Banana Rain", chaos = "bananen", tag = "FUN",
+	{ key = "bananen", id = 3720579331, preis = 29, name = "🍌 Banana Rain", chaos = "bananen", tag = "FUN",
 		text = "Banana peels rain down in front of every driver on the server!" },
-	{ key = "coins1", id = 0, preis = 49, name = "2,500 coins", geld = 2500 },
-	{ key = "coins2", id = 0, preis = 179, name = "10,000 coins", geld = 10000 },
-	{ key = "coins3", id = 0, preis = 449, name = "30,000 coins", geld = 30000, tag = "POPULAR" },
-	{ key = "coins4", id = 0, preis = 1199, name = "100,000 coins", geld = 100000, tag = "BEST VALUE" },
+	{ key = "coins1", id = 3720579454, preis = 49, name = "2,500 coins", geld = 2500 },
+	{ key = "coins2", id = 3720579561, preis = 179, name = "10,000 coins", geld = 10000 },
+	{ key = "coins3", id = 3720579673, preis = 449, name = "30,000 coins", geld = 30000, tag = "POPULAR" },
+	{ key = "coins4", id = 3720579782, preis = 1199, name = "100,000 coins", geld = 100000, tag = "BEST VALUE" },
 }
 
 -- bonus shares on earned coins / XP (purchases and admin money never get a bonus)

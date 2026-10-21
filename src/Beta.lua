@@ -174,6 +174,23 @@ function Beta.bewerten(p, sterne)
 	return { text = ("You gave %s %d star%s."):format(fahrer.DisplayName, sterne, sterne == 1 and "" or "s") }
 end
 
+-- ---------------------------------------------------------------
+-- 🙈 Blind Drive (v55): team rating for driver + co-pilot. Fewer mistakes = better team, more coins.
+-- ---------------------------------------------------------------
+Beta.BLIND_STUFEN = {
+	{ max = 0, titel = "💞 DREAM TEAM", geld = 120 },
+	{ max = 3, titel = "🤝 GREAT TEAM", geld = 80 },
+	{ max = 7, titel = "😬 NEEDS COUPLES THERAPY", geld = 50 },
+	{ max = math.huge, titel = "💔 DIVORCE INCOMING", geld = 25 },
+}
+function Beta.blindWertung(fehler, erfolg, mitCopilot)
+	if not erfolg then return { titel = "🚧 LOST IN TRAFFIC", geld = 0 } end
+	if not mitCopilot then return { titel = "🧍 SOLO (co-pilot left)", geld = 15 } end
+	for _, s in Beta.BLIND_STUFEN do
+		if (fehler or 0) <= s.max then return { titel = s.titel, geld = s.geld } end
+	end
+end
+
 function Beta.starten(k)
 	ctx = k
 end

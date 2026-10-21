@@ -558,6 +558,30 @@ local function lektionBeenden(p, erfolg, text)
 	end
 	Chaos.reaktion(p, st, erfolg and "ende_gut" or "ende_schlecht")
 	Chaos.ende(st)
+	if st.blind then
+		-- 🙈 Blind Drive: team rating for driver + co-pilot (no stars, no lesson progress)
+		local co = st.blind.copilot
+		local sek = st.blind.start and math.floor(os.clock() - st.blind.start) or 0
+		local team = Beta.blindWertung(st.fehler, erfolg, co ~= nil)
+		local info = { typ = "ende", blind = true, erfolg = erfolg, text = text, fehler = st.fehler, sek = sek, titel = team.titel,
+			geld = team.geld, fahrer = p.DisplayName, copilotName = co and co.DisplayName }
+		for _, wer in { p, co } do
+			if wer and wer.Parent then
+				if team.geld > 0 then geldGeben(wer, team.geld, "Blind Drive") end
+				if erfolg then xpGeben(wer, 40, "Blind Drive") end
+				local kopie = table.clone(info)
+				kopie.copilot = wer == co
+				fahrEvent:FireClient(wer, kopie)
+				Beta.ereignis(wer, erfolg and "Blind Drive finished" or "Blind Drive ended", st.fehler)
+			end
+		end
+		task.delay(4, function()
+			aussteigen(st.sitz)
+			if st.copilotPP and st.copilotPP.Parent then aussteigen(st.copilotPP.Parent) end
+			if st.model then st.model:Destroy() end
+		end)
+		return
+	end
 	if st.party then
 		-- party test: the race decides (no stars, no license)
 		if p.Parent then fahrEvent:FireClient(p, { typ = "ende", erfolg = erfolg, text = text, fehler = st.fehler, party = true }) end
@@ -691,6 +715,14 @@ local function zielSenden(p, st)
 	end
 	st.zielAktiv = true
 	Chaos.losgehen(st)
+	local co = st.blind and st.blind.copilot
+	if co and co.Parent then
+		-- 🙈 Blind Drive: the route only goes to the co-pilot, the driver gets no gate and no map
+		info.copilot, info.fahrer = true, p.DisplayName
+		fahrEvent:FireClient(co, info)
+		fahrEvent:FireClient(p, { typ = "ziel", blind = true, nr = info.nr, gesamt = info.gesamt, text = ("🙈 Listen to %s!"):format(co.DisplayName), sprecher = "Co-pilot" })
+		return
+	end
 	fahrEvent:FireClient(p, info)
 end
 
@@ -823,6 +855,51 @@ local function mitfahrPrompt(besitzer, sitz, modell)
 	return pp
 end
 
+-- 🙈 Blind Drive: a friend becomes the co-pilot in the passenger seat (sees the route, the driver doesn't)
+local function copilotPrompt(fahrer, st, sitz, modell)
+	local pp = Instance.new("ProximityPrompt")
+	pp.Name = "Copilot"
+	pp.ActionText = "Be the co-pilot"
+	pp.ObjectText = fahrer.DisplayName .. "'s Blind Drive"
+	pp.HoldDuration = 0
+	pp.MaxActivationDistance = 12
+	pp.RequiresLineOfSight = false
+	pp.Parent = sitz
+	pp.Triggered:Connect(function(wer)
+		if wer == fahrer or sitz.Occupant or not modell.Parent or lektionen[fahrer] ~= st then return end
+		if lektionen[wer] or jobs[wer] then
+			fahrEvent:FireClient(wer, { typ = "hinweis", text = "Finish your own lesson or job first." })
+			return
+		end
+		local hum = wer.Character and wer.Character:FindFirstChildOfClass("Humanoid")
+		if not hum or hum.SeatPart then return end
+		sitz:Sit(hum)
+		st.blind.copilot = wer
+		st.blind.solo = nil
+		Beta.ereignis(wer, "Blind Drive co-pilot")
+		fahrEvent:FireClient(wer, { typ = "chaos", titel = "🗺 YOU'RE THE CO-PILOT!", text = ("%s can't see the route. Tell them where to go (buttons or keys 1-6)!"):format(fahrer.DisplayName), farbe = "gruen" })
+		if fahrer.Parent then
+			fahrEvent:FireClient(fahrer, { typ = "chaos", titel = "🙈 " .. wer.DisplayName:upper() .. " IS YOUR CO-PILOT!", text = "You won't see the route – listen to your co-pilot!", farbe = "gruen" })
+		end
+		local fh = st.sitz.Occupant
+		if fh and Players:GetPlayerFromCharacter(fh.Parent) == fahrer then st.losfahren() end
+	end)
+	sitz:GetPropertyChangedSignal("Occupant"):Connect(function()
+		pp.Enabled = sitz.Occupant == nil
+		if sitz.Occupant == nil and st.blind.copilot and lektionen[fahrer] == st then
+			-- the co-pilot got out: the driver sees the route again (no team rating)
+			local weg = st.blind.copilot
+			st.blind.copilot, st.blind.solo = nil, true
+			if fahrer.Parent then
+				fahrEvent:FireClient(fahrer, { typ = "hinweis", text = ("%s left the car – you can see the route again (no team rating)."):format(weg.DisplayName) })
+				if st.zielAktiv then zielSenden(fahrer, st) end
+			end
+			if weg.Parent then fahrEvent:FireClient(weg, { typ = "ende", blind = true, copilot = true, abbruch = true }) end
+		end
+	end)
+	return pp
+end
+
 local function blinkTeileSuchen(modell)
 	local teile = { L = {}, R = {} }
 	for _, t in modell:GetDescendants() do
@@ -859,6 +936,10 @@ local function lektionStarten(p, art, wiederholNr, party)
 		-- 🏁 party test: everybody drives the same exam route, no requirements
 		nr = 0
 		lektion = party.lektion
+	elseif art == "blind" then
+		-- 🙈 Blind Drive (v55): the driver can't see the route, a friend in the passenger seat navigates
+		nr = 0
+		lektion = LEKTIONEN.PRUEFUNGEN[math.random(#LEKTIONEN.PRUEFUNGEN)]
 	elseif art == "wiederholen" then
 		-- replay a finished lesson to get more stars
 		nr = math.floor(tonumber(wiederholNr) or 0)
@@ -922,20 +1003,43 @@ local function lektionStarten(p, art, wiederholNr, party)
 		party = party,
 	}
 	if party then st.erlaubt = 99 end
+	if art == "blind" then st.blind = { start = nil } st.erlaubt = 99 end
 	lektionen[p] = st
 	letzteLektion[p] = { art = art or "lektion", nr = art == "wiederholen" and wiederholNr or nil }
 
 	-- Instructor in the passenger seat (a random crazy one, see Chaos.lua), examiner in the back (or in the middle of the truck cab)
 	local lehrer = Chaos.neu(p, st)
-	mitfahrer(modell, "Fahrlehrer", lehrer.name .. " (Instructor)", lehrer.haut, lehrer.oberteil, lehrer.hose, beifahrer, { uniform = true, frau = lehrer.frau == true })
+	mitfahrer(modell, "Fahrlehrer", lehrer.name .. " (Instructor)", lehrer.haut, lehrer.oberteil, lehrer.hose, (st.blind and ruecksitz) or beifahrer, { uniform = true, frau = lehrer.frau == true })
 	if pruefung then
 		mitfahrer(modell, "Pruefer", "Mr. Becker (Examiner)", Color3.fromRGB(225, 185, 150), Color3.fromRGB(45, 50, 65), Color3.fromRGB(45, 50, 65), ruecksitz)
 	end
 
 	einsteigPrompt(p, sitz, lkw and "Driving school truck" or (party and "Party car" or "Driving school car"))
-	if not pruefung and ruecksitz then
+	if st.blind then
+		st.copilotPP = copilotPrompt(p, st, beifahrer, modell)
+	elseif not pruefung and ruecksitz then
 		-- friends can ride along on the back seat (not in the driving test – the examiner sits there)
 		st.mitfahrPP = mitfahrPrompt(p, ruecksitz, modell)
+	end
+	st.losfahren = function()
+		if st.gestartet or lektionen[p] ~= st then return end
+		st.gestartet = true
+		if st.nr == 1 and not pruefung then funnel(p, 2) end
+		local titel, text, sprecher = lektion.titel, lektion.intro, pruefung and "Examiner" or lehrer.name
+		if party then
+			titel, text = "🏁 PARTY TEST", "Same route for everybody – first to park wins! Each mistake = +5 s. Watch out for chaos!"
+		elseif st.blind then
+			st.blind.start = os.clock()
+			titel, sprecher = "🙈 BLIND DRIVE", "Co-pilot"
+			text = ("You can't see the route – %s can! Listen and drive."):format(st.blind.copilot.DisplayName)
+		end
+		fahrEvent:FireClient(p, { typ = "start", titel = titel, text = text, sprecher = sprecher, grenze = st.erlaubt, lehrer = lehrer.name })
+		task.delay(1.5, function()
+			if lektionen[p] == st then Chaos.sagen(st, "start") end
+		end)
+		task.delay(st.blind and 3 or 6, function()
+			if lektionen[p] == st then zielSenden(p, st) end
+		end)
 	end
 	sitz:GetPropertyChangedSignal("Occupant"):Connect(function()
 		if lektionen[p] ~= st then return end
@@ -948,15 +1052,11 @@ local function lektionStarten(p, art, wiederholNr, party)
 			st.ausgestiegenSeit = nil
 			pcall(function() chassis:SetNetworkOwner(p) end)
 			if not st.gestartet then
-				st.gestartet = true
-				if st.nr == 1 and not pruefung then funnel(p, 2) end
-				fahrEvent:FireClient(p, { typ = "start", titel = party and "🏁 PARTY TEST" or lektion.titel, text = party and "Same route for everybody – first to park wins! Each mistake = +5 s. Watch out for chaos!" or lektion.intro, sprecher = pruefung and "Examiner" or lehrer.name, grenze = st.erlaubt, lehrer = lehrer.name })
-				task.delay(1.5, function()
-					if lektionen[p] == st then Chaos.sagen(st, "start") end
-				end)
-				task.delay(6, function()
-					if lektionen[p] == st then zielSenden(p, st) end
-				end)
+				if st.blind and not st.blind.copilot then
+					fahrEvent:FireClient(p, { typ = "hinweis", text = "🙈 Blind Drive: you need a co-pilot! A friend sits in your passenger seat (\"Be the co-pilot\")." })
+					return
+				end
+				st.losfahren()
 			end
 		else
 			st.ausgestiegenSeit = os.clock()
@@ -969,6 +1069,8 @@ local function lektionStarten(p, art, wiederholNr, party)
 		return { text = "Your truck test starts now! The driving school truck is waiting at the Parcel Express depot, south of the neighbourhood (follow the green line on your minimap). Press E at the driver's door to get in." }
 	elseif party then
 		return { text = "Party test! Your car is waiting on the driving school parking lot – press E at the driver's door. GO GO GO!" }
+	elseif st.blind then
+		return { text = "🙈 Blind Drive! Your car is waiting on the driving school parking lot. Get in (E) – and a friend takes the passenger seat as your co-pilot." }
 	elseif pruefung then
 		return { text = "Your driving test starts now! Your instructor and the examiner Mr. Becker are waiting in the car on the parking lot. Press E at the driver's door to get in." }
 	end
@@ -3353,6 +3455,10 @@ aktion.OnServerInvoke = function(p, was, eingabe)
 			return { text = "Progress reset." }
 		end
 		return { fehler = "Unknown test command." }
+
+	-- v55: 🙈 Blind Drive (a friend navigates from the passenger seat)
+	elseif was == "blindStarten" then
+		return lektionStarten(p, "blind")
 
 	-- v54 beta tools (checked in Beta.lua)
 	elseif was == "code" then

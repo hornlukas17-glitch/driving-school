@@ -1400,7 +1400,9 @@ end
 
 -- v54 beta: invite friends, report "map loaded", 🧑‍🏫 instructor mode light (own module: this script is near Roblox' 200,000-character limit)
 local BetaClient = require(ordner:WaitForChild("BetaClient")).starten({
-	spieler = spieler, frage = frage, warnen = warnen, GRUEN = GRUEN, BLAU = BLAU,
+	spieler = spieler, frage = frage, warnen = warnen, GRUEN = GRUEN, BLAU = BLAU, zeige = zeige, schliessen = schliessen, einh = einh,
+	markerWeg = markerWeg, markerSetzen = markerSetzen, hudAus = hudAus, hud = hud, anweisungText = anweisungText,
+	lektionTitel = lektionTitel, lektion = function(an) lektionAktiv = an end,
 })
 
 -- 📯 somebody honked: sound from the car + a "HONK!" bubble over it for everybody nearby
@@ -1438,6 +1440,7 @@ local function hupeZeigen(info)
 end
 
 fahrEvent.OnClientEvent:Connect(function(info)
+	if BetaClient.event(info) then return end -- v55 Blind Drive (co-pilot / blind driver)
 	if info.typ == "chaos" then
 		chaosBanner(info)
 	elseif info.typ == "kommando" then
@@ -3765,6 +3768,7 @@ end)
 -- 🏁 Party test: up to 4 friends drive the same route, first to park wins
 -- ---------------------------------------------------------------
 do
+	leistenKnopf("🙈", "Blind", 9, Color3.fromRGB(150, 60, 170)).MouseButton1Click:Connect(BetaClient.blindKnopf)
 	local partyKnopf = leistenKnopf("🏁", "Party", 8, Color3.fromRGB(200, 90, 30))
 	partyKnopf.MouseButton1Click:Connect(function()
 		local r = frage("partyBeitreten")

@@ -228,6 +228,109 @@ function BetaClient.starten(k)
 		end)
 	end
 	BetaClient.kommandoZeigen = kommandoZeigen
+
+	-- 🙈 Blind Drive (v55): the co-pilot sees gate + route + distance, the driver sees nothing but the road
+	local coGui = Instance.new("ScreenGui")
+	coGui.Name = "Copilot"
+	coGui.ResetOnSpawn = false
+	coGui.Enabled = false
+	coGui.Parent = spieler.PlayerGui
+	local coBox = Instance.new("Frame")
+	coBox.AnchorPoint = Vector2.new(0.5, 0)
+	coBox.Position = UDim2.new(0.5, 0, 0, 8)
+	coBox.Size = UDim2.fromOffset(460, 92)
+	coBox.BackgroundColor3 = Color3.fromRGB(20, 24, 34)
+	coBox.BackgroundTransparency = 0.1
+	coBox.Parent = coGui
+	Instance.new("UICorner", coBox).CornerRadius = UDim.new(0, 12)
+	local coSkala = Instance.new("UIScale")
+	coSkala.Parent = coBox
+	local function zeile(y, h, groesse, farbe, font)
+		local t = Instance.new("TextLabel")
+		t.Position = UDim2.fromOffset(14, y)
+		t.Size = UDim2.new(1, -28, 0, h)
+		t.BackgroundTransparency = 1
+		t.Font = font or Enum.Font.GothamBold
+		t.TextSize = groesse
+		t.TextColor3 = farbe
+		t.TextXAlignment = Enum.TextXAlignment.Left
+		t.TextWrapped = true
+		t.RichText = true
+		t.Parent = coBox
+		return t
+	end
+	local coTitel = zeile(6, 18, 13, Color3.fromRGB(255, 210, 40), Enum.Font.GothamBlack)
+	local coText = zeile(26, 40, 16, Color3.new(1, 1, 1))
+	local coWeite = zeile(66, 20, 15, Color3.fromRGB(120, 230, 140), Enum.Font.GothamBlack)
+	local coZiel, coNr = nil, 0
+	local function copilotAus()
+		coGui.Enabled = false
+		coZiel = nil
+	end
+	task.spawn(function()
+		while true do
+			if coGui.Enabled and coZiel then
+				local hrp = spieler.Character and spieler.Character:FindFirstChild("HumanoidRootPart")
+				if hrp then
+					local m = Vector3.new(coZiel.X - hrp.Position.X, 0, coZiel.Z - hrp.Position.Z).Magnitude
+					coWeite.Text = m < 25 and "➡ NOW!" or ("Next gate in %d m"):format(math.floor(m / 5 + 0.5) * 5)
+				end
+				local kam = workspace.CurrentCamera
+				coSkala.Scale = math.clamp(((kam and kam.ViewportSize.X or 1000) - 20) / 460, 0.6, 1)
+			end
+			task.wait(0.2)
+		end
+	end)
+
+	function BetaClient.event(info)
+		if info.typ == "ziel" and info.copilot then
+			k.markerWeg()
+			if info.pos then k.markerSetzen(info.pos, info.richtung, info.breite or 26) end
+			if _G.MinimapRoute then _G.MinimapRoute(info.route, info.nr) end
+			coZiel, coNr = info.pos, info.nr
+			coTitel.Text = ("🗺 CO-PILOT  ·  %s can't see the route  ·  %d/%d"):format(info.fahrer or "Your driver", info.nr or 0, info.gesamt or 0)
+			coText.Text = "Tell them: <b>" .. k.einh(info.text or "") .. "</b>"
+			coGui.Enabled = true
+			return true
+		elseif info.typ == "ziel" and info.blind then
+			k.lektion(true)
+			k.hud.Enabled = true
+			k.anweisungText.Text = (info.sprecher or "Co-pilot") .. ": " .. (info.text or "")
+			k.lektionTitel.Text = "🙈 BLIND DRIVE  (" .. (info.nr or 0) .. "/" .. (info.gesamt or 0) .. ")"
+			k.markerWeg()
+			if _G.MinimapRoute then _G.MinimapRoute(nil) end
+			return true
+		elseif info.typ == "ende" and info.blind then
+			k.hudAus()
+			copilotAus()
+			if info.abbruch then
+				warnen("🗺 You left the car – your friend drives on alone.", Color3.fromRGB(200, 140, 30))
+				return true
+			end
+			local zeit = ("%d:%02d"):format(math.floor((info.sek or 0) / 60), (info.sek or 0) % 60)
+			local text = ("<font size=\"26\" color=\"#ffd23c\"><b>%s</b></font>\n\n🙈 Driver: <b>%s</b>   🗺 Co-pilot: <b>%s</b>\nMistakes: <b>%d</b>   ·   Time: <b>%s</b>%s"):format(
+				info.titel or "", info.fahrer or "?", info.copilotName or "–", info.fehler or 0, zeit,
+				(info.geld or 0) > 0 and ("\n\n+%d coins each"):format(info.geld) or "")
+			local knoepfe = { { text = "Close", farbe = GRUEN, klick = k.schliessen } }
+			if not info.copilot then
+				table.insert(knoepfe, 1, { text = "🔁 Again", farbe = BLAU, klick = function() BetaClient.blindKnopf() end })
+			end
+			k.zeige(info.erfolg and "🙈 BLIND DRIVE DONE!" or "🙈 Blind Drive ended", text, knoepfe, "hinweis")
+			return true
+		end
+		return false
+	end
+
+	function BetaClient.blindKnopf()
+		local r = frage("blindStarten")
+		if r.fehler then
+			warnen(r.fehler, Color3.fromRGB(200, 140, 30))
+		else
+			k.zeige("🙈 Blind Drive", (r.text or "") .. "\n\n<b>How it works:</b> you drive, but you can't see the route. Your friend sits next to you (\"Be the co-pilot\" at the passenger door), sees the map and tells you where to go.", {
+				{ text = "Let's go!", farbe = GRUEN, klick = k.schliessen },
+			}, "dialog")
+		end
+	end
 	return BetaClient
 end
 

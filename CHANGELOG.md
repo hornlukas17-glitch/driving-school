@@ -1,5 +1,11 @@
 # Changelog
 
+## v55 – 🙈 Blind Drive (Fahrer sieht nichts, Beifahrer navigiert)
+- Neuer Knopf **🙈 Blind** im Menü: Ein Fahrschulauto wartet, ein Freund setzt sich als **Co-Pilot** auf den Beifahrersitz („Be the co-pilot“). Erst dann geht es los (Prüfungsroute, ohne Voraussetzungen).
+- **Fahrer:** keine grünen Tore, keine Route auf der Minimap, nur „🙈 Listen to …!“. **Co-Pilot:** sieht Tor + Route + „Next gate in 40 m / NOW!“ und gibt Kommandos (Knöpfe/Tasten 1–6). Der Computer-Fahrlehrer sitzt hinten und kommentiert nur.
+- Am Ende Team-Wertung für beide: 💞 Dream Team (0 Fehler, 120 Münzen) · 🤝 Great Team · 😬 Needs Couples Therapy · 💔 Divorce Incoming. Steigt der Co-Pilot aus, sieht der Fahrer die Route wieder (nur kleine Belohnung).
+- Server schickt die Route nur an den Co-Piloten (Fahrer kann nicht schummeln). Test 30.
+
 ## v54 – Beta-Werkzeuge: Karte lädt, Freunde einladen, Codes, Fahrlehrer-Modus
 - **Karte im veröffentlichten Spiel:** Streaming nach Roblox-Empfehlung (Ziel 1024, Minimum 64, `PauseOutsideLoadedArea`, `Opportunistic`) und keine vereinfachten Detailstufen mehr (`LevelOfDetail = StreamingMesh` steht im Verdacht, Modelle verschwinden zu lassen). Studio: `studio/streaming_fix.lua`, Generator angepasst. Der Client blockiert nicht mehr, wenn die Karte spät ankommt.
 - **🧑‍🏫 Fahrlehrer-Modus Light:** Wer bei einem Freund mitfährt, bekommt Knöpfe (bzw. Tasten 1–6) für LEFT / STRAIGHT / RIGHT / STOP / SLOW / NICE – der Fahrer sieht das Kommando groß oben. Nach mind. 3 Kommandos kann man den Fahrer mit 1–5 Sternen bewerten (8 Münzen pro Stern). Nur feste Kommandos, kein Chat nötig.

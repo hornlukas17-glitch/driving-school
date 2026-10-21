@@ -1,6 +1,7 @@
 -- Tauscht alle Haeuser der Wohngebiete gegen die neuen Haustypen (Blender -> OBJ -> 3D-Importer).
 -- Voraussetzung: die vier importierten Modelle Haus_A..Haus_D liegen im Workspace oder in ServerStorage.Haustypen.
--- Mehrfach ausfuehrbar. Rueckweg: ServerStorage.Haeuser_Alt (alte Teile je Haus) bzw. Strg+Z.
+-- v59: dreht jedes neue Haus so, dass seine Tuer dort ist, wo die alte Tuer war (Importer-Drehung egal).
+-- ERST auf wenigen Haeusern testen. Mehrfach ausfuehrbar. Rueckweg: ServerStorage.Haeuser_Alt (alte Teile je Haus) bzw. Strg+Z.
 local CHS = game:GetService("ChangeHistoryService")
 local SS = game:GetService("ServerStorage")
 local RGB = Color3.fromRGB
@@ -23,7 +24,17 @@ for _, n in { "Haus_A", "Haus_B", "Haus_C", "Haus_D" } do
 		if d:IsA("BasePart") and d.Name:find("Anker") then anker = d end
 	end
 	assert(anker, n .. ": Teil 'Anker' fehlt")
-	table.insert(VORLAGEN, { name = n, modell = m, ursprung = CFrame.new(anker.Position) })
+	-- Richtung zur Haustuer (waagerecht, im Vorlagen-Raum): der 3D-Importer kann die Modelle drehen (bei den Autos: Front -Z)
+	local tuerRichtung
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") and d.Name:match("^Tuer") then
+			local lok = CFrame.new(anker.Position):PointToObjectSpace(d.Position)
+			tuerRichtung = Vector3.new(lok.X, 0, lok.Z)
+			if tuerRichtung.Magnitude > 0.5 then tuerRichtung = tuerRichtung.Unit else tuerRichtung = nil end
+			break
+		end
+	end
+	table.insert(VORLAGEN, { name = n, modell = m, ursprung = CFrame.new(anker.Position), tuer = tuerRichtung })
 end
 
 -- 2) Musterhaeuser von vorhin zuruecknehmen (alte Teile wieder einsetzen)
@@ -74,7 +85,7 @@ local alt = SS:FindFirstChild("Haeuser_Alt") or Instance.new("Folder")
 alt.Name = "Haeuser_Alt"
 alt.Parent = SS
 local WEG = { Dach = true, Giebel = true, Tuer = true, Fenster = true }
-local n, uebersprungen = 0, 0
+local n, uebersprungen, gedreht, ohneTuer = 0, 0, {}, 0
 local letzter = {}
 local haeuser = {}
 for _, h in workspace.Karte:GetDescendants() do
@@ -94,6 +105,21 @@ for i, h in haeuser do
 	local basis = k.CFrame * CFrame.new(0, -k.Size.Y / 2, 0)
 	-- leicht versetzt nach hinten/vorne, damit die Reihe nicht wie kopiert aussieht
 	basis = basis * CFrame.new(0, 0, r:NextNumber(-1.2, 0.6))
+	-- Tuer des neuen Hauses dorthin drehen, wo die Tuer des alten Hauses war (zur Strasse)
+	local dreh = CFrame.new()
+	local alteTuer = h:FindFirstChild("Tuer")
+	if v.tuer and alteTuer then
+		local lok = k.CFrame:PointToObjectSpace(alteTuer.Position)
+		local soll = Vector3.new(lok.X, 0, lok.Z)
+		if soll.Magnitude > 0.5 then
+			local winkel = math.atan2(soll.X, soll.Z) - math.atan2(v.tuer.X, v.tuer.Z)
+			local grad = math.floor(math.deg(winkel) % 360 / 90 + 0.5) % 4 * 90 -- Haeuser stehen rechtwinklig
+			dreh = CFrame.Angles(0, math.rad(grad), 0)
+			gedreht[grad] = (gedreht[grad] or 0) + 1
+		end
+	else
+		ohneTuer += 1
+	end
 	local neu = Instance.new("Model")
 	neu.Name = "NeuesHaus"
 	local farben = { Wand = WAND[r:NextInteger(1, #WAND)], Wand2 = WAND2[r:NextInteger(1, #WAND2)], Dach = DACH[r:NextInteger(1, #DACH)], Laden = LADEN[r:NextInteger(1, #LADEN)] }
@@ -104,7 +130,7 @@ for i, h in haeuser do
 			c.CanCollide = false
 			c.CanQuery = false
 			c.CanTouch = false
-			c.CFrame = basis * v.ursprung:ToObjectSpace(t.CFrame)
+			c.CFrame = basis * dreh * v.ursprung:ToObjectSpace(t.CFrame)
 			local g = gruppe(t.Name)
 			local m = g and MAT[g]
 			if m then
@@ -132,4 +158,6 @@ for i, h in haeuser do
 	if i % 25 == 0 then task.wait() end
 end
 CHS:SetWaypoint("Haeuser getauscht")
-return ("%d Haeuser getauscht, %d waren schon neu"):format(n, uebersprungen)
+local dreh = {}
+for grad, anzahl in gedreht do table.insert(dreh, grad .. "°: " .. anzahl) end
+return ("%d Haeuser getauscht, %d waren schon neu | Drehung %s | ohne Tuer-Erkennung %d"):format(n, uebersprungen, table.concat(dreh, ", "), ohneTuer)

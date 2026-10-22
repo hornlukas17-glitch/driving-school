@@ -3,3 +3,4 @@ tools/run.luau
 *.rbxl.lock
 __pycache__/
 dist/sound/
+dist/werbung/_tiktok_tmp/
